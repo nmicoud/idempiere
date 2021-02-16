@@ -30,7 +30,7 @@ public class X_AD_InfoColumn extends PO implements I_AD_InfoColumn, I_Persistent
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20201220L;
+	private static final long serialVersionUID = 20210216L;
 
     /** Standard Constructor */
     public X_AD_InfoColumn (Properties ctx, int AD_InfoColumn_ID, String trxName)
@@ -383,6 +383,23 @@ public class X_AD_InfoColumn extends PO implements I_AD_InfoColumn, I_Persistent
 	public String getEntityType () 
 	{
 		return (String)get_Value(COLUMNNAME_EntityType);
+	}
+
+	/** Set Format Pattern.
+		@param FormatPattern 
+		The pattern used to format a number or date.
+	  */
+	public void setFormatPattern (String FormatPattern)
+	{
+		set_Value (COLUMNNAME_FormatPattern, FormatPattern);
+	}
+
+	/** Get Format Pattern.
+		@return The pattern used to format a number or date.
+	  */
+	public String getFormatPattern () 
+	{
+		return (String)get_Value(COLUMNNAME_FormatPattern);
 	}
 
 	/** Set Comment/Help.

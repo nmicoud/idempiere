@@ -294,6 +294,19 @@ public interface I_AD_UserDef_Field
 	  */
 	public String getDisplayLogic();
 
+    /** Column name FormatPattern */
+    public static final String COLUMNNAME_FormatPattern = "FormatPattern";
+
+	/** Set Format Pattern.
+	  * The pattern used to format a number or date.
+	  */
+	public void setFormatPattern (String FormatPattern);
+
+	/** Get Format Pattern.
+	  * The pattern used to format a number or date.
+	  */
+	public String getFormatPattern();
+
     /** Column name Help */
     public static final String COLUMNNAME_Help = "Help";
 

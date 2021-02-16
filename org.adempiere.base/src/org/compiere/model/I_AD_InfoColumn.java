@@ -259,6 +259,19 @@ public interface I_AD_InfoColumn
 	  */
 	public String getEntityType();
 
+    /** Column name FormatPattern */
+    public static final String COLUMNNAME_FormatPattern = "FormatPattern";
+
+	/** Set Format Pattern.
+	  * The pattern used to format a number or date.
+	  */
+	public void setFormatPattern (String FormatPattern);
+
+	/** Get Format Pattern.
+	  * The pattern used to format a number or date.
+	  */
+	public String getFormatPattern();
+
     /** Column name Help */
     public static final String COLUMNNAME_Help = "Help";
 

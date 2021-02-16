@@ -46,6 +46,7 @@ public class WTableColumn
     protected String tooltipText;
 
 	private int AD_Reference_ID;
+	protected String formatPattern;
 
     /** 
      *  Cover method, using a default width of 75 
@@ -297,5 +298,19 @@ public class WTableColumn
 	
 	public void setAD_Reference_ID(int AD_Reference_ID) {
 		this.AD_Reference_ID=AD_Reference_ID;
+	}
+
+	/**
+	 * @return Format pattern
+	 */
+	public String getFormatPattern() {
+		return formatPattern;
+	}
+
+	/**
+	 * @param formatPattern
+	 */
+	public void setFormatPattern(String formatPattern) {
+		this.formatPattern = formatPattern;
 	}
 }

@@ -1267,4 +1267,22 @@ public class MColumn extends X_AD_Column implements ImmutablePOSupport
 		return this;
 	}
 
+	/** Return the format to apply for datebox (used by datetime editor) */
+	public static String getDateFormat(String format) {
+		if (!Util.isEmpty(format)) {
+			if (format.toUpperCase().contains("H"))
+				return format.substring(0, format.toUpperCase().indexOf("H")).trim();
+		}
+		return format;
+	}
+
+	/** Return the format to apply for timebox (used by datetime editor) */
+	public static String getTimeFormat(String format) {
+		if (!Util.isEmpty(format)) {
+			if (format.toUpperCase().contains("H"))
+				return format.substring(format.toUpperCase().indexOf("H")).trim();
+		}
+		return format;
+	}
+
 }	//	MColumn

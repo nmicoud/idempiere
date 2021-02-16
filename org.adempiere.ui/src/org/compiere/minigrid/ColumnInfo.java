@@ -129,6 +129,7 @@ public class ColumnInfo
 	
 	private String colDescription;
 	private int AD_Reference_ID;
+	private String formatPattern;
 
 	/**
 	 * 	Get Col Class
@@ -285,4 +286,13 @@ public class ColumnInfo
 	public void setAD_Reference_ID(int AD_Reference_ID) {
 		this.AD_Reference_ID = AD_Reference_ID;
 	}
+
+	public void setFormatPattern(String formatPattern) {
+		this.formatPattern = formatPattern;
+	}
+
+	public String getFormatPattern() {
+		return formatPattern;
+	}
+
 }   //  infoColumn

@@ -24,9 +24,11 @@ import org.adempiere.webui.event.ContextMenuListener;
 import org.adempiere.webui.event.ValueChangeEvent;
 import org.adempiere.webui.window.WFieldRecordInfo;
 import org.compiere.model.GridField;
+import org.compiere.model.MColumn;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.Util;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.Events;
 
@@ -64,6 +66,11 @@ public class WDatetimeEditor extends WEditor implements ContextMenuListener
     {
         super(new DatetimeBox(), gridField, tableEditor, editorConfiguration);
         init();
+        
+        if (!Util.isEmpty(gridField.getFormatPattern())) {
+        	getComponent().getDatebox().setFormat(MColumn.getDateFormat(MColumn.get(Env.getCtx(), gridField.getAD_Column_ID()).getFormatPattern()));
+        	getComponent().getTimebox().setFormat(MColumn.getTimeFormat(MColumn.get(Env.getCtx(), gridField.getAD_Column_ID()).getFormatPattern()));
+        }
     }
 
 

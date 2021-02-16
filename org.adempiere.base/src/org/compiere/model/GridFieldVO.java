@@ -185,7 +185,10 @@ public class GridFieldVO implements Serializable, Cloneable
 
 				if (userDef.getPlaceholder() != null)
 					vo.Placeholder = userDef.getPlaceholder();
-				
+
+				if (userDef.getFormatPattern() != null)
+					vo.FormatPattern = userDef.getFormatPattern();
+
 				//devCoffee 8535
 				if (userDef.getAD_FieldGroup_ID() > 0)
 				{

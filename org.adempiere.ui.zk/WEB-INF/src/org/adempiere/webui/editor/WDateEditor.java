@@ -29,6 +29,7 @@ import org.adempiere.webui.event.ValueChangeEvent;
 import org.adempiere.webui.window.WFieldRecordInfo;
 import org.compiere.model.GridField;
 import org.compiere.util.CLogger;
+import org.compiere.util.Util;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.Events;
 
@@ -70,6 +71,9 @@ public class WDateEditor extends WEditor implements ContextMenuListener
     {
         super(new Datebox(), gridField, tableEditor, editorConfiguration);
         init();
+        
+        if (!Util.isEmpty(gridField.getFormatPattern()))
+        	getComponent().setFormat(gridField.getFormatPattern());
     }
 
 

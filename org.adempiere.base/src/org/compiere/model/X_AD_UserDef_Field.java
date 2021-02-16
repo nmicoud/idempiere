@@ -30,7 +30,7 @@ public class X_AD_UserDef_Field extends PO implements I_AD_UserDef_Field, I_Pers
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20201220L;
+	private static final long serialVersionUID = 20210216L;
 
     /** Standard Constructor */
     public X_AD_UserDef_Field (Properties ctx, int AD_UserDef_Field_ID, String trxName)
@@ -454,6 +454,23 @@ public class X_AD_UserDef_Field extends PO implements I_AD_UserDef_Field, I_Pers
 	public String getDisplayLogic () 
 	{
 		return (String)get_Value(COLUMNNAME_DisplayLogic);
+	}
+
+	/** Set Format Pattern.
+		@param FormatPattern 
+		The pattern used to format a number or date.
+	  */
+	public void setFormatPattern (String FormatPattern)
+	{
+		set_Value (COLUMNNAME_FormatPattern, FormatPattern);
+	}
+
+	/** Get Format Pattern.
+		@return The pattern used to format a number or date.
+	  */
+	public String getFormatPattern () 
+	{
+		return (String)get_Value(COLUMNNAME_FormatPattern);
 	}
 
 	/** Set Comment/Help.
