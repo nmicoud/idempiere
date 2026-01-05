@@ -80,7 +80,7 @@ public class MCostDetail extends X_M_CostDetail
 	 *	@return true if created
 	 *	@deprecated
 	 */
-	@Deprecated
+	@Deprecated (since="13", forRemoval=true)
 	public static boolean createOrder (MAcctSchema as, int AD_Org_ID, 
 		int M_Product_ID, int M_AttributeSetInstance_ID,
 		int C_OrderLine_ID, int M_CostElement_ID, 
@@ -175,7 +175,7 @@ public class MCostDetail extends X_M_CostDetail
 	 *	@return true if created
 	 *	@deprecated
 	 */
-	@Deprecated
+	@Deprecated (since="13", forRemoval=true)
 	public static boolean createInvoice (MAcctSchema as, int AD_Org_ID, 
 		int M_Product_ID, int M_AttributeSetInstance_ID,
 		int C_InvoiceLine_ID, int M_CostElement_ID, 
@@ -271,7 +271,7 @@ public class MCostDetail extends X_M_CostDetail
 	 *	@return true if no error
 	 *	@deprecated
 	 */
-	@Deprecated
+	@Deprecated (since="13", forRemoval=true)
 	public static boolean createShipment (MAcctSchema as, int AD_Org_ID, 
 		int M_Product_ID, int M_AttributeSetInstance_ID,
 		int M_InOutLine_ID, int M_CostElement_ID, 
@@ -366,7 +366,7 @@ public class MCostDetail extends X_M_CostDetail
 	 *	@return true if no error
 	 *	@deprecated
 	 */
-	@Deprecated
+	@Deprecated (since="13", forRemoval=true)
 	public static boolean createInventory (MAcctSchema as, int AD_Org_ID, 
 		int M_Product_ID, int M_AttributeSetInstance_ID,
 		int M_InventoryLine_ID, int M_CostElement_ID, 
@@ -460,7 +460,7 @@ public class MCostDetail extends X_M_CostDetail
 	 *	@return true if no error
 	 *	@deprecated
 	 */
-	@Deprecated
+	@Deprecated (since="13", forRemoval=true)
 	public static boolean createMovement (MAcctSchema as, int AD_Org_ID, 
 		int M_Product_ID, int M_AttributeSetInstance_ID,
 		int M_MovementLine_ID, int M_CostElement_ID, 
@@ -556,7 +556,7 @@ public class MCostDetail extends X_M_CostDetail
 	 *	@return true if no error
 	 *	@deprecated
 	 */
-	@Deprecated
+	@Deprecated (since="13", forRemoval=true)
 	public static boolean createProduction (MAcctSchema as, int AD_Org_ID, 
 		int M_Product_ID, int M_AttributeSetInstance_ID,
 		int M_ProductionLine_ID, int M_CostElement_ID, 
@@ -648,7 +648,7 @@ public class MCostDetail extends X_M_CostDetail
 	 *	@return true if no error
 	 *	@deprecated
 	 */
-	@Deprecated
+	@Deprecated (since="13", forRemoval=true)
 	public static boolean createMatchInvoice (MAcctSchema as, int AD_Org_ID, 
 			int M_Product_ID, int M_AttributeSetInstance_ID,
 			int M_MatchInv_ID, int M_CostElement_ID, 
@@ -740,7 +740,7 @@ public class MCostDetail extends X_M_CostDetail
 	 *	@return true if no error
 	 *	@deprecated
 	 */
-	@Deprecated
+	@Deprecated (since="13", forRemoval=true)
 	public static boolean createProjectIssue (MAcctSchema as, int AD_Org_ID, 
 		int M_Product_ID, int M_AttributeSetInstance_ID,
 		int C_ProjectIssue_ID, int M_CostElement_ID, 
@@ -899,7 +899,7 @@ public class MCostDetail extends X_M_CostDetail
 	 *	@return cost detail
 	 *  @deprecated
 	 */
-	@Deprecated
+	@Deprecated (since="13", forRemoval=true)
 	public static MCostDetail get (Properties ctx, String whereClause,
 		int ID, int M_AttributeSetInstance_ID, String trxName)
 	{
@@ -1113,7 +1113,7 @@ public class MCostDetail extends X_M_CostDetail
 	 *	@param trxName transaction
 	 *	@deprecated
 	 */
-	@Deprecated
+	@Deprecated (since="13", forRemoval=true)
 	public MCostDetail (MAcctSchema as, int AD_Org_ID, 
 		int M_Product_ID, int M_AttributeSetInstance_ID,
 		int M_CostElement_ID, BigDecimal amt, BigDecimal qty,
@@ -1482,10 +1482,26 @@ public class MCostDetail extends X_M_CostDetail
 		if (getM_InOutLine_ID() > 0) { // skip average costing qty check for reversed shipment
 			MInOutLine iol = new MInOutLine(getCtx(), getM_InOutLine_ID(), get_TrxName());
 			MInOut io = new MInOut(getCtx(), iol.getM_InOut_ID(), get_TrxName());
-			cost.setSkipAverageCostingQtyCheck(io.getReversal_ID() > 0);
+			if (io.getReversal_ID() > 0)
+				cost.setSkipAverageCostingQtyCheck(io.getReversal_ID() > 0);
+			else { // skip average costing qty check for drop shipment
+				int C_Order_ID = io.getC_Order_ID();
+				if (C_Order_ID > 0) {
+					MOrder sOrder = new MOrder(getCtx(), C_Order_ID, get_TrxName());
+					int Link_Order_ID = sOrder.getLink_Order_ID();
+					if (Link_Order_ID > 0) {
+						MOrder lOrder = new MOrder(getCtx(), Link_Order_ID, get_TrxName());
+						cost.setSkipAverageCostingQtyCheck(lOrder.isDropShip());
+					}
+				}
+			}
 		} else if (getC_ProjectIssue_ID() > 0) { // skip average costing qty check for reversed project issue
 			MProjectIssue pi = new MProjectIssue(getCtx(), getC_ProjectIssue_ID(), get_TrxName());
 			cost.setSkipAverageCostingQtyCheck(pi.getReversal_ID() > 0);
+		} else if (getM_InventoryLine_ID() > 0) { // skip average costing qty check for reversed inventory
+			MInventoryLine il = new MInventoryLine(getCtx(), getM_InventoryLine_ID(), get_TrxName());
+			MInventory i = new MInventory(getCtx(), il.getM_Inventory_ID(), get_TrxName());
+			cost.setSkipAverageCostingQtyCheck(i.getReversal_ID() > 0);
 		}
 		
 		ICostInfo costInfo = MCost.getCostInfo(product.getCtx(), product.getAD_Client_ID(), Org_ID, product.getM_Product_ID(), 

@@ -1497,10 +1497,9 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 	 */
 	public void onAttributeForm()
 	{
-		new WTableAttribute(adTabbox.getSelectedGridTab().getAD_Table_ID(), adTabbox.getSelectedGridTab().getRecord_ID());
-		
+		new WTableAttribute(adTabbox.getSelectedGridTab());
 	}
-	
+
     /**
      * @param event
      * @see EventListener#onEvent(Event)
@@ -1925,11 +1924,11 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 							PO po = tab.getTableModel().getPO(row);
 							titleLogic = Env.parseVariable(titleLogic, po, null, false);
 						} else {
-							titleLogic = Env.parseContext(Env.getCtx(), curWindowNo, titleLogic, false, true);
+							titleLogic = Env.parseContext(Env.getCtx(), curWindowNo, titleLogic, false, true, false, false);
 						}
 					}
 				} else {
-					titleLogic = Env.parseContext(Env.getCtx(), curWindowNo, titleLogic, false, true);
+					titleLogic = Env.parseContext(Env.getCtx(), curWindowNo, titleLogic, false, true, false, false);
 				}
         		sb.append(titleLogic);
         		header = sb.toString().trim();
@@ -4391,13 +4390,6 @@ public abstract class AbstractADWindowContent extends AbstractUIPart implements 
 	 */
 	public IADTabbox getADTab() {
 		return adTabbox;
-	}
-
-	/**
-	 * @param pi
-	 */
-	@Deprecated(forRemoval = true, since = "11")
-	public void executeASync(ProcessInfo pi) {
 	}
 
 	/**
