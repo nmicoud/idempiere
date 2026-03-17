@@ -112,7 +112,7 @@ public class InvoiceCreateCreditMemo extends SvrProcess {
 			throw new AdempiereException(Msg.getMsg(getCtx(), "CannotCreateCreditMemoFromCreditMemo"));
 		}
 		// Validate if there is already another credit memo for this invoice
-		int id = DB.getSQLValueEx(get_TrxName(), "SELECT C_Invoice_ID FROM C_Invoice WHERE RelatedInvoice_ID = ? AND DocStatus IN ('DR', 'CO', 'CL')", invoice.getC_Invoice_ID());
+		int id = DB.getSQLValueEx(get_TrxName(), "SELECT C_Invoice_ID FROM C_Invoice WHERE RelatedInvoice_ID = ?", invoice.getC_Invoice_ID());
 
 		if (id > 0) {
 			MInvoice actualCreditMemo = MInvoice.get(getCtx(), id);
