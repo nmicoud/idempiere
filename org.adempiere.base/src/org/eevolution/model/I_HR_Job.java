@@ -23,7 +23,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for HR_Job
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 @SuppressWarnings("all")
 public interface I_HR_Job 
@@ -46,8 +46,8 @@ public interface I_HR_Job
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -55,12 +55,12 @@ public interface I_HR_Job
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -102,6 +102,7 @@ public interface I_HR_Job
 	/** Get Payroll Department	  */
 	public int getHR_Department_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.eevolution.model.I_HR_Department getHR_Department() throws RuntimeException;
 
     /** Column name HR_Job_ID */
@@ -151,10 +152,10 @@ public interface I_HR_Job
     /** Column name JobCant */
     public static final String COLUMNNAME_JobCant = "JobCant";
 
-	/** Set Job Cant	  */
+	/** Set Job Qty	  */
 	public void setJobCant (int JobCant);
 
-	/** Get Job Cant	  */
+	/** Get Job Qty	  */
 	public int getJobCant();
 
     /** Column name Name */
@@ -179,6 +180,7 @@ public interface I_HR_Job
 	/** Get Next Job	  */
 	public int getNext_Job_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.eevolution.model.I_HR_Job getNext_Job() throws RuntimeException;
 
     /** Column name Supervisor_ID */
@@ -194,6 +196,7 @@ public interface I_HR_Job
 	  */
 	public int getSupervisor_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_User getSupervisor() throws RuntimeException;
 
     /** Column name Updated */

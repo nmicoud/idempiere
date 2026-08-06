@@ -61,8 +61,8 @@ public class PipoDictionaryService implements IDictionaryService {
 			else
 				packIn.setPackageName(symbolicName);
 			
-			if (Env.getCtx().getProperty("#AD_Client_ID") == null) {
-				Env.getCtx().put("#AD_Client_ID", 0);
+			if (Env.getCtx().getProperty(Env.AD_CLIENT_ID) == null) {
+				Env.getCtx().put(Env.AD_CLIENT_ID, 0);
 			}
 			//get package version from file name suffix or bundle header
 			String packageVersion = null;
@@ -96,8 +96,11 @@ public class PipoDictionaryService implements IDictionaryService {
 			File targetDir = new File(System.getProperty("java.io.tmpdir"));
 			Zipper.unpackFile(packageFile, targetDir);
 
-			String dict_file = targetDir + File.separator + parentDir + File.separator
-					+ "dict" + File.separator + "PackOut.xml";
+			String dictBase = targetDir + File.separator + parentDir + File.separator + "dict" + File.separator;
+			String dict_file;
+			if      (new File(dictBase + "PackOut.json").exists()) dict_file = dictBase + "PackOut.json";
+			else if (new File(dictBase + "PackOut.yaml").exists()) dict_file = dictBase + "PackOut.yaml";
+			else                                                   dict_file = dictBase + "PackOut.xml";
 			
 			packIn.setPackageDirectory(targetDir + File.separator + parentDir);
 
@@ -132,33 +135,16 @@ public class PipoDictionaryService implements IDictionaryService {
 				// Add the attachment to the packin for possible reprocessing
 				if (MSysConfig.getBooleanValue(MSysConfig.ATTACH_EMBEDDED_2PACK, true) || ! packIn.isSuccess()) {
 					// TODO: This sometimes fails with error No archive storage provider found - because the IAttachmentStore required is still not loaded
-					MAttachment attachment = new MAttachment (adPackageImp.getCtx(), X_AD_Package_Imp_Proc.Table_ID, adPackageImp.getAD_Package_Imp_Proc_ID(), null);
+					MAttachment attachment = new MAttachment (adPackageImp.getCtx(), X_AD_Package_Imp_Proc.Table_ID, adPackageImp.getAD_Package_Imp_Proc_ID(), adPackageImp.getAD_Package_Imp_Proc_UU(), null);
 					attachment.addEntry(packageFile);
 					attachment.save(); // ignoring exceptions
+					attachment.close();
 				}
 			}
 			packIn.getNotifier().notifyRecipient();
 		}
 
 	}
-
-	/*
-	private String getPackageDir() {
-
-		// Create Target directory if required
-		String packageDirectory = Adempiere.getAdempiereHome();
-		String result = packageDirectory + File.separator
-				+ "packages";
-		File docDir = new File( result+File.separator+"doc");
-
-		if (!docDir.exists()) {
-			boolean success = docDir.mkdirs();
-			if (!success) {
-				logger.info("Target directory creation failed");
-			}
-		}
-		return result;
-	}*/
 
 	@Override
 	public X_AD_Package_Imp_Proc getAD_Package_Imp_Proc() {

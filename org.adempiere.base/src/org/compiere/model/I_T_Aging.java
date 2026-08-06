@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for T_Aging
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_T_Aging 
 {
@@ -44,8 +44,8 @@ public interface I_T_Aging
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -53,12 +53,12 @@ public interface I_T_Aging
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -75,6 +75,7 @@ public interface I_T_Aging
 	  */
 	public int getAD_PInstance_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_PInstance getAD_PInstance() throws RuntimeException;
 
     /** Column name C_Activity_ID */
@@ -90,22 +91,8 @@ public interface I_T_Aging
 	  */
 	public int getC_Activity_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_Activity getC_Activity() throws RuntimeException;
-
-    /** Column name C_BPartner_ID */
-    public static final String COLUMNNAME_C_BPartner_ID = "C_BPartner_ID";
-
-	/** Set Business Partner .
-	  * Identifies a Business Partner
-	  */
-	public void setC_BPartner_ID (int C_BPartner_ID);
-
-	/** Get Business Partner .
-	  * Identifies a Business Partner
-	  */
-	public int getC_BPartner_ID();
-
-	public org.compiere.model.I_C_BPartner getC_BPartner() throws RuntimeException;
 
     /** Column name C_BP_Group_ID */
     public static final String COLUMNNAME_C_BP_Group_ID = "C_BP_Group_ID";
@@ -120,7 +107,24 @@ public interface I_T_Aging
 	  */
 	public int getC_BP_Group_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_BP_Group getC_BP_Group() throws RuntimeException;
+
+    /** Column name C_BPartner_ID */
+    public static final String COLUMNNAME_C_BPartner_ID = "C_BPartner_ID";
+
+	/** Set Business Partner.
+	  * Identifies a Business Partner
+	  */
+	public void setC_BPartner_ID (int C_BPartner_ID);
+
+	/** Get Business Partner.
+	  * Identifies a Business Partner
+	  */
+	public int getC_BPartner_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_C_BPartner getC_BPartner() throws RuntimeException;
 
     /** Column name C_Campaign_ID */
     public static final String COLUMNNAME_C_Campaign_ID = "C_Campaign_ID";
@@ -135,6 +139,7 @@ public interface I_T_Aging
 	  */
 	public int getC_Campaign_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_Campaign getC_Campaign() throws RuntimeException;
 
     /** Column name C_Currency_ID */
@@ -150,22 +155,8 @@ public interface I_T_Aging
 	  */
 	public int getC_Currency_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_Currency getC_Currency() throws RuntimeException;
-
-    /** Column name C_Invoice_ID */
-    public static final String COLUMNNAME_C_Invoice_ID = "C_Invoice_ID";
-
-	/** Set Invoice.
-	  * Invoice Identifier
-	  */
-	public void setC_Invoice_ID (int C_Invoice_ID);
-
-	/** Get Invoice.
-	  * Invoice Identifier
-	  */
-	public int getC_Invoice_ID();
-
-	public org.compiere.model.I_C_Invoice getC_Invoice() throws RuntimeException;
 
     /** Column name C_InvoicePaySchedule_ID */
     public static final String COLUMNNAME_C_InvoicePaySchedule_ID = "C_InvoicePaySchedule_ID";
@@ -180,18 +171,24 @@ public interface I_T_Aging
 	  */
 	public int getC_InvoicePaySchedule_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_InvoicePaySchedule getC_InvoicePaySchedule() throws RuntimeException;
 
-    /** Column name ConvertAmountsInCurrency_ID */
-    public static final String COLUMNNAME_ConvertAmountsInCurrency_ID = "ConvertAmountsInCurrency_ID";
+    /** Column name C_Invoice_ID */
+    public static final String COLUMNNAME_C_Invoice_ID = "C_Invoice_ID";
 
-	/** Set Convert Amounts in Currency	  */
-	public void setConvertAmountsInCurrency_ID (int ConvertAmountsInCurrency_ID);
+	/** Set Invoice.
+	  * Invoice Identifier
+	  */
+	public void setC_Invoice_ID (int C_Invoice_ID);
 
-	/** Get Convert Amounts in Currency	  */
-	public int getConvertAmountsInCurrency_ID();
+	/** Get Invoice.
+	  * Invoice Identifier
+	  */
+	public int getC_Invoice_ID();
 
-	public org.compiere.model.I_C_Currency getConvertAmountsInCurrency() throws RuntimeException;
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_C_Invoice getC_Invoice() throws RuntimeException;
 
     /** Column name C_Project_ID */
     public static final String COLUMNNAME_C_Project_ID = "C_Project_ID";
@@ -206,7 +203,20 @@ public interface I_T_Aging
 	  */
 	public int getC_Project_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_Project getC_Project() throws RuntimeException;
+
+    /** Column name ConvertAmountsInCurrency_ID */
+    public static final String COLUMNNAME_ConvertAmountsInCurrency_ID = "ConvertAmountsInCurrency_ID";
+
+	/** Set Convert Amounts in Currency	  */
+	public void setConvertAmountsInCurrency_ID (int ConvertAmountsInCurrency_ID);
+
+	/** Get Convert Amounts in Currency	  */
+	public int getConvertAmountsInCurrency_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_C_Currency getConvertAmountsInCurrency() throws RuntimeException;
 
     /** Column name Created */
     public static final String COLUMNNAME_Created = "Created";
@@ -298,10 +308,12 @@ public interface I_T_Aging
     /** Column name Due31_Plus */
     public static final String COLUMNNAME_Due31_Plus = "Due31_Plus";
 
-	/** Set Due > 31	  */
+	/** Set Due &gt;
+ 31	  */
 	public void setDue31_Plus (BigDecimal Due31_Plus);
 
-	/** Get Due > 31	  */
+	/** Get Due &gt;
+ 31	  */
 	public BigDecimal getDue31_Plus();
 
     /** Column name Due61_90 */
@@ -316,10 +328,12 @@ public interface I_T_Aging
     /** Column name Due61_Plus */
     public static final String COLUMNNAME_Due61_Plus = "Due61_Plus";
 
-	/** Set Due > 61	  */
+	/** Set Due &gt;
+ 61	  */
 	public void setDue61_Plus (BigDecimal Due61_Plus);
 
-	/** Get Due > 61	  */
+	/** Get Due &gt;
+ 61	  */
 	public BigDecimal getDue61_Plus();
 
     /** Column name Due8_30 */
@@ -334,10 +348,12 @@ public interface I_T_Aging
     /** Column name Due91_Plus */
     public static final String COLUMNNAME_Due91_Plus = "Due91_Plus";
 
-	/** Set Due > 91	  */
+	/** Set Due &gt;
+ 91	  */
 	public void setDue91_Plus (BigDecimal Due91_Plus);
 
-	/** Get Due > 91	  */
+	/** Get Due &gt;
+ 91	  */
 	public BigDecimal getDue91_Plus();
 
     /** Column name DueAmt */
@@ -461,10 +477,12 @@ public interface I_T_Aging
     /** Column name PastDue31_Plus */
     public static final String COLUMNNAME_PastDue31_Plus = "PastDue31_Plus";
 
-	/** Set Past Due > 31	  */
+	/** Set Past Due &gt;
+ 31	  */
 	public void setPastDue31_Plus (BigDecimal PastDue31_Plus);
 
-	/** Get Past Due > 31	  */
+	/** Get Past Due &gt;
+ 31	  */
 	public BigDecimal getPastDue31_Plus();
 
     /** Column name PastDue61_90 */
@@ -479,10 +497,12 @@ public interface I_T_Aging
     /** Column name PastDue61_Plus */
     public static final String COLUMNNAME_PastDue61_Plus = "PastDue61_Plus";
 
-	/** Set Past Due > 61	  */
+	/** Set Past Due &gt;
+ 61	  */
 	public void setPastDue61_Plus (BigDecimal PastDue61_Plus);
 
-	/** Get Past Due > 61	  */
+	/** Get Past Due &gt;
+ 61	  */
 	public BigDecimal getPastDue61_Plus();
 
     /** Column name PastDue8_30 */
@@ -497,10 +517,12 @@ public interface I_T_Aging
     /** Column name PastDue91_Plus */
     public static final String COLUMNNAME_PastDue91_Plus = "PastDue91_Plus";
 
-	/** Set Past Due > 91	  */
+	/** Set Past Due &gt;
+ 91	  */
 	public void setPastDue91_Plus (BigDecimal PastDue91_Plus);
 
-	/** Get Past Due > 91	  */
+	/** Get Past Due &gt;
+ 91	  */
 	public BigDecimal getPastDue91_Plus();
 
     /** Column name PastDueAmt */

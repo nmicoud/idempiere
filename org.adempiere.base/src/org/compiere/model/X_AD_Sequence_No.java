@@ -21,15 +21,16 @@ import java.sql.ResultSet;
 import java.util.Properties;
 
 /** Generated Model for AD_Sequence_No
- *  @author iDempiere (generated) 
- *  @version Release 8.2 - $Id$ */
-public class X_AD_Sequence_No extends PO implements I_AD_Sequence_No, I_Persistent 
+ *  @author iDempiere (generated)
+ *  @version Release 13 - $Id$ */
+@org.adempiere.base.Model(table="AD_Sequence_No")
+public class X_AD_Sequence_No extends PO implements I_AD_Sequence_No, I_Persistent
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20201220L;
+	private static final long serialVersionUID = 20260309L;
 
     /** Standard Constructor */
     public X_AD_Sequence_No (Properties ctx, int AD_Sequence_No_ID, String trxName)
@@ -38,8 +39,44 @@ public class X_AD_Sequence_No extends PO implements I_AD_Sequence_No, I_Persiste
       /** if (AD_Sequence_No_ID == 0)
         {
 			setAD_Sequence_ID (0);
-			setCalendarYearMonth (null);
 			setCurrentNext (0);
+			setSequenceKey (null);
+        } */
+    }
+
+    /** Standard Constructor */
+    public X_AD_Sequence_No (Properties ctx, int AD_Sequence_No_ID, String trxName, String ... virtualColumns)
+    {
+      super (ctx, AD_Sequence_No_ID, trxName, virtualColumns);
+      /** if (AD_Sequence_No_ID == 0)
+        {
+			setAD_Sequence_ID (0);
+			setCurrentNext (0);
+			setSequenceKey (null);
+        } */
+    }
+
+    /** Standard Constructor */
+    public X_AD_Sequence_No (Properties ctx, String AD_Sequence_No_UU, String trxName)
+    {
+      super (ctx, AD_Sequence_No_UU, trxName);
+      /** if (AD_Sequence_No_UU == null)
+        {
+			setAD_Sequence_ID (0);
+			setCurrentNext (0);
+			setSequenceKey (null);
+        } */
+    }
+
+    /** Standard Constructor */
+    public X_AD_Sequence_No (Properties ctx, String AD_Sequence_No_UU, String trxName, String ... virtualColumns)
+    {
+      super (ctx, AD_Sequence_No_UU, trxName, virtualColumns);
+      /** if (AD_Sequence_No_UU == null)
+        {
+			setAD_Sequence_ID (0);
+			setCurrentNext (0);
+			setSequenceKey (null);
         } */
     }
 
@@ -50,7 +87,7 @@ public class X_AD_Sequence_No extends PO implements I_AD_Sequence_No, I_Persiste
     }
 
     /** AccessLevel
-      * @return 6 - System - Client 
+      * @return 6 - System - Client
       */
     protected int get_AccessLevel()
     {
@@ -67,31 +104,32 @@ public class X_AD_Sequence_No extends PO implements I_AD_Sequence_No, I_Persiste
     public String toString()
     {
       StringBuilder sb = new StringBuilder ("X_AD_Sequence_No[")
-        .append(get_ID()).append("]");
+        .append(get_UUID()).append("]");
       return sb.toString();
     }
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Sequence getAD_Sequence() throws RuntimeException
-    {
-		return (org.compiere.model.I_AD_Sequence)MTable.get(getCtx(), org.compiere.model.I_AD_Sequence.Table_Name)
-			.getPO(getAD_Sequence_ID(), get_TrxName());	}
+	{
+		return (org.compiere.model.I_AD_Sequence)MTable.get(getCtx(), org.compiere.model.I_AD_Sequence.Table_ID)
+			.getPO(getAD_Sequence_ID(), get_TrxName());
+	}
 
 	/** Set Sequence.
-		@param AD_Sequence_ID 
-		Document Sequence
-	  */
+		@param AD_Sequence_ID Document Sequence
+	*/
 	public void setAD_Sequence_ID (int AD_Sequence_ID)
 	{
-		if (AD_Sequence_ID < 1) 
+		if (AD_Sequence_ID < 1)
 			set_ValueNoCheck (COLUMNNAME_AD_Sequence_ID, null);
-		else 
+		else
 			set_ValueNoCheck (COLUMNNAME_AD_Sequence_ID, Integer.valueOf(AD_Sequence_ID));
 	}
 
 	/** Get Sequence.
 		@return Document Sequence
 	  */
-	public int getAD_Sequence_ID () 
+	public int getAD_Sequence_ID()
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_AD_Sequence_ID);
 		if (ii == null)
@@ -100,7 +138,8 @@ public class X_AD_Sequence_No extends PO implements I_AD_Sequence_No, I_Persiste
 	}
 
 	/** Set AD_Sequence_No_UU.
-		@param AD_Sequence_No_UU AD_Sequence_No_UU	  */
+		@param AD_Sequence_No_UU AD_Sequence_No_UU
+	*/
 	public void setAD_Sequence_No_UU (String AD_Sequence_No_UU)
 	{
 		set_Value (COLUMNNAME_AD_Sequence_No_UU, AD_Sequence_No_UU);
@@ -108,32 +147,14 @@ public class X_AD_Sequence_No extends PO implements I_AD_Sequence_No, I_Persiste
 
 	/** Get AD_Sequence_No_UU.
 		@return AD_Sequence_No_UU	  */
-	public String getAD_Sequence_No_UU () 
+	public String getAD_Sequence_No_UU()
 	{
 		return (String)get_Value(COLUMNNAME_AD_Sequence_No_UU);
 	}
 
-	/** Set YearMonth.
-		@param CalendarYearMonth 
-		YYYYMM
-	  */
-	public void setCalendarYearMonth (String CalendarYearMonth)
-	{
-		set_ValueNoCheck (COLUMNNAME_CalendarYearMonth, CalendarYearMonth);
-	}
-
-	/** Get YearMonth.
-		@return YYYYMM
-	  */
-	public String getCalendarYearMonth () 
-	{
-		return (String)get_Value(COLUMNNAME_CalendarYearMonth);
-	}
-
 	/** Set Current Next.
-		@param CurrentNext 
-		The next number to be used
-	  */
+		@param CurrentNext The next number to be used
+	*/
 	public void setCurrentNext (int CurrentNext)
 	{
 		set_Value (COLUMNNAME_CurrentNext, Integer.valueOf(CurrentNext));
@@ -142,11 +163,27 @@ public class X_AD_Sequence_No extends PO implements I_AD_Sequence_No, I_Persiste
 	/** Get Current Next.
 		@return The next number to be used
 	  */
-	public int getCurrentNext () 
+	public int getCurrentNext()
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_CurrentNext);
 		if (ii == null)
 			 return 0;
 		return ii.intValue();
+	}
+
+	/** Set Sequence Key.
+		@param SequenceKey Stores a unique key that determines the sequence numbering scope.
+	*/
+	public void setSequenceKey (String SequenceKey)
+	{
+		set_ValueNoCheck (COLUMNNAME_SequenceKey, SequenceKey);
+	}
+
+	/** Get Sequence Key.
+		@return Stores a unique key that determines the sequence numbering scope.
+	  */
+	public String getSequenceKey()
+	{
+		return (String)get_Value(COLUMNNAME_SequenceKey);
 	}
 }

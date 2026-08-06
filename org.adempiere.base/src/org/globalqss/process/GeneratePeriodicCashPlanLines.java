@@ -14,23 +14,22 @@
  * ComPiere, Inc., 2620 Augustine Dr. #245, Santa Clara, CA 95054, USA        *
  * or via info@compiere.org or http://www.compiere.org/license.html           *
  *****************************************************************************/
-
 package org.globalqss.process;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.Calendar;
-import java.util.logging.Level;
 
 import org.compiere.model.MCashPlan;
 import org.compiere.model.MCashPlanLine;
+import org.compiere.model.MProcessPara;
 import org.compiere.process.ProcessInfoParameter;
 import org.compiere.process.SvrProcess;
 import org.compiere.util.AdempiereSystemError;
-import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 
+@org.adempiere.base.annotation.Process
 public class GeneratePeriodicCashPlanLines  extends SvrProcess {
 
 	private int p_C_Project_ID = 0;
@@ -46,9 +45,7 @@ public class GeneratePeriodicCashPlanLines  extends SvrProcess {
 	private BigDecimal p_Probability = null;
 	private int p_C_CashPlan_ID = 0;
 
-	/**	Logger							*/
-	CLogger log = CLogger.getCLogger (getClass());
-
+	@Override
 	protected void prepare()
 	{
 		ProcessInfoParameter[] para = getParameter();
@@ -77,11 +74,12 @@ public class GeneratePeriodicCashPlanLines  extends SvrProcess {
 			else if (name.equals("Probability"))
 				p_Probability = (BigDecimal) para[i].getParameter();
 			else
-				log.log(Level.SEVERE, "Unknown Parameter: " + name);
+				MProcessPara.validateUnknownParameter(getProcessInfo().getAD_Process_ID(), para[i]);
 		}
 		p_C_CashPlan_ID = getRecord_ID();
 	}
 
+	@Override
 	protected String doIt() throws Exception
 	{
 		boolean usename = (p_Name != null && p_Name.trim().length() > 0);
@@ -144,7 +142,7 @@ public class GeneratePeriodicCashPlanLines  extends SvrProcess {
         	cpl.setUser2_ID(cp.getUser2_ID());
         	// cpl.setC_ProjectPhase_ID(cp.getC_ProjectPhase_ID());
         	// cpl.setC_ProjectTask_ID(cp.getC_ProjectTask_ID());
-        	// cpl.setDescription(cp.getDescription());
+        	cpl.setDescription(cp.getDescription());
         	cpl.setC_Activity_ID(p_C_Activity_ID);
         	cpl.setC_Project_ID(p_C_Project_ID);
         	cpl.setC_Charge_ID(p_C_Charge_ID);

@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_Client
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_AD_Client 
 {
@@ -44,8 +44,8 @@ public interface I_AD_Client
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -75,12 +75,12 @@ public interface I_AD_Client
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -93,6 +93,7 @@ public interface I_AD_Client
 	/** Get Password Policies	  */
 	public int getAD_PasswordRule_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_PasswordRule getAD_PasswordRule() throws RuntimeException;
 
     /** Column name AD_ReplicationStrategy_ID */
@@ -108,7 +109,17 @@ public interface I_AD_Client
 	  */
 	public int getAD_ReplicationStrategy_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_ReplicationStrategy getAD_ReplicationStrategy() throws RuntimeException;
+
+    /** Column name AuthenticationType */
+    public static final String COLUMNNAME_AuthenticationType = "AuthenticationType";
+
+	/** Set Authentication Type	  */
+	public void setAuthenticationType (String AuthenticationType);
+
+	/** Get Authentication Type	  */
+	public String getAuthenticationType();
 
     /** Column name AutoArchive */
     public static final String COLUMNNAME_AutoArchive = "AutoArchive";
@@ -246,10 +257,10 @@ public interface I_AD_Client
     /** Column name IsUseASP */
     public static final String COLUMNNAME_IsUseASP = "IsUseASP";
 
-	/** Set IsUseASP	  */
+	/** Set Is Use ASP	  */
 	public void setIsUseASP (boolean IsUseASP);
 
-	/** Get IsUseASP	  */
+	/** Get Is Use ASP	  */
 	public boolean isUseASP();
 
     /** Column name IsUseBetaFunctions */
@@ -264,6 +275,15 @@ public interface I_AD_Client
 	  * Enable the use of Beta Functionality
 	  */
 	public boolean isUseBetaFunctions();
+
+    /** Column name LoginPrefix */
+    public static final String COLUMNNAME_LoginPrefix = "LoginPrefix";
+
+	/** Set Login Prefix	  */
+	public void setLoginPrefix (String LoginPrefix);
+
+	/** Get Login Prefix	  */
+	public String getLoginPrefix();
 
     /** Column name MMPolicy */
     public static final String COLUMNNAME_MMPolicy = "MMPolicy";

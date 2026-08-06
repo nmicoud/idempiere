@@ -23,32 +23,43 @@ import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.Borderlayout;
 import org.zkoss.zul.Center;
+import org.zkoss.zul.Div;
 import org.zkoss.zul.North;
 import org.zkoss.zul.South;
-import org.zkoss.zul.Div;
-import org.zkoss.zul.Vbox;
 
 /**
- * A custom accoridon implementation using borderlayout
+ * A custom accordion implementation using borderlayout.<br/>
+ * - north is selected tab label<br/>
+ * - center is seelcted tab content<br/>
+ * - south is the list of not selected tabs
  * @author hengsin
- *
  */
 public class Accordion extends Borderlayout implements EventListener<Event> {
-	
+	/**
+	 * generated serial id
+	 */
 	private static final long serialVersionUID = 5898232602746332810L;
 	
-	private Vbox southBox;
-	private Vbox northBox;
+	@SuppressWarnings("deprecation")
+	private org.zkoss.zul.Vbox southBox;
+	@SuppressWarnings("deprecation")
+	private org.zkoss.zul.Vbox northBox;
 	
+	/** List of label for component in {@link #componentList} */
 	private List<String> labelList = new ArrayList<String>();
+	/** List of header Div for component in {@link #componentList}. Header div is shown in {@link #northBox} */
 	private List<Div> headerList = new ArrayList<Div>();
 	private List<Component> componentList = new ArrayList<Component>();
 	private int selectedIndex = -1;
 	
+	/**
+	 * default constructor
+	 */
+	@SuppressWarnings("deprecation")
 	public Accordion() {
 		North north = new North();		
 		appendChild(north);
-		northBox = new Vbox();
+		northBox = new org.zkoss.zul.Vbox();
 		ZKUpdateUtil.setWidth(northBox, "100%");
 		north.appendChild(northBox);
 		north.setSplittable(false);
@@ -59,7 +70,7 @@ public class Accordion extends Borderlayout implements EventListener<Event> {
 		
 		South south = new South();
 		appendChild(south);
-		southBox = new Vbox();
+		southBox = new org.zkoss.zul.Vbox();
 		ZKUpdateUtil.setWidth(southBox, "100%");
 		south.appendChild(southBox);
 		south.setSplittable(false);
@@ -67,9 +78,9 @@ public class Accordion extends Borderlayout implements EventListener<Event> {
 	}
 	
 	/**
-	 * 
-	 * @param component
-	 * @param label
+	 * Add new component
+	 * @param component content of accordion tab
+	 * @param label accordion tab label
 	 */
 	public void add(Component component, String label) {
 		ToolBarButton button = new ToolBarButton();
@@ -88,7 +99,7 @@ public class Accordion extends Borderlayout implements EventListener<Event> {
 	}
 	
 	/**
-	 * 
+	 * Set label of accordion tab
 	 * @param index
 	 * @param label
 	 */
@@ -100,6 +111,7 @@ public class Accordion extends Borderlayout implements EventListener<Event> {
 		}
 	}
 
+	@Override
 	public void onEvent(Event event) throws Exception {
 		if (Events.ON_CLICK.equals(event.getName()) && event.getTarget() instanceof ToolBarButton) {			
 			ToolBarButton button = (ToolBarButton) event.getTarget();
@@ -113,7 +125,7 @@ public class Accordion extends Borderlayout implements EventListener<Event> {
 	}
 	
 	/**
-	 * 
+	 * Set selected accordion tab
 	 * @param index
 	 */
 	public void setSelectedIndex(int index) {
@@ -121,6 +133,10 @@ public class Accordion extends Borderlayout implements EventListener<Event> {
 		render(index);
 	}
 
+	/**
+	 * Render content of accordion tab
+	 * @param index
+	 */
 	private void render(int index) {
 		northBox.getChildren().clear();
 		southBox.getChildren().clear();

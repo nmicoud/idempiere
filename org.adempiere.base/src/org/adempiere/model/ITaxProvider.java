@@ -23,38 +23,131 @@ import org.compiere.model.MTaxProvider;
 import org.compiere.process.ProcessInfo;
 
 /**
- * Tax provider interface
+ * Tax calculation interface
  * @author Elaine
  *
  * @contributor Murilo H. Torquato <muriloht@devcoffee.com.br>
- *
  */
 public interface ITaxProvider {
 		
+	/**
+	 * Calculate order tax
+	 * @param provider
+	 * @param order
+	 * @return true if success, false otherwise
+	 */
 	public boolean calculateOrderTaxTotal(MTaxProvider provider, MOrder order);
 	
+	/**
+	 * Update order tax for line
+	 * @param provider
+	 * @param line
+	 * @return true if success, false otherwise
+	 */
 	public boolean updateOrderTax(MTaxProvider provider, MOrderLine line);
 
+	/**
+	 * Re-calculate order tax for line (if line tax id change)
+	 * @param provider
+	 * @param line
+	 * @param newRecord
+	 * @return true if success, false otherwise
+	 */
 	public boolean recalculateTax(MTaxProvider provider, MOrderLine line, boolean newRecord);
 
+	/**
+	 * Update order tax total
+	 * @param provider
+	 * @param line
+	 * @return true if success, false otherwise
+	 */
 	public boolean updateHeaderTax(MTaxProvider provider, MOrderLine line);
 
+	/**
+	 * Calculate invoice tax total
+	 * @param provider
+	 * @param invoice
+	 * @return true if success, false otherwise
+	 */
 	public boolean calculateInvoiceTaxTotal(MTaxProvider provider, MInvoice invoice);
 
+	/**
+	 * Update invoice tax for line
+	 * @param provider
+	 * @param line
+	 * @return true if success, false otherwise
+	 */
 	public boolean updateInvoiceTax(MTaxProvider provider, MInvoiceLine line);
 	
+	/**
+	 * Re-calculate invoice tax for line (if line tax id change)
+	 * @param provider
+	 * @param line
+	 * @param newRecord
+	 * @return true if success, false otherwise
+	 */
 	public boolean recalculateTax(MTaxProvider provider, MInvoiceLine line, boolean newRecord);
 
+	/**
+	 * Update invoice tax total
+	 * @param provider
+	 * @param line
+	 * @return true if success, false otherwise
+	 */
 	public boolean updateHeaderTax(MTaxProvider provider, MInvoiceLine line);
 
+	/**
+	 * Calculate rma tax total
+	 * @param provider
+	 * @param rma
+	 * @return true if success, false otherwise
+	 */
 	public boolean calculateRMATaxTotal(MTaxProvider provider, MRMA rma);
 	
+	/**
+	 * Update rma tax for rma line
+	 * @param provider
+	 * @param line
+	 * @return true if success, false otherwise
+	 */
 	public boolean updateRMATax(MTaxProvider provider, MRMALine line);
 
+	/**
+	 * Re-calculate rma tax for ram line (if line tax id change)
+	 * @param provider
+	 * @param line
+	 * @param newRecord
+	 * @return true if success, false otherwise
+	 */
 	public boolean recalculateTax(MTaxProvider provider, MRMALine line, boolean newRecord);
 
+	/**
+	 * Update rma header total
+	 * @param provider
+	 * @param line
+	 * @return true if success, false otherwise
+	 */
 	public boolean updateHeaderTax(MTaxProvider provider, MRMALine line);
 
+	/**
+	 * Validate connection to online tax calculation service.
+	 * @param provider
+	 * @param pi
+	 * @return error message or null
+	 * @throws Exception
+	 */
 	public String validateConnection(MTaxProvider provider, ProcessInfo pi) throws Exception;
+
+	/**
+	 * Does this provider correctly handle a tax-included price combined with a summary tax?<br/>
+	 * The native calculation (StandardTaxProvider) does not, so this combination is forbidden for it (see IDEMPIERE-6749).<br/>
+	 * A custom provider that delegates the whole tax calculation and computes this case correctly
+	 * can override this method to return true, allowing the line to be saved (see IDEMPIERE-7069).
+	 * @return true if the provider computes a tax-included summary tax correctly - false by default
+	 */
+	public default boolean isTaxIncludedSummarySupported()
+	{
+		return false;
+	}
 	
 }

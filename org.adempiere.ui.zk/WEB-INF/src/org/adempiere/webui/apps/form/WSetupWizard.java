@@ -26,6 +26,7 @@ import org.adempiere.model.MWizardProcess;
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.component.Button;
 import org.adempiere.webui.component.Checkbox;
+import org.adempiere.webui.component.FlexHlayout;
 import org.adempiere.webui.component.Label;
 import org.adempiere.webui.component.Panel;
 import org.adempiere.webui.component.Textbox;
@@ -38,6 +39,7 @@ import org.adempiere.webui.panel.IFormController;
 import org.adempiere.webui.part.WindowContainer;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ThemeManager;
+import org.adempiere.webui.util.Icon;
 import org.adempiere.webui.util.TreeUtils;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.apps.form.SetupWizard;
@@ -68,23 +70,29 @@ import org.zkoss.zul.Treecell;
 import org.zkoss.zul.Treechildren;
 import org.zkoss.zul.Treeitem;
 import org.zkoss.zul.Treerow;
-import org.zkoss.zul.Vbox;
+import org.adempiere.webui.component.FlexVlayout;
 
 /**
- * View for Setup Wizard
+ * Form for Client/Tenant Setup Wizard
  *
  * @author Carlos Ruiz
  *
  */
+@org.idempiere.ui.zk.annotation.Form(name = "org.compiere.apps.form.VSetupWizard")
 public class WSetupWizard extends SetupWizard implements IFormController, EventListener<Event>
 {
+	/** Custom form/window UI instance */
 	private CustomForm form = null;
 	
+	/** Main layout of {@link #form} */
 	private Borderlayout	mainLayout	= new Borderlayout();
+	
+	/** North of {@link #mainLayout} */
 	private Panel 			northPanel	= new Panel();
 	private Progressmeter	progressbar    = new Progressmeter();
 	private Label			progressLabel	= new Label();
-	//
+	
+	/** Workflow nodes. Child of {@link #centerBox}. */
 	private Tree			wfnodeTree;
 	private Treeitem 		prevti = null;
 	private Treeitem 		firstOpenNode = null;
@@ -93,12 +101,16 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 	private int				cntNodes = 0;
 	private int				cntSolved = 0;
 
+	/** East of {@link #mainLayout}. Info for current selected node. */
 	private Label			pretitleLabel	= new Label(Msg.getMsg(Env.getCtx(), "SetupTask"));
 	private Label			titleLabel	= new Label();
 	private Iframe			helpFrame	= new Iframe();
 	private Label			notesLabel  = new Label(Msg.getElement(Env.getCtx(), MWizardProcess.COLUMNNAME_Note));
 	private Textbox			notesField  = new Textbox();
 	
+	/** Footer of east panel of {@link #mainLayout} */
+	private FlexHlayout westdown = new FlexHlayout();
+	/** {@link #westdown} contents */	
 	private Label 			userLabel = new Label(Msg.getMsg(Env.getCtx(), "User"));
 	private WSearchEditor	userField;	
 
@@ -110,8 +122,9 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 	private Button 			bOK 		= new Button();
 	private Button 			bNext 		= new Button();
 	private Button 			bZoom 		= new Button();
+	
+	/** Child of {@link #centerBoxdown} */
 	private Button 			bExpand 	= new Button();
-
 	private Checkbox		justmine    = new Checkbox();
 	private Checkbox		showColors = new Checkbox();
 	
@@ -122,11 +135,15 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 	private boolean expandTree = false;
 	private boolean allFinished = true;
 	private boolean allPending = true;
-	private Vbox centerBox = new Vbox();
-	private Vbox centerBoxdown = new Vbox();
-	private Vbox westdown = new Vbox();
+	/** Center of {@link #mainLayout} */
+	private FlexVlayout centerBox = new FlexVlayout();
+	/** Footer of {@link #centerBox} */ 
+	private FlexHlayout centerBoxdown = new FlexHlayout();	
 	private ArrayList<Integer> openNodes = new ArrayList<Integer>();
 
+	/**
+	 * Default constructor
+	 */
 	public WSetupWizard()
 	{
 		try
@@ -138,7 +155,7 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 		{
 			log.log(Level.SEVERE, "WSetupWizard.init", ex);
 		}
-	}	//	init
+	}
 	
 	/**
 	 * 	Fill Tree Combo
@@ -148,10 +165,11 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 		form = new CustomForm()
 		{
 			/**
-			 * 
+			 * generated serial id
 			 */
 			private static final long serialVersionUID = 8563773513335140396L;
 
+			@Override
 			public void onEvent(Event event) throws Exception
 		    {
 				if (event.getName().equals(WindowContainer.ON_WINDOW_CONTAINER_SELECTION_CHANGED_EVENT)) 
@@ -202,6 +220,10 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 		}
 	}
 
+	/**
+	 * Add workflow
+	 * @param wfwizard
+	 */
 	protected void addWfEntry(MWorkflow wfwizard) {
 		allFinished = true;
 		allPending = true;
@@ -257,6 +279,11 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 
 	}
 
+	/**
+	 * Add workflow nodes
+	 * @param wfwizard
+	 * @param treeitemwf
+	 */
 	private void addNodes(MWorkflow wfwizard, Treeitem treeitemwf) {
 		MWFNode[] nodes = wfwizard.getNodes(true, Env.getAD_Client_ID(Env.getCtx()));
 		for (MWFNode node : nodes) {
@@ -264,6 +291,11 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 		}
 	}
 
+	/**
+	 * Add workflow node
+	 * @param node
+	 * @param treeitemwf
+	 */
 	private void addWfNode(MWFNode node, Treeitem treeitemwf) {
 		if (MWFNode.ACTION_UserWindow.equals(node.getAction()) && node.getAD_Window_ID() > 0) {
 			if (MRole.getDefault().getWindowAccess(node.getAD_Window_ID()) == null)
@@ -343,7 +375,7 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 	}
 
 	/**
-	 * 	Static init
+	 * 	Layout {@link #form}
 	 *	@throws Exception
 	 */
 	private void jbInit () throws Exception
@@ -357,28 +389,28 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 		mainLayout.setStyle("position: absolute");
 
 		if (ThemeManager.isUseFontIconForImage())
-			bRefresh.setIconSclass("z-icon-Refresh");
+			bRefresh.setIconSclass(Icon.getIconSclass(Icon.REFRESH));
 		else
 			bRefresh.setImage(ThemeManager.getThemeResource("images/Refresh16.png"));
 		bRefresh.setTooltiptext(Msg.getCleanMsg(Env.getCtx(), "Refresh"));
 		bRefresh.addEventListener(Events.ON_CLICK, this);
 
 		if (ThemeManager.isUseFontIconForImage())
-			bOK.setIconSclass("z-icon-Ok");
+			bOK.setIconSclass(Icon.getIconSclass(Icon.OK));
 		else
 			bOK.setImage(ThemeManager.getThemeResource("images/Ok16.png"));
 		bOK.setTooltiptext(Msg.getCleanMsg(Env.getCtx(), "Update"));
 		bOK.addEventListener(Events.ON_CLICK, this);
 
 		if (ThemeManager.isUseFontIconForImage())
-			bNext.setIconSclass("z-icon-Next");
+			bNext.setIconSclass(Icon.getIconSclass(Icon.NEXT));
 		else
 			bNext.setImage(ThemeManager.getThemeResource("images/Next16.png"));
 		bNext.setTooltiptext(Msg.getCleanMsg(Env.getCtx(), "Next"));
 		bNext.addEventListener(Events.ON_CLICK, this);
 		
 		if (ThemeManager.isUseFontIconForImage())
-			bZoom.setIconSclass("z-icon-Zoom");
+			bZoom.setIconSclass(Icon.getIconSclass(Icon.ZOOM));
 		else
 			bZoom.setImage(ThemeManager.getThemeResource("images/Zoom16.png"));
 		bZoom.setTooltiptext(Msg.getCleanMsg(Env.getCtx(), "Zoom"));
@@ -425,9 +457,8 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 		ZKUpdateUtil.setWidth(centerBox, "100%");
 		ZKUpdateUtil.setVflex(wfnodeTree, "1");
 		centerBox.appendChild(centerBoxdown);
-		centerBoxdown.setOrient("horizontal");
-		centerBoxdown.setAlign("center");
-		centerBoxdown.setPack("start");
+		centerBoxdown.setAlign(FlexHlayout.AlignType.CENTER);
+		centerBoxdown.setPack(FlexHlayout.PackType.START);
 		centerBoxdown.appendChild(bExpand);
 		centerBoxdown.appendChild(justmine);
 		centerBoxdown.appendChild(showColors);
@@ -463,9 +494,8 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 		userField = new WSearchEditor(lookup, Msg.translate(
                 Env.getCtx(), "AD_User_ID"), "", false, false, true);
 
-		westdown.setOrient("horizontal");
-		westdown.setAlign("center");
-		westdown.setPack("center");
+		westdown.setAlign(FlexHlayout.AlignType.CENTER);
+		westdown.setPack(FlexHlayout.PackType.CENTER);
 		westdown.appendChild(bZoomLabel);
 		westdown.appendChild(bZoom);
 		westdown.appendChild(userLabel);
@@ -505,6 +535,9 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 		}
 	}	//	jbInit
 
+	/**
+	 * Update {@link #progressbar}
+	 */
 	private void refreshProgress() {
 		int percent = cntSolved * 100;
 		if (cntNodes > 0)
@@ -519,7 +552,7 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 	}
 
 	/**
-	 * 	Dispose
+	 * Close form
 	 */
 	public void dispose()
 	{
@@ -527,9 +560,10 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 	}	//	dispose
 
 	/**
-	 * 	Action Listener
+	 * 	Event Listener
 	 *	@param e event
 	 */
+	@Override
 	public void onEvent (Event e)
 	{
 		if (e.getTarget() == wfnodeTree) {
@@ -556,8 +590,11 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 			showColors();
 		}
 	
-	}	//	actionPerformed
+	}
 
+	/**
+	 * Update colors of tree nodes.
+	 */
 	private void showColors() {
 		if (showColors.isChecked())
 		{
@@ -567,6 +604,9 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 		repaintTree();
 	}
 
+	/**
+	 * Filter tree nodes by login user or show all (by {@link #justmine} value).
+	 */
 	private void justMine() {
 		if (justmine.isChecked()) {
 			showChildren(false);
@@ -575,6 +615,10 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 		}
 	}
 
+	/**
+	 * Filter tree nodes by login user.
+	 * @param showmine true to filter by login user, false to show all.
+	 */
 	private void showChildren(boolean showmine) {
 		int user = Env.getAD_User_ID(Env.getCtx());
 		for (Treeitem nextItem : nextItems){
@@ -589,6 +633,9 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 		
 	}
 
+	/**
+	 * Expand or collapse all tree nodes.
+	 */
 	private void expandTree() {
 		if(!expandTree){
 			TreeUtils.expandAll(wfnodeTree);
@@ -600,6 +647,9 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 		
 	}
 
+	/**
+	 * Zoom to window, form or info window of current node.
+	 */
 	private void zoom() {
 		if (m_node != null) {
 			if (MWFNode.ACTION_UserWindow.equals(m_node.getAction())) {
@@ -615,6 +665,9 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 		}
 	}
 
+	/**
+	 * Repaint {@link #wfnodeTree}.
+	 */
 	private void repaintTree() {
 		openNodes.removeAll(openNodes);
 		for (Treeitem nextItem : nextItems) {
@@ -628,6 +681,9 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 		refreshProgress();
 	}
 	
+	/**
+	 * Navigate to next node.
+	 */
 	private void navigateToNext() {
 		boolean repaint = false;
 		if (m_node != null) {
@@ -661,6 +717,10 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 		showItem(ti);
 	}	//	propertyChange
 
+	/**
+	 * Update UI for tree item.
+	 * @param ti
+	 */
 	private void showItem(Treeitem ti) {
 		if (ti == null)
 			return;
@@ -680,6 +740,11 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 		}
 	}
 
+	/**
+	 * Update right panel (east) UI.
+	 * @param ad_workflow_id
+	 * @param ad_wf_node_id
+	 */
 	private void showInRightPanel(int ad_workflow_id, int ad_wf_node_id) {
 		String title = null;
 		String help = null;
@@ -711,6 +776,10 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 		helpFrame.invalidate();
 	}
 
+	/**
+	 * Set visibility of components in notes panel (top part of east panel)
+	 * @param visible
+	 */
 	private void setNotesPanelVisible(boolean visible) {
 		notesLabel.setVisible(visible);
 		notesField.setVisible(visible);
@@ -723,9 +792,9 @@ public class WSetupWizard extends SetupWizard implements IFormController, EventL
 		bZoom.setVisible(visible);
 	}
 
+	@Override
 	public ADForm getForm() 
 	{
 		return form;
 	}
-
 } // WSetupWizard

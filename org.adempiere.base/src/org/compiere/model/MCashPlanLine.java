@@ -23,14 +23,14 @@ import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 
 /**
- *	Cash Plan model
+ *	Cash Plan Line model
  *
  *  @author Carlos Ruiz - GlobalQSS
  */
 public class MCashPlanLine extends X_C_CashPlanLine
 {
 	/**
-	 * 
+	 * generated serial id
 	 */
 	private static final long serialVersionUID = -5535407146793681944L;
 
@@ -38,7 +38,17 @@ public class MCashPlanLine extends X_C_CashPlanLine
 	@SuppressWarnings("unused")
 	private static CLogger s_log = CLogger.getCLogger(MCashPlanLine.class);
 
-	/**************************************************************************
+    /**
+     * UUID based Constructor
+     * @param ctx  Context
+     * @param C_CashPlanLine_UU  UUID key
+     * @param trxName Transaction
+     */
+    public MCashPlanLine(Properties ctx, String C_CashPlanLine_UU, String trxName) {
+        super(ctx, C_CashPlanLine_UU, trxName);
+    }
+
+	/**
 	 * 	Standard Constructor
 	 *	@param ctx context
 	 *	@param C_CashPlanLine_ID id
@@ -47,17 +57,6 @@ public class MCashPlanLine extends X_C_CashPlanLine
 	public MCashPlanLine (Properties ctx, int C_CashPlanLine_ID, String trxName)
 	{
 	      super (ctx, C_CashPlanLine_ID, trxName);
-	      /** if (C_CashPlanLine_ID == 0)
-	        {
-				setC_CashPlan_ID (0);
-				setC_CashPlanLine_ID (0);
-				setDateTrx (new Timestamp(System.currentTimeMillis()));
-				setLine (0);
-	// @SQL=SELECT NVL(MAX(Line),0)+10 AS DefaultValue FROM C_CashPlanLine WHERE C_CashPlanLine_ID=@C_CashPlanLine_ID@
-				setProcessed (false);
-				setQtyEntered (Env.ZERO);
-	// 1
-	        } */
 	}	//	MCashPlanLine
 
 	/**
@@ -71,18 +70,14 @@ public class MCashPlanLine extends X_C_CashPlanLine
 		super(ctx, rs, trxName);
 	}	//	MCashPlanLine
 
-	/**************************************************************************
-	 * 	Before Save
-	 *	@param newRecord
-	 *	@return true if it can be sabed
-	 */
+	@Override
 	protected boolean beforeSave (boolean newRecord)
 	{
-		//	Charge
+		// Reset M_Product_ID to 0 if this is a Charge line
 		if (getC_Charge_ID() != 0 && getM_Product_ID() != 0)
 			setM_Product_ID(0);
 		
-		//	Get Line No
+		// Set Line No
 		if (getLine() == 0)
 		{
 			String sql = "SELECT COALESCE(MAX(Line),0)+10 FROM C_CashPlanLine WHERE C_CashPlan_ID=?";
@@ -93,12 +88,7 @@ public class MCashPlanLine extends X_C_CashPlanLine
 		return true;
 	}	//	beforeSave
 
-	/**
-	 * 	After Save
-	 *	@param newRecord new
-	 *	@param success success
-	 *	@return saved
-	 */
+	@Override
 	protected boolean afterSave (boolean newRecord, boolean success)
 	{
 		if (!success)
@@ -107,7 +97,7 @@ public class MCashPlanLine extends X_C_CashPlanLine
 	}	//	afterSave
 
 	/**
-	 *	Update Header
+	 *	Update Header (C_CashPlan)
 	 *	@return true if header updated
 	 */
 	protected boolean updateHeader()

@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for A_Asset_Reval_Entry
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_A_Asset_Reval_Entry 
 {
@@ -40,6 +40,27 @@ public interface I_A_Asset_Reval_Entry
     BigDecimal accessLevel = BigDecimal.valueOf(7);
 
     /** Load Meta Data */
+
+    /** Column name AD_Client_ID */
+    public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
+
+	/** Get Tenant.
+	  * Tenant for this installation.
+	  */
+	public int getAD_Client_ID();
+
+    /** Column name AD_Org_ID */
+    public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
+
+	/** Set Organization.
+	  * Organizational entity within tenant
+	  */
+	public void setAD_Org_ID (int AD_Org_ID);
+
+	/** Get Organization.
+	  * Organizational entity within tenant
+	  */
+	public int getAD_Org_ID();
 
     /** Column name A_Asset_Reval_Entry_ID */
     public static final String COLUMNNAME_A_Asset_Reval_Entry_ID = "A_Asset_Reval_Entry_ID";
@@ -59,27 +80,6 @@ public interface I_A_Asset_Reval_Entry
 	/** Get A_Asset_Reval_Entry_UU	  */
 	public String getA_Asset_Reval_Entry_UU();
 
-    /** Column name AD_Client_ID */
-    public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
-
-	/** Get Client.
-	  * Client/Tenant for this installation.
-	  */
-	public int getAD_Client_ID();
-
-    /** Column name AD_Org_ID */
-    public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
-
-	/** Set Organization.
-	  * Organizational entity within client
-	  */
-	public void setAD_Org_ID (int AD_Org_ID);
-
-	/** Get Organization.
-	  * Organizational entity within client
-	  */
-	public int getAD_Org_ID();
-
     /** Column name A_Effective_Date */
     public static final String COLUMNNAME_A_Effective_Date = "A_Effective_Date";
 
@@ -88,6 +88,15 @@ public interface I_A_Asset_Reval_Entry
 
 	/** Get Effective Date	  */
 	public Timestamp getA_Effective_Date();
+
+    /** Column name A_Rev_Code */
+    public static final String COLUMNNAME_A_Rev_Code = "A_Rev_Code";
+
+	/** Set Rev. Code	  */
+	public void setA_Rev_Code (String A_Rev_Code);
+
+	/** Get Rev. Code	  */
+	public String getA_Rev_Code();
 
     /** Column name A_Reval_Cal_Method */
     public static final String COLUMNNAME_A_Reval_Cal_Method = "A_Reval_Cal_Method";
@@ -116,15 +125,6 @@ public interface I_A_Asset_Reval_Entry
 	/** Get Reval. Multiplier	  */
 	public String getA_Reval_Multiplier();
 
-    /** Column name A_Rev_Code */
-    public static final String COLUMNNAME_A_Rev_Code = "A_Rev_Code";
-
-	/** Set Rev. Code	  */
-	public void setA_Rev_Code (String A_Rev_Code);
-
-	/** Get Rev. Code	  */
-	public String getA_Rev_Code();
-
     /** Column name C_AcctSchema_ID */
     public static final String COLUMNNAME_C_AcctSchema_ID = "C_AcctSchema_ID";
 
@@ -138,6 +138,7 @@ public interface I_A_Asset_Reval_Entry
 	  */
 	public int getC_AcctSchema_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_AcctSchema getC_AcctSchema() throws RuntimeException;
 
     /** Column name C_Currency_ID */
@@ -153,6 +154,7 @@ public interface I_A_Asset_Reval_Entry
 	  */
 	public int getC_Currency_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_Currency getC_Currency() throws RuntimeException;
 
     /** Column name C_DocType_ID */
@@ -168,6 +170,7 @@ public interface I_A_Asset_Reval_Entry
 	  */
 	public int getC_DocType_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_DocType getC_DocType() throws RuntimeException;
 
     /** Column name C_Period_ID */
@@ -183,6 +186,7 @@ public interface I_A_Asset_Reval_Entry
 	  */
 	public int getC_Period_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_Period getC_Period() throws RuntimeException;
 
     /** Column name Created */
@@ -266,6 +270,7 @@ public interface I_A_Asset_Reval_Entry
 	  */
 	public int getGL_Category_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_GL_Category getGL_Category() throws RuntimeException;
 
     /** Column name IsActive */
@@ -284,12 +289,12 @@ public interface I_A_Asset_Reval_Entry
     /** Column name PostingType */
     public static final String COLUMNNAME_PostingType = "PostingType";
 
-	/** Set PostingType.
+	/** Set Posting Type.
 	  * The type of posted amount for the transaction
 	  */
 	public void setPostingType (String PostingType);
 
-	/** Get PostingType.
+	/** Get Posting Type.
 	  * The type of posted amount for the transaction
 	  */
 	public String getPostingType();

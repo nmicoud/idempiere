@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_Package_Imp_Detail
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_AD_Package_Imp_Detail 
 {
@@ -41,19 +41,6 @@ public interface I_AD_Package_Imp_Detail
 
     /** Load Meta Data */
 
-    /** Column name Action */
-    public static final String COLUMNNAME_Action = "Action";
-
-	/** Set Action.
-	  * Indicates the Action to be performed
-	  */
-	public void setAction (String Action);
-
-	/** Get Action.
-	  * Indicates the Action to be performed
-	  */
-	public String getAction();
-
     /** Column name AD_Backup_ID */
     public static final String COLUMNNAME_AD_Backup_ID = "AD_Backup_ID";
 
@@ -66,8 +53,8 @@ public interface I_AD_Package_Imp_Detail
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -75,12 +62,12 @@ public interface I_AD_Package_Imp_Detail
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -111,6 +98,7 @@ public interface I_AD_Package_Imp_Detail
 	/** Get Package Imp.	  */
 	public int getAD_Package_Imp_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Package_Imp getAD_Package_Imp() throws RuntimeException;
 
     /** Column name AD_Table_ID */
@@ -126,7 +114,21 @@ public interface I_AD_Package_Imp_Detail
 	  */
 	public int getAD_Table_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Table getAD_Table() throws RuntimeException;
+
+    /** Column name Action */
+    public static final String COLUMNNAME_Action = "Action";
+
+	/** Set Action.
+	  * Indicates the Action to be performed
+	  */
+	public void setAction (String Action);
+
+	/** Get Action.
+	  * Indicates the Action to be performed
+	  */
+	public String getAction();
 
     /** Column name Created */
     public static final String COLUMNNAME_Created = "Created";
@@ -143,6 +145,15 @@ public interface I_AD_Package_Imp_Detail
 	  * User who created this records
 	  */
 	public int getCreatedBy();
+
+    /** Column name ExecCode */
+    public static final String COLUMNNAME_ExecCode = "ExecCode";
+
+	/** Set Execution Code	  */
+	public void setExecCode (String ExecCode);
+
+	/** Get Execution Code	  */
+	public String getExecCode();
 
     /** Column name IsActive */
     public static final String COLUMNNAME_IsActive = "IsActive";
@@ -182,6 +193,28 @@ public interface I_AD_Package_Imp_Detail
 	  * Direct internal record ID
 	  */
 	public int getRecord_ID();
+
+    /** Column name Record_UU */
+    public static final String COLUMNNAME_Record_UU = "Record_UU";
+
+	/** Set Record UUID	  */
+	public void setRecord_UU (String Record_UU);
+
+	/** Get Record UUID	  */
+	public String getRecord_UU();
+
+    /** Column name Result */
+    public static final String COLUMNNAME_Result = "Result";
+
+	/** Set Result.
+	  * Result of the action taken
+	  */
+	public void setResult (String Result);
+
+	/** Get Result.
+	  * Result of the action taken
+	  */
+	public String getResult();
 
     /** Column name Success */
     public static final String COLUMNNAME_Success = "Success";

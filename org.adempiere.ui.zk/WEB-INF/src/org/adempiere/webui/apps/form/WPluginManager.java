@@ -35,7 +35,9 @@ import org.adempiere.webui.component.Button;
 import org.adempiere.webui.component.ListModelTable;
 import org.adempiere.webui.component.Listbox;
 import org.adempiere.webui.component.ListboxFactory;
+import org.adempiere.webui.component.Textbox;
 import org.adempiere.webui.component.WListbox;
+import org.adempiere.webui.factory.ButtonFactory;
 import org.adempiere.webui.panel.ADForm;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.minigrid.IDColumn;
@@ -43,6 +45,7 @@ import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
+import org.compiere.util.Util;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
@@ -51,8 +54,9 @@ import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.Div;
+import org.zkoss.zul.Hlayout;
 import org.zkoss.zul.Listitem;
-import org.zkoss.zul.Vbox;
+import org.adempiere.webui.component.FlexVlayout;
 
 /**
  * A Custom Form to manage plugins in iDempiere
@@ -60,20 +64,29 @@ import org.zkoss.zul.Vbox;
  * @author Carlos Ruiz - globalqss - bxservice
  *
  */
+@org.idempiere.ui.zk.annotation.Form
 public class WPluginManager extends ADForm implements EventListener<Event> {
 	/**
-	 * 
+	 * generated serial id
 	 */
-	private static final long serialVersionUID = -2038792517003449189L;
+	private static final long serialVersionUID = -5661912464378243252L;
 
 	/** Log. */
 	private static final CLogger log = CLogger.getCLogger(WPluginManager.class);
 
+	/** Center of form */
 	private WListbox pluginsTable;
+	/** Available actions for plugins */
 	private Listbox pluginActions;
+	/** Button to apply {@link #pluginActions} to bundle */
 	private Button pluginProcess;
+	/** Data for {@link #pluginsTable} */
 	private Vector<Vector<Object>> pluginData;
+	/** Column headers of {@link #pluginsTable} */
 	private Vector<String> pluginColumnNames;
+	/** filter by bundle symbolic name (using contains) */
+	private Textbox fFilter = new Textbox();
+	private Button btnRefresh = null;
 
 	private static final int PLUGIN_ACTION_NONE = 0;
 	private static final int PLUGIN_ACTION_STOP = 1;
@@ -92,9 +105,20 @@ public class WPluginManager extends ADForm implements EventListener<Event> {
 	@Override
 	protected void initForm() {
 		Properties ctx = Env.getCtx();
-		Vbox vbox = new Vbox();
+		FlexVlayout vbox = new FlexVlayout();
 		ZKUpdateUtil.setHflex(vbox, "1");
 		ZKUpdateUtil.setVflex(vbox, "1");
+
+		fFilter.setPlaceholder(Msg.getMsg(ctx, "filter.by"));
+		fFilter.addEventListener(Events.ON_CHANGE, this);
+		btnRefresh = ButtonFactory.createNamedButton("Refresh");
+		btnRefresh.addEventListener(Events.ON_CLICK, this);
+
+		Hlayout hl = new Hlayout();
+		hl.setValign("middle");
+		hl.appendChild(fFilter);
+		hl.appendChild(btnRefresh);
+		vbox.appendChild(hl);
 
 		pluginColumnNames = new Vector<String>();
 		pluginColumnNames.add("");
@@ -115,7 +139,6 @@ public class WPluginManager extends ADForm implements EventListener<Event> {
 		ZKUpdateUtil.setVflex(pluginsTable, "1");
 		ZKUpdateUtil.setHflex(pluginsTable, "1");
 		refreshPluginTable();
-		pluginsTable.autoSize();
 		pluginsTable.addEventListener(Events.ON_SELECT, this);
 
 		pluginActions = new Listbox(new KeyNamePair[] { new KeyNamePair(PLUGIN_ACTION_NONE, ""),
@@ -140,6 +163,10 @@ public class WPluginManager extends ADForm implements EventListener<Event> {
 		this.appendChild(vbox);
 	}
 
+	/**
+	 * @param state
+	 * @return Text for bundle state
+	 */
 	private String state(int state) {
 		switch (state) {
 		case Bundle.ACTIVE:
@@ -159,6 +186,9 @@ public class WPluginManager extends ADForm implements EventListener<Event> {
 		}
 	}
 
+	/**
+	 * Refresh {@link #pluginActions}
+	 */
 	private void refreshActionList() {
 		pluginActions.getItemAtIndex(PLUGIN_ACTION_UPDATE).setVisible(false); // not implemented yet
 		pluginActions.getItemAtIndex(PLUGIN_ACTION_UNINSTALL).setVisible(false); // not implemented yet
@@ -203,6 +233,9 @@ public class WPluginManager extends ADForm implements EventListener<Event> {
 		}
 	}
 
+	/**
+	 * @return selected @link {@link Bundle}
+	 */
 	private Bundle getSelectedBundle() {
 		Bundle retValue = null;
 		int idx = pluginsTable.getSelectedIndex();
@@ -215,6 +248,9 @@ public class WPluginManager extends ADForm implements EventListener<Event> {
 		return retValue;
 	}
 
+	/**
+	 * Apply selected {@link #pluginActions} to selected {@link Bundle} (from selected {@link #pluginsTable} row).
+	 */
 	private void processPlugin() {
 		Listitem actionItem = pluginActions.getSelectedItem();
 		if (actionItem != null && actionItem.getValue() instanceof Integer) {
@@ -244,10 +280,13 @@ public class WPluginManager extends ADForm implements EventListener<Event> {
 				// PLUGIN_ACTION_INSTALL not implemented yet
 			}
 		}
-		refreshPluginTable();
-		refreshActionList();
+		refreshAll();
 	}
 
+	/**
+	 * Refresh {@link #pluginsTable}.
+	 * Bundle list is loaded from {@link BundleContext#getBundles()}.
+	 */
 	private void refreshPluginTable() {
 		int idx = pluginsTable.getSelectedIndex();
 		pluginsTable.getModel().removeAll(pluginData);
@@ -255,6 +294,10 @@ public class WPluginManager extends ADForm implements EventListener<Event> {
 
 		BundleContext bundleCtx = WebUIActivator.getBundleContext();
 		for (Bundle bundle : bundleCtx.getBundles()) {
+
+			if (!Util.isEmpty(fFilter.getValue()) && !bundle.getSymbolicName().toUpperCase().contains(fFilter.getValue().toUpperCase()))
+				continue;
+
 			Vector<Object> line = new Vector<Object>();
 			Integer bundl = Long.valueOf(bundle.getBundleId()).intValue(); // potential problem converting Long to
 			// Integer, but WListBox cannot order Long
@@ -270,11 +313,27 @@ public class WPluginManager extends ADForm implements EventListener<Event> {
 		pluginsTable.setSelectedIndex(idx);
 	}
 
+	/**
+	 * Call {@link #refreshPluginTable()} and {@link #refreshActionList()}.
+	 */
+	private void refreshAll() {
+		refreshPluginTable();
+		refreshActionList();
+	}
+
+	@Override
 	public void onEvent(Event event) throws Exception {
+		super.onEvent(event);
+
 		if (Events.ON_SELECT.equals(event.getName()) && event.getTarget() == pluginsTable)
 			refreshActionList();
 		else if (Events.ON_CLICK.equals(event.getName()) && event.getTarget() == pluginProcess)
 			processPlugin();
+		else if (Events.ON_CLICK.equals(event.getName()) && event.getTarget() == btnRefresh)
+			refreshAll();
+		else if (Events.ON_CHANGE.equals(event.getName()) && event.getTarget() == fFilter) {
+			pluginsTable.setSelectedIndex(-1);
+			refreshAll();
+		}
 	}
-
 }

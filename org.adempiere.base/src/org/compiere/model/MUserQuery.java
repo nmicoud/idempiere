@@ -19,13 +19,14 @@ package org.compiere.model;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Properties;
 import java.util.logging.Level;
 
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
-
 
 /**
  *	User Query Model
@@ -36,9 +37,9 @@ import org.compiere.util.Env;
 public class MUserQuery extends X_AD_UserQuery
 {
 	/**
-	 * 
+	 * generated serial id
 	 */
-	private static final long serialVersionUID = 488522350853249825L;
+	private static final long serialVersionUID = -7615897105314639570L;
 
 	/**
 	 * 	Get all active queries of client for Tab
@@ -52,13 +53,21 @@ public class MUserQuery extends X_AD_UserQuery
 		list.addAll(getAllUsersQueries(ctx, AD_Tab_ID));
 		list.addAll(getClientQueries(ctx, AD_Tab_ID));
 		list.addAll(getRoleQueries(ctx, AD_Tab_ID));
+
+		Collections.sort(list, new Comparator<MUserQuery>() {
+			@Override
+			public int compare(MUserQuery uq1, MUserQuery uq2) {
+				return uq1.getName().compareTo(uq2.getName());
+			}
+		});
+
 		MUserQuery[] retValue = new MUserQuery[list.size()];
 		list.toArray(retValue);
 		return retValue;
 	}	//	get
 	
 	/**
-	 * 	Get all active queries of user for Tab
+	 * 	Get all active user only queries for Tab
 	 *	@param ctx context
 	 *	@param AD_Tab_ID tab
 	 *	@return array of queries
@@ -97,7 +106,7 @@ public class MUserQuery extends X_AD_UserQuery
 	}	//	getUserOnlyQueries
 	
 	/**
-	 * 	Get all active queries of the system for Tab
+	 * 	Get all active queries of system tenant for Tab
 	 *	@param ctx context
 	 *	@param AD_Tab_ID tab
 	 *	@return array of queries
@@ -132,7 +141,7 @@ public class MUserQuery extends X_AD_UserQuery
 	}	//	getAllUsersQueries
 	
 	/**
-	 * 	Get all active queries of the client for Tab
+	 * 	Get all active client only queries for Tab
 	 *	@param ctx context
 	 *	@param AD_Tab_ID tab
 	 *	@return array of queries
@@ -169,7 +178,7 @@ public class MUserQuery extends X_AD_UserQuery
 	}	//	getClientQueries
 	
 	/**
-	 * 	Get all active queries of the role for Tab
+	 * 	Get all active role only queries for Tab
 	 *	@param ctx context
 	 *	@param AD_Tab_ID tab
 	 *	@return array of queries
@@ -210,10 +219,10 @@ public class MUserQuery extends X_AD_UserQuery
 	}	//	getRoleQueries
 	
 	/**
-	 * 	Get Specific Tab Query
+	 * 	Get Specific Tab Query via name (use case insensitive like matching).
 	 *	@param ctx context
 	 *	@param AD_Tab_ID tab
-	 *	@param name name
+	 *	@param name query name
 	 *	@return query or null
 	 */
 	public static MUserQuery get (Properties ctx, int AD_Tab_ID, String name)
@@ -252,11 +261,11 @@ public class MUserQuery extends X_AD_UserQuery
 	}	//	get
 	
 	/**
-	 * 	Get Specific Tab Query 
-	 *  Private or globall
+	 * 	Get Tab Query via name (use case insensitive like matching). 
+	 *  Private or global.
 	 *	@param ctx context
 	 *	@param AD_Tab_ID tab
-	 *	@param name name
+	 *	@param name query name
 	 *	@return query or null
 	 */
 	public static MUserQuery getUserQueryByName(Properties ctx, int AD_Tab_ID, String name)
@@ -274,7 +283,17 @@ public class MUserQuery extends X_AD_UserQuery
 	/**	Logger	*/
 	private static CLogger s_log = CLogger.getCLogger (MUserQuery.class);
 	
-	/**************************************************************************
+    /**
+     * UUID based Constructor
+     * @param ctx  Context
+     * @param AD_UserQuery_UU  UUID key
+     * @param trxName Transaction
+     */
+    public MUserQuery(Properties ctx, String AD_UserQuery_UU, String trxName) {
+        super(ctx, AD_UserQuery_UU, trxName);
+    }
+
+	/**
 	 * 	Standard Constructor
 	 *	@param ctx context
 	 *	@param AD_UserQuery_ID id
@@ -299,6 +318,7 @@ public class MUserQuery extends X_AD_UserQuery
 	@Override
 	protected boolean beforeSave(boolean newRecord) {
 		if (getAD_Tab_ID() > 0) {
+			// Set AD_Window_ID and AD_Table_ID from AD_Tab_ID
 			if (newRecord || is_ValueChanged(COLUMNNAME_AD_Tab_ID)) {
 				MTab tab = new MTab(getCtx(), getAD_Tab_ID(), get_TrxName());
 				setAD_Window_ID(tab.getAD_Window_ID());
@@ -311,8 +331,8 @@ public class MUserQuery extends X_AD_UserQuery
 	}
 	
 	/**
-	 * Returns true if the current user can save the query privately
-	 * @return
+	 * Can user save this query record.
+	 * @return true if the current user can save the query privately and is not a SQL Query
 	 */
 	public boolean userCanSave() {
 		if (getAD_Client_ID() != Env.getAD_Client_ID(Env.getCtx()) || //Cannot modify a query from another client (e.g. System) 
@@ -320,34 +340,42 @@ public class MUserQuery extends X_AD_UserQuery
 				get_Value(COLUMNNAME_AD_User_ID) == null) //Cannot save privately (user-specific) an already existing global query
 			return false;
 
-		return true;
+		return !getCode().startsWith(MColumn.VIRTUAL_UI_COLUMN_PREFIX);
 	}
 	
 	/**
-	 * Returns true if the current users has permission
-	 * to share or modify the query globally
-	 * @return
+	 * Can use share this query record.
+	 * @return true if the current users has permission to share or modify the query globally and is not a SQL Query
 	 */
 	public boolean userCanShare() {
 		if (!MRole.PREFERENCETYPE_Client.equals(MRole.getDefault().getPreferenceType()) || //Share button only works for roles with preference level = Client
         		getAD_Client_ID() != Env.getAD_Client_ID(Env.getCtx())) //Cannot modify a query from another client (e.g. System) 
 			return false;
 
-		return true;
+		return !getCode().startsWith(MColumn.VIRTUAL_UI_COLUMN_PREFIX);
 	}
-
-	/** Set User/Contact.
-        @param AD_User_ID
-        User within the system - Internal or Business Partner Contact
-        Overridden to allow saving System record (zero ID)
+	
+	/**
+	 * Retrieves the default user query for the specified window, tab, and user.
+	 *
+	 * <p>This method constructs a query to fetch the default user query for the current user
+	 * based on the `AD_Window_ID`, `AD_Tab_ID`, and `AD_User_ID`. It ensures that only active records
+	 * are considered and filters the results by the current client.</p>
+	 *
+	 * @return The default `MUserQuery` object for the specified window, tab, and user, or `null` if no match is found.
 	 */
-	@Override
-	public void setAD_User_ID (int AD_User_ID)
-	{
-		if (AD_User_ID == 0) 
-			set_ValueNoCheck (COLUMNNAME_AD_User_ID, AD_User_ID);
-		else 
-			super.setAD_User_ID(AD_User_ID);
-	} //setAD_User_ID
+	public MUserQuery getDefaultQueryForUserAndTab() {
+		String whereClause = "AD_Window_ID=? AND AD_Tab_ID=? AND AD_User_ID=? "
+				+ "AND AD_UserQuery_ID !=? AND IsDefault=?";		
+		return new Query(Env.getCtx(), Table_Name, whereClause,null)
+				.setParameters(getAD_Window_ID(), getAD_Tab_ID(), Env.getAD_User_ID(Env.getCtx()), getAD_UserQuery_ID(), true)
+				.setClient_ID()
+				.setOnlyActiveRecords(true)
+				.first();
+	}	//	getDefaultQueriesForUserAndTab
+	
+	public boolean isShared() {
+		return getAD_User_ID() <= 0;
+	} // isShared
 
 }	//	MUserQuery

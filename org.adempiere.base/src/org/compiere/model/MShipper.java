@@ -22,7 +22,6 @@ import java.util.Properties;
 
 import org.compiere.util.Env;
 
-
 /**
  *	Shipper Model
  *	
@@ -32,10 +31,19 @@ import org.compiere.util.Env;
 public class MShipper extends X_M_Shipper
 {
 	/**
-	 * 
+	 * generated serial id 
 	 */
 	private static final long serialVersionUID = -4026295839866634739L;
 
+    /**
+     * UUID based Constructor
+     * @param ctx  Context
+     * @param M_Shipper_UU  UUID key
+     * @param trxName Transaction
+     */
+    public MShipper(Properties ctx, String M_Shipper_UU, String trxName) {
+        super(ctx, M_Shipper_UU, trxName);
+    }
 
 	/**
 	 * 	Standard Constructor
@@ -59,12 +67,11 @@ public class MShipper extends X_M_Shipper
 		super(ctx, rs, trxName);
 	}	//	MShipper
 	
-
 	/**
 	 * @param ctx
 	 * @param FreightCategory_ID
 	 * @param trxName
-	 * @return      A list of shippers having the given freight category
+	 * @return list of shippers having the given freight category
 	 */
 	public static List<MShipper> getShippersForFreightCategory(Properties ctx, int FreightCategory_ID, String trxName) {
 		Query q = new Query(ctx, I_M_Shipper.Table_Name,
@@ -75,29 +82,49 @@ public class MShipper extends X_M_Shipper
 		return(result);
 	}
 	
+	/**
+	 * @return shipping service code
+	 */
 	public String getShippingServiceCode()
 	{
-		return getM_ShipperCfg().getShippingServiceCode();
+		MShipperCfg cfg = new MShipperCfg(getCtx(), getM_ShipperCfg_ID(), get_TrxName());
+		return cfg.getShippingServiceCode();
 	}
 	
+	/**
+	 * @return true if this shipper support international shipping
+	 */
 	public boolean isInternational()
 	{
-		return getM_ShipperCfg().isInternational();
+		MShipperCfg cfg = new MShipperCfg(getCtx(), getM_ShipperCfg_ID(), get_TrxName());
+		return cfg.isInternational();
 	}
 
+	/**
+	 * @return true if this shipper support residential shipping
+	 */
 	public boolean isResidential()
 	{
-		return getM_ShipperCfg().isResidential();
+		MShipperCfg cfg = new MShipperCfg(getCtx(), getM_ShipperCfg_ID(), get_TrxName());
+		return cfg.isResidential();
 	}
 	
+	/**
+	 * @return true if this shipper provide saturday delivery service
+	 */
 	public boolean isSaturdayDelivery()
 	{
-		return getM_ShipperCfg().isSaturdayDelivery();
+		MShipperCfg cfg = new MShipperCfg(getCtx(), getM_ShipperCfg_ID(), get_TrxName());
+		return cfg.isSaturdayDelivery();
 	}
 	
+	/**
+	 * @return URL for delivery tracking
+	 */
 	public String getTrackingURL()
 	{
-		return getM_ShipperCfg().getTrackingURL();
+		MShipperCfg cfg = new MShipperCfg(getCtx(), getM_ShipperCfg_ID(), get_TrxName());
+		return cfg.getTrackingURL();
 	}
 	
 }	//	MShipper

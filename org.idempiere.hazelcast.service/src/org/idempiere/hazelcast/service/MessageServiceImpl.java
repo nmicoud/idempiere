@@ -15,6 +15,9 @@ package org.idempiere.hazelcast.service;
 
 import org.idempiere.distributed.IMessageService;
 import org.idempiere.distributed.ITopic;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.condition.Condition;
 
 import com.hazelcast.core.HazelcastInstance;
 
@@ -22,7 +25,11 @@ import com.hazelcast.core.HazelcastInstance;
  * @author hengsin
  *
  */
+@Component(immediate = true, service = IMessageService.class)
 public class MessageServiceImpl implements IMessageService {
+
+	@Reference(target = "(osgi.condition.id=distributed.provider.hazelcast)")
+    Condition distributedCondition;
 
 	/**
 	 * Default constructor 
@@ -34,7 +41,7 @@ public class MessageServiceImpl implements IMessageService {
 	public <T> ITopic<T> getTopic(String name) {
 		HazelcastInstance instance = Activator.getHazelcastInstance();
 		if (instance != null) {
-			com.hazelcast.core.ITopic<T> topic = instance.getTopic(name);
+			com.hazelcast.topic.ITopic<T> topic = instance.getTopic(name);
 			return new TopicImpl<T>(topic);
 		} else {
 			return null;

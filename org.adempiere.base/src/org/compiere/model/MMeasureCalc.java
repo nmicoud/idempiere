@@ -20,6 +20,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 
@@ -27,6 +28,7 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.idempiere.cache.ImmutableIntPOCache;
 import org.idempiere.cache.ImmutablePOSupport;
+import org.idempiere.db.util.SQLFragment;
 
 /**
  * 	Performance Measure Calculation
@@ -37,9 +39,9 @@ import org.idempiere.cache.ImmutablePOSupport;
 public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 {
 	/**
-	 * 
+	 * generated serial id
 	 */
-	private static final long serialVersionUID = 3143013490477454559L;
+	private static final long serialVersionUID = -1334100963468705584L;
 
 	/**
 	 * 	Get MMeasureCalc from Cache (immutable)
@@ -76,7 +78,17 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 	private static ImmutableIntPOCache<Integer, MMeasureCalc> s_cache 
 		= new ImmutableIntPOCache<Integer, MMeasureCalc> (Table_Name, 10);
 	
-	/**************************************************************************
+    /**
+     * UUID based Constructor
+     * @param ctx  Context
+     * @param PA_MeasureCalc_UU  UUID key
+     * @param trxName Transaction
+     */
+    public MMeasureCalc(Properties ctx, String PA_MeasureCalc_UU, String trxName) {
+        super(ctx, PA_MeasureCalc_UU, trxName);
+    }
+
+	/**
 	 * 	Standard Constructor
 	 *	@param ctx context
 	 *	@param PA_MeasureCalc_ID id
@@ -99,7 +111,7 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 	}	//	MMeasureCalc
 	
 	/**
-	 * 
+	 * Copy constructor
 	 * @param copy
 	 */
 	public MMeasureCalc(MMeasureCalc copy) 
@@ -108,7 +120,7 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 	}
 
 	/**
-	 * 
+	 * Copy constructor
 	 * @param ctx
 	 * @param copy
 	 */
@@ -118,7 +130,7 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 	}
 
 	/**
-	 * 
+	 * Copy constructor
 	 * @param ctx
 	 * @param copy
 	 * @param trxName
@@ -130,16 +142,35 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 	}
 	
 	/**
-	 * 	Get Sql to return single value for the Performance Indicator
-	 *	@param restrictions array of goal restrictions
-	 *	@param MeasureScope scope of this value  
-	 *	@param MeasureDataType data type
-	 *	@param reportDate optional report date
-	 *	@param role role
-	 *	@return sql for performance indicator
+	 * Get SQL to return single value for the Performance Indicator
+	 * 
+	 * @param restrictions    array of goal restrictions
+	 * @param MeasureScope    scope of this value
+	 * @param MeasureDataType data type
+	 * @param reportDate      optional report date
+	 * @param role            role
+	 * @return sql for performance indicator
+	 * @deprecated use getSqlPIFragment
 	 */
-	public String getSqlPI (MGoalRestriction[] restrictions, 
-		String MeasureScope, String MeasureDataType, Timestamp reportDate, MRole role)
+	@Deprecated(since = "13", forRemoval = true)
+	public String getSqlPI(MGoalRestriction[] restrictions,
+			String MeasureScope, String MeasureDataType, Timestamp reportDate, MRole role) 
+	{
+		return getSqlPIFragment(restrictions, MeasureScope, MeasureDataType, reportDate, role).toSQLWithParameters();
+	}
+
+	/**
+	 * Get SQL to return single value for the Performance Indicator
+	 * 
+	 * @param restrictions    array of goal restrictions
+	 * @param MeasureScope    scope of this value
+	 * @param MeasureDataType data type
+	 * @param reportDate      optional report date
+	 * @param role            role
+	 * @return sql for performance indicator
+	 */
+	public SQLFragment getSqlPIFragment(MGoalRestriction[] restrictions,
+			String MeasureScope, String MeasureDataType, Timestamp reportDate, MRole role) 
 	{
 		StringBuilder sb = new StringBuilder(getSelectClause())
 			.append(" ")
@@ -163,30 +194,49 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 				trunc = "MM";
 			else if (MGoal.MEASUREDISPLAY_Week.equals(MeasureScope))
 				trunc = "D";
-		//	else if (MGoal.MEASUREDISPLAY_Day.equals(MeasureDisplay))
-		//		;
+
 			sb.append(" AND TRUNC(")
 				.append(getDateColumn()).append(",'").append(trunc).append("')=TRUNC(")
 				.append(DB.TO_DATE(reportDate)).append(",'").append(trunc).append("')");
 		}	//	date
 		String sql = addRestrictions(sb.toString(), restrictions, role);
+		List<Object> params = new ArrayList<>();
 		if (sql.indexOf("@") >= 0)
-			sql = Env.parseContext(getCtx(), 0, sql.toString(), false, false);
-		
-		log.fine(sql);
-		return sql;
-	}	//	getSql
-	
+			sql = Env.parseContextForSql(getCtx(), 0, sql.toString(), false, true, params);
+
+		if (log.isLoggable(Level.FINE))
+			log.fine(sql);
+		return new SQLFragment(sql, params);
+	} // getSqlPIFragment
+
 	/**
-	 * 	Get Sql to value for the bar chart
-	 *	@param restrictions array of goal restrictions
-	 *	@param MeasureDisplay scope of this value  
-	 *	@param startDate optional report start date
-	 *	@param role role
-	 *	@return sql for Bar Chart
+	 * Get SQL to retrieve value for bar chart
+	 * 
+	 * @param restrictions   array of goal restrictions
+	 * @param MeasureDisplay scope of this value
+	 * @param startDate      optional report start date
+	 * @param role           role
+	 * @return sql for Bar Chart
+	 * @deprecated use getSqlBarChartFragment instead
 	 */
-	public String getSqlBarChart (MGoalRestriction[] restrictions, 
-		String MeasureDisplay, Timestamp startDate, MRole role)
+	@Deprecated(since = "13", forRemoval = true)
+	public String getSqlBarChart(MGoalRestriction[] restrictions,
+			String MeasureDisplay, Timestamp startDate, MRole role) 
+	{
+		return getSqlBarChartFragment(restrictions, MeasureDisplay, startDate, role).toSQLWithParameters();
+	}
+
+	/**
+	 * Get SQL to retrieve value for bar chart
+	 * 
+	 * @param restrictions   array of goal restrictions
+	 * @param MeasureDisplay scope of this value
+	 * @param startDate      optional report start date
+	 * @param role           role
+	 * @return sql for Bar Chart
+	 */
+	public SQLFragment getSqlBarChartFragment(MGoalRestriction[] restrictions,
+			String MeasureDisplay, Timestamp startDate, MRole role) 
 	{
 		StringBuilder sb = new StringBuilder();
 		String dateCol = null;
@@ -203,8 +253,7 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 				trunc = "MM";
 			else if (MGoal.MEASUREDISPLAY_Week.equals(MeasureDisplay))
 				trunc = "W";
-		//	else if (MGoal.MEASUREDISPLAY_Day.equals(MeasureDisplay))
-		//		;
+
 			dateCol = "TRUNC(" + getDateColumn() + ",'" + trunc + "') ";
 			groupBy = dateCol; 
 		}
@@ -237,17 +286,19 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 		if (groupBy != null)
 			sql += " GROUP BY " + groupBy
 					+ " ORDER BY " + groupBy; // teo_sarca, [ 1665129 ] Bar Graph is not ordered
+		List<Object> params = new ArrayList<>();
 		if (sql.indexOf("@") >= 0)
-			sql = Env.parseContext(getCtx(), 0, sql, false, false);
+			sql = Env.parseContextForSql(getCtx(), 0, sql, false, true, params);
 		//
-		log.fine(sql);
-		return sql;
-	}	//	getSqlBarChart
-	
+		if (log.isLoggable(Level.FINE))
+			log.fine(sql);
+		return new SQLFragment(sql, params);
+	} // getSqlBarChartFragment
+
 	/**
 	 * 	Get Zoom Query
 	 * 	@param restrictions restrictions
-	 * 	@param MeasureDisplay display
+	 * 	@param MeasureDisplay measure display type (MGoal.MEASUREDISPLAY_*)
 	 * 	@param date date
 	 * 	@param role role
 	 *	@return query
@@ -257,6 +308,7 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 	{
 		MQuery query = new MQuery(getAD_Table_ID());
 		//
+		List<Object> params = new ArrayList<Object>();
 		StringBuilder sql = new StringBuilder("SELECT ").append(getKeyColumn()).append(" ");
 		String from = getSelectClause();
 		int index = from.indexOf("FROM ");
@@ -277,14 +329,23 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 				trunc = "MM";
 			else if (MGoal.MEASUREDISPLAY_Week.equals(MeasureDisplay))
 				trunc = "W";
-		//	else if (MGoal.MEASUREDISPLAY_Day.equals(MeasureDisplay))
-		//		trunc = "D";
+
 			sql.append(" AND TRUNC(").append(getDateColumn()).append(",'").append(trunc)
 				.append("')=TRUNC(").append(DB.TO_DATE(date)).append(",'").append(trunc).append("')");
 		}
-		String finalSQL = addRestrictions(sql.toString(), restrictions, role);
-		if (finalSQL.indexOf("@") >= 0)
-			finalSQL = Env.parseContext(getCtx(), 0, finalSQL, false, false);
+		String finalSQL = addRestrictions(sql.toString(), restrictions, role, params);
+		if (finalSQL.indexOf("@") >= 0) {
+			List<Object> ctxParams = new ArrayList<Object>();
+			String orginalSQL = finalSQL;
+			finalSQL = Env.parseContextForSql(getCtx(), 0, finalSQL, false, true, ctxParams);
+			if (!ctxParams.isEmpty())
+			{
+				if (!params.isEmpty())
+					params = Env.mergeParameters(orginalSQL, finalSQL, params.toArray(), ctxParams.toArray());
+				else
+					params.addAll(ctxParams);
+			}
+		}
 		//	Execute
 		StringBuilder where = new StringBuilder();
 		PreparedStatement pstmt = null;
@@ -292,6 +353,8 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 		try
 		{
 			pstmt = DB.prepareStatement (finalSQL, null);
+			if (!params.isEmpty())
+				DB.setParameters(pstmt, params);	
 			rs = pstmt.executeQuery ();
 			while (rs.next ())
 			{
@@ -316,13 +379,13 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 		//
 		StringBuilder whereClause = new StringBuilder (getKeyColumn())
 			.append(" IN (").append(where).append(")");
-		query.addRestriction(whereClause.toString());
+		query.addRestriction(new SQLFragment(whereClause.toString()));
 		query.setRecordCount(1);
 		return query;
 	}	//	getQuery
 	
 	/**
-	 * 	Add Restrictions
+	 * 	Add Restrictions to SQL
 	 *	@param sql existing sql
 	 *	@param restrictions restrictions
 	 *	@param role role
@@ -335,22 +398,49 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 			getTableName(), getOrgColumn(), getBPartnerColumn(), getProductColumn());
 	}	//	addRestrictions
 
-
+	private String addRestrictions(String sql, 
+			MGoalRestriction[] restrictions, MRole role, List<Object> params)
+	{
+		return addRestrictions(sql, false, restrictions, role,
+				getTableName(), getOrgColumn(), getBPartnerColumn(), getProductColumn(), params);
+	}
+	
 	/**
 	 * 	Add Restrictions to SQL
-	 *	@param sql orig sql
-	 *	@param queryOnly incomplete sql for query restriction
+	 *	@param sql existing sql
+	 *	@param queryOnly if true, don't add role access SQL clause 
 	 *	@param restrictions restrictions
 	 *	@param role role
 	 *	@param tableName table name
-	 *	@param orgColumn org column
+	 *	@param orgColumn organization column
 	 *	@param bpColumn bpartner column
 	 *	@param pColumn product column
 	 *	@return updated sql
 	 */
 	public static String addRestrictions(String sql, boolean queryOnly,
+			MGoalRestriction[] restrictions, MRole role, 
+			String tableName, String orgColumn, String bpColumn, String pColumn)
+	{
+		return addRestrictions(sql, queryOnly, restrictions, role,
+			tableName, orgColumn, bpColumn, pColumn, null);
+	}
+	
+	/**
+	 * 	Add Restrictions to SQL
+	 *	@param sql existing sql
+	 *	@param queryOnly if true, don't add role access SQL clause 
+	 *	@param restrictions restrictions
+	 *	@param role role
+	 *	@param tableName table name
+	 *	@param orgColumn organization column
+	 *	@param bpColumn bpartner column
+	 *	@param pColumn product column
+	 *  @param params parameters
+	 *	@return updated sql
+	 */
+	public static String addRestrictions(String sql, boolean queryOnly,
 		MGoalRestriction[] restrictions, MRole role, 
-		String tableName, String orgColumn, String bpColumn, String pColumn)
+		String tableName, String orgColumn, String bpColumn, String pColumn, List<Object> params)
 	{
 		StringBuilder sb = new StringBuilder(sql);
 		//	Org Restrictions
@@ -364,8 +454,17 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 				//	Hierarchy comes here
 			}
 			if (list.size() == 1)
+			{
 				sb.append(" AND ").append(orgColumn)
-					.append("=").append(list.get(0));
+					.append("=");
+				if (params != null)
+				{
+					sb.append("?");
+					params.add(list.get(0));
+				}
+				else
+					sb.append(list.get(0));
+			}
 			else if (list.size() > 1)
 			{
 				sb.append(" AND ").append(orgColumn).append(" IN (");
@@ -373,7 +472,13 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 				{
 					if (i > 0)
 						sb.append(",");
-					sb.append(list.get(i));
+					if (params != null)
+					{
+						sb.append("?");
+						params.add(list.get(i));
+					}
+					else
+						sb.append(list.get(i));
 				}
 				sb.append(")");
 			}
@@ -394,8 +499,17 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 			}
 			//	BP
 			if (listBP.size() == 1)
+			{
 				sb.append(" AND ").append(bpColumn)
-					.append("=").append(listBP.get(0));
+					.append("=");
+				if (params != null)
+				{
+					sb.append("?");
+					params.add(listBP.get(0));
+				}
+				else
+					sb.append(listBP.get(0));
+			}
 			else if (listBP.size() > 1)
 			{
 				sb.append(" AND ").append(bpColumn).append(" IN (");
@@ -403,7 +517,13 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 				{
 					if (i > 0)
 						sb.append(",");
-					sb.append(listBP.get(i));
+					if (params != null)
+					{
+						sb.append("?");
+						params.add(listBP.get(i));
+					}
+					else
+						sb.append(listBP.get(i));
 				}
 				sb.append(")");
 			}
@@ -411,10 +531,18 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 			if (bpColumn.indexOf('.') == -1)
 				bpColumn = tableName + "." + bpColumn;
 			if (listBPG.size() == 1)
+			{
 				sb.append(" AND EXISTS (SELECT * FROM C_BPartner bpx WHERE ")
 					.append(bpColumn)
-					.append("=bpx.C_BPartner_ID AND bpx.C_BP_GROUP_ID=")
-					.append(listBPG.get(0)).append(")"); 
+					.append("=bpx.C_BPartner_ID AND bpx.C_BP_GROUP_ID=");
+				if (params != null)
+				{
+					sb.append("?").append(")");
+					params.add(listBPG.get(0));
+				}
+				else
+					sb.append(listBPG.get(0)).append(")");
+			}
 			else if (listBPG.size() > 1)
 			{
 				sb.append(" AND EXISTS (SELECT * FROM C_BPartner bpx WHERE ")
@@ -424,7 +552,15 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 				{
 					if (i > 0)
 						sb.append(",");
-					sb.append(listBPG.get(i));
+					if (params != null)
+					{
+						sb.append("?");
+						params.add(listBPG.get(i));
+					}
+					else
+					{
+						sb.append(listBPG.get(i));
+					}
 				}
 				sb.append("))");
 			}
@@ -445,8 +581,17 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 			}
 			//	Product
 			if (listP.size() == 1)
+			{
 				sb.append(" AND ").append(pColumn)
-					.append("=").append(listP.get(0));
+					.append("=");
+				if (params != null)
+				{
+					sb.append("?");
+					params.add(listP.get(0));
+				}
+				else
+					sb.append(listP.get(0));
+			}
 			else if (listP.size() > 1)
 			{
 				sb.append(" AND ").append(pColumn).append(" IN (");
@@ -454,7 +599,13 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 				{
 					if (i > 0)
 						sb.append(",");
-					sb.append(listP.get(i));
+					if (params != null)
+					{
+						sb.append("?");
+						params.add(listP.get(i));
+					} 
+					else
+						sb.append(listP.get(i));
 				}
 				sb.append(")");
 			}
@@ -462,10 +613,18 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 			if (pColumn.indexOf('.') == -1)
 				pColumn = tableName + "." + pColumn;
 			if (listPC.size() == 1)
+			{
 				sb.append(" AND EXISTS (SELECT * FROM M_Product px WHERE ")
 					.append(pColumn)
-					.append("=px.M_Product_ID AND px.M_Product_Category_ID=")
-					.append(listPC.get(0)).append(")"); 
+					.append("=px.M_Product_ID AND px.M_Product_Category_ID=");
+				if (params != null)
+				{
+					sb.append("?").append(")");
+					params.add(listPC.get(0));
+				}
+				else
+					sb.append(listPC.get(0)).append(")");
+			}
 			else if (listPC.size() > 1)
 			{
 				sb.append(" AND EXISTS (SELECT * FROM M_Product px WHERE ")
@@ -475,7 +634,13 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 				{
 					if (i > 0)
 						sb.append(",");
-					sb.append(listPC.get(i));
+					if (params != null)
+					{
+						sb.append("?");
+						params.add(listPC.get(i));
+					}
+					else
+						sb.append(listPC.get(i));
 				}
 				sb.append("))");
 			}
@@ -485,7 +650,7 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 			return finalSQL;
 		if (role == null)
 			role = MRole.getDefault();
-		String retValue = role.addAccessSQL(finalSQL, tableName, true, false);
+		String retValue = role.addAccessSQL(finalSQL, null, true, false);
 		return retValue;
 	}	//	addRestrictions
 
@@ -502,6 +667,7 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 	 * 	String Representation
 	 *	@return info
 	 */
+	@Override
 	public String toString ()
 	{
 		StringBuilder sb = new StringBuilder ("MMeasureCalc[");
@@ -516,6 +682,18 @@ public class MMeasureCalc extends X_PA_MeasureCalc implements ImmutablePOSupport
 
 		makeImmutable();
 		return this;
+	}
+
+	/**
+	 * Get where clause, add WHERE keyword if where clause not started with it
+	 * @return where clause with "WHERE " keyword
+	 */
+	@Override
+	public String getWhereClause() {
+		String whereClause = super.getWhereClause();
+		if (! whereClause.matches("(?si)\\s*where\\s+.*"))
+			whereClause = "WHERE " + whereClause;
+		return whereClause;
 	}
 
 }	//	MMeasureCalc

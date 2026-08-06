@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import org.adempiere.base.IColumnCallout;
+import org.adempiere.base.annotation.Callout;
 import org.compiere.model.AccessSqlParser;
 import org.compiere.model.AccessSqlParser.TableInfo;
 import org.compiere.model.GridField;
@@ -25,6 +26,7 @@ import org.compiere.model.GridTab;
 import org.compiere.model.I_AD_InfoColumn;
 import org.compiere.model.I_AD_InfoWindow;
 import org.compiere.model.MColumn;
+import org.compiere.model.MInfoWindow;
 import org.compiere.model.MTable;
 import org.compiere.model.M_Element;
 import org.compiere.model.X_AD_InfoColumn;
@@ -32,13 +34,15 @@ import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 
 /**
+ * Callout for AD_InfoWindow and AD_InfoColumn
  * @author hengsin
- *
  */
+@Callout(tableName = "AD_InfoWindow", columnName = "AD_Table_ID")
+@Callout(tableName = "AD_InfoColumn", columnName = {"AD_Element_ID","AD_Reference_ID"})
 public class CalloutInfoWindow implements IColumnCallout {
 
 	/**
-	 * 
+	 * default constructor
 	 */
 	public CalloutInfoWindow() {
 	}
@@ -62,6 +66,12 @@ public class CalloutInfoWindow implements IColumnCallout {
 			return "";
 	}
 
+	/**
+	 * For AD_Reference_ID callout, set query operator and function of info column.
+	 * @param mTab
+	 * @param value AD_Reference_ID
+	 * @return error message or null
+	 */
 	private String reference(GridTab mTab, Object value) {
 		if (value != null) {
 			int id = ((Number)value).intValue();
@@ -73,6 +83,11 @@ public class CalloutInfoWindow implements IColumnCallout {
 		return null;
 	}
 
+	/**
+	 * Set query operator and function
+	 * @param AD_Reference_ID
+	 * @param infoColumn
+	 */
 	private void setQueryOption(int AD_Reference_ID, I_AD_InfoColumn infoColumn) {
 		if (DisplayType.isText(AD_Reference_ID)) {
 			infoColumn.setQueryOperator(X_AD_InfoColumn.QUERYOPERATOR_Like);
@@ -85,6 +100,12 @@ public class CalloutInfoWindow implements IColumnCallout {
 		}
 	}
 
+	/**
+	 * For AD_Table_ID callout, set from clause of info window.
+	 * @param mTab GridTab for AD_InfoWindow
+	 * @param value AD_Table_ID
+	 * @return error message or null
+	 */
 	private String table(GridTab mTab, Object value) {
 		if (value != null) {			
 			int id = ((Number)value).intValue();
@@ -104,6 +125,12 @@ public class CalloutInfoWindow implements IColumnCallout {
 		return null;
 	}
 
+	/**
+	 * For AD_Element_ID callout, copy element values to info column.
+	 * @param mTab
+	 * @param value
+	 * @return error message or null
+	 */
 	protected String element(GridTab mTab, Object value) {		
 		if (value != null) {			
 			int id = ((Number)value).intValue();
@@ -115,7 +142,8 @@ public class CalloutInfoWindow implements IColumnCallout {
 				infoColumn.setHelp(element.getHelp());
 				infoColumn.setName(element.getName());
 				if (infoColumn.getSelectClause() == null || infoColumn.getSelectClause().trim().length() == 0) {
-					String fromClause = infoColumn.getAD_InfoWindow().getFromClause();
+					MInfoWindow infoWindow = MInfoWindow.getInfoWindow(infoColumn.getAD_InfoWindow_ID());
+					String fromClause = infoWindow.getFromClause();
 					AccessSqlParser parser = new AccessSqlParser("SELECT * FROM " + fromClause);
 					TableInfo[] tableInfos = parser.getTableInfo(0);
 					Map<String, MTable> map = new HashMap<String, MTable>();

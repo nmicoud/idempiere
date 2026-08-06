@@ -28,9 +28,11 @@ import org.adempiere.exceptions.DBException;
 import org.compiere.model.MInvoice;
 import org.compiere.model.MPaySelection;
 import org.compiere.model.MPaySelectionLine;
+import org.compiere.model.MProcessPara;
 import org.compiere.model.X_C_Order;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
+import org.compiere.util.Util;
 
 
 /**
@@ -39,6 +41,7 @@ import org.compiere.util.Env;
  *  @author Jorg Janke
  *  @version $Id: PaySelectionCreateFrom.java,v 1.2 2006/07/30 00:51:02 jjanke Exp $
  */
+@org.adempiere.base.annotation.Process
 public class PaySelectionCreateFrom extends SvrProcess
 {
 	/**	Only When Discount			*/
@@ -61,6 +64,7 @@ public class PaySelectionCreateFrom extends SvrProcess
 	private boolean		p_OnlyPositive = false;
 	
 	private Timestamp p_DueDate = null;
+	private String p_docTypeIDs = "";
 
 	/**
 	 *  Prepare - e.g., get Parameters.
@@ -91,8 +95,10 @@ public class PaySelectionCreateFrom extends SvrProcess
 				p_DueDate = (Timestamp) para[i].getParameter();
 			else if (name.equals("PositiveBalance"))
 				p_OnlyPositive = "Y".equals(para[i].getParameter());
+			else if (name.equals("C_DocType_ID"))
+				p_docTypeIDs = para[i].getParameterAsCSVInt();
 			else
-				log.log(Level.SEVERE, "Unknown Parameter: " + name);
+				MProcessPara.validateUnknownParameter(getProcessInfo().getAD_Process_ID(), para[i]);
 		}
 		p_C_PaySelection_ID = getRecord_ID();
 	}	//	prepare
@@ -172,7 +178,6 @@ public class PaySelectionCreateFrom extends SvrProcess
 				sqlWhere.append(" OR ");
 			else
 				sqlWhere.append(" AND ");
-			// sql.append("paymentTermDueDays(C_PaymentTerm_ID, DateInvoiced, ?) >= 0");	//	##
 			sqlWhere.append("i.DueDate<=?");	//	##
 			if (p_OnlyDiscount)
 				sqlWhere.append(")");
@@ -219,16 +224,16 @@ public class PaySelectionCreateFrom extends SvrProcess
 			
 			sqlWhere.append(onlyPositiveWhere);
 		}
-	
+
+		if (!Util.isEmpty(p_docTypeIDs))
+			sqlWhere.append(" AND i.C_DocType_ID IN (").append(p_docTypeIDs).append(")");
+
 		sql.append(sqlWhere.toString());
 		//
 		int lines = 0;
-		int C_CurrencyTo_ID = psel.getC_Currency_ID();
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		try
-		{
-			pstmt = DB.prepareStatement (sql.toString(), get_TrxName());
+		int C_CurrencyTo_ID = psel.getC_Currency_ID();		
+		try (PreparedStatement pstmt = DB.prepareStatement (sql.toString(), get_TrxName());)
+		{			
 			int index = 1;
 			pstmt.setInt (index++, C_CurrencyTo_ID);
 			pstmt.setTimestamp(index++, psel.getPayDate());
@@ -267,7 +272,7 @@ public class PaySelectionCreateFrom extends SvrProcess
 					pstmt.setInt (index++, p_C_BP_Group_ID);
 			}
 			//
-			rs = pstmt.executeQuery ();
+			ResultSet rs = pstmt.executeQuery ();
 			while (rs.next ())
 			{
 				int C_Invoice_ID = rs.getInt(1);
@@ -300,12 +305,6 @@ public class PaySelectionCreateFrom extends SvrProcess
 		catch (Exception e)
 		{
 			throw new AdempiereException(e);
-		}
-		finally
-		{
-			DB.close(rs, pstmt);
-			rs = null;
-			pstmt = null;
 		}
 		StringBuilder msgreturn = new StringBuilder("@C_PaySelectionLine_ID@  - #").append(lines);
 		return msgreturn.toString();

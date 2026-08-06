@@ -15,6 +15,7 @@ package org.adempiere.impexp;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
+import java.sql.Date;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -23,18 +24,21 @@ import java.util.HashMap;
 import java.util.Properties;
 import java.util.logging.Level;
 
-import org.apache.poi.hssf.usermodel.HSSFDataFormat;
-import org.apache.poi.hssf.usermodel.HSSFHeader;
+import org.apache.commons.compress.archivers.zip.Zip64Mode;
 import org.apache.poi.ss.usermodel.BorderStyle;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DataFormat;
+import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.Footer;
 import org.apache.poi.ss.usermodel.Header;
-import org.apache.poi.xssf.usermodel.XSSFCell;
-import org.apache.poi.xssf.usermodel.XSSFCellStyle;
-import org.apache.poi.xssf.usermodel.XSSFDataFormat;
-import org.apache.poi.xssf.usermodel.XSSFFont;
-import org.apache.poi.xssf.usermodel.XSSFPrintSetup;
+import org.apache.poi.ss.usermodel.PrintSetup;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.streaming.SXSSFSheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.apache.poi.xssf.usermodel.XSSFRichTextString;
-import org.apache.poi.xssf.usermodel.XSSFRow;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.compiere.model.MSysConfig;
@@ -141,24 +145,36 @@ public abstract class AbstractXLSXExporter
 	/** Logger */
 	protected final CLogger					log				= CLogger.getCLogger(getClass());
 	//
-	private XSSFWorkbook					m_workbook;
-	private XSSFDataFormat					m_dataFormat;
-	private XSSFFont						m_fontHeader	= null;
-	private XSSFFont						m_fontDefault	= null;
-	private Language						m_lang			= null;
+	protected Workbook					m_workbook;
+	private boolean						m_isUseSXSSF;
+	private DataFormat					m_dataFormat;
+	private Font						m_fontHeader	= null;
+	private Font						m_fontDefault	= null;
+	protected Language						m_lang			= null;
 	private int								m_sheetCount	= 0;
 	//
 	private int								m_colSplit		= 1;
 	private int								m_rowSplit		= 1;
 	private boolean							currentRowOnly	= false;
 	/** Styles cache */
-	private HashMap<String, XSSFCellStyle>	m_styles		= new HashMap<String, XSSFCellStyle>();
+	private HashMap<String, CellStyle>	m_styles		= new HashMap<String, CellStyle>();
 
 	protected Boolean[]						colSuppressRepeats;
+	private int noOfParameter = 0;
 
+	/**
+	 * Default constructor
+	 */
 	public AbstractXLSXExporter()
 	{
-		m_workbook = new XSSFWorkbook();
+		m_isUseSXSSF = MSysConfig.getBooleanValue(MSysConfig.XLSX_EXPORT_USE_FAST_METHOD, true, Env.getAD_Client_ID(Env.getCtx()));
+		if (m_isUseSXSSF) {
+			m_workbook = new SXSSFWorkbook(null, SXSSFWorkbook.DEFAULT_WINDOW_SIZE, true, true);
+			((SXSSFWorkbook)m_workbook).getXSSFWorkbook().getProperties().getCoreProperties().setCreator("iDempiere");
+			((SXSSFWorkbook)m_workbook).setZip64Mode(Zip64Mode.Never);
+		} else {
+			m_workbook = new XSSFWorkbook();
+		}
 		m_dataFormat = m_workbook.createDataFormat();
 	}
 
@@ -167,18 +183,19 @@ public abstract class AbstractXLSXExporter
 		return Env.getCtx();
 	}
 
+	/**
+	 * @param colSplit column index to freeze
+	 * @param rowSplit row index to freeze
+	 */
 	protected void setFreezePane(int colSplit, int rowSplit)
 	{
 		m_colSplit = colSplit;
 		m_rowSplit = rowSplit;
 	}
 
-	private String fixString(String str)
-	{
-		// ms excel doesn't support UTF8 charset
-		return Util.stripDiacritics(str);
-	}
-
+	/**
+	 * @return Language
+	 */
 	protected Language getLanguage()
 	{
 		if (m_lang == null)
@@ -186,9 +203,13 @@ public abstract class AbstractXLSXExporter
 		return m_lang;
 	}
 
-	private XSSFFont getFont(boolean isHeader)
+	/**
+	 * @param isHeader
+	 * @return XSSFFont
+	 */
+	private Font getFont(boolean isHeader)
 	{
-		XSSFFont font = null;
+		Font font = null;
 		if (isHeader)
 		{
 			if (m_fontHeader == null)
@@ -221,7 +242,7 @@ public abstract class AbstractXLSXExporter
 	 * @param df number format
 	 * @param isHighlightNegativeNumbers highlight negative numbers using RED
 	 *            color
-	 * @return number excel format string
+	 * @return excel format pattern
 	 */
 	private String getFormatString(NumberFormat df, boolean isHighlightNegativeNumbers)
 	{
@@ -262,16 +283,20 @@ public abstract class AbstractXLSXExporter
 
 	}
 
-	private XSSFCellStyle getStyle(int row, int col)
+	/**
+	 * @param row
+	 * @param col
+	 * @return CellStyle
+	 */
+	private CellStyle getStyle(int row, int col)
 	{
 		int displayType = getDisplayType(row, col);
 		String key = "cell-" + col + "-" + displayType;
-		XSSFCellStyle cs = m_styles.get(key);
+		CellStyle cs = m_styles.get(key);
 		if (cs == null)
 		{
-			boolean isHighlightNegativeNumbers = true;
 			cs = m_workbook.createCellStyle();
-			XSSFFont font = getFont(false);
+			Font font = getFont(false);
 			cs.setFont(font);
 			// Border
 			cs.setBorderLeft(BorderStyle.THIN);
@@ -279,56 +304,110 @@ public abstract class AbstractXLSXExporter
 			cs.setBorderRight(BorderStyle.THIN);
 			cs.setBorderBottom(BorderStyle.THIN);
 			//
-			if (DisplayType.isDate(displayType))
-			{
-				cs.setDataFormat(m_dataFormat.getFormat(DisplayType.getDateFormat(getLanguage()).toPattern()));
-			}
-			else if (DisplayType.isNumeric(displayType))
-			{
-				DecimalFormat df = DisplayType.getNumberFormat(displayType, getLanguage());
-				String format = getFormatString(df, isHighlightNegativeNumbers);
-				cs.setDataFormat(m_dataFormat.getFormat(format));
-			}
+			String cellFormat = getCellFormat(row, col);
+			if (cellFormat != null)
+				cs.setDataFormat(m_dataFormat.getFormat(cellFormat));
 			m_styles.put(key, cs);
 		}
 		return cs;
 	}
 
-	private XSSFCellStyle getHeaderStyle(int col)
+	/**
+	 * @param row
+	 * @param col
+	 * @return Excel format pattern for cell
+	 */
+	protected String getCellFormat(int row, int col) {
+		boolean isHighlightNegativeNumbers = true;
+		int displayType = getDisplayType(row, col);
+		String cellFormat = null;
+		
+		if (DisplayType.isDate(displayType)) {
+			cellFormat = DisplayType.getDateFormat(getLanguage()).toPattern();
+		} else if (DisplayType.isNumeric(displayType)) {
+			DecimalFormat df = DisplayType.getNumberFormat(displayType, getLanguage());
+			cellFormat = getFormatString(df, isHighlightNegativeNumbers);
+		}
+		
+		return cellFormat;
+	}
+	
+	/**
+	 * @param col
+	 * @return XSSFCellStyle for column
+	 */
+	private CellStyle getHeaderStyle(int col)
 	{
 		String key = "header-" + col;
-		XSSFCellStyle cs_header = m_styles.get(key);
+		CellStyle cs_header = m_styles.get(key);
 		if (cs_header == null)
 		{
-			XSSFFont font_header = getFont(true);
+			Font font_header = getFont(true);
 			cs_header = m_workbook.createCellStyle();
 			cs_header.setFont(font_header);
 			cs_header.setBorderLeft(BorderStyle.MEDIUM);
 			cs_header.setBorderTop(BorderStyle.MEDIUM);
 			cs_header.setBorderRight(BorderStyle.MEDIUM);
 			cs_header.setBorderBottom(BorderStyle.MEDIUM);
-			cs_header.setDataFormat(HSSFDataFormat.getBuiltinFormat("text"));
+			cs_header.setDataFormat(m_workbook.createDataFormat().getFormat("text"));
 			cs_header.setWrapText(true);
 			m_styles.put(key, cs_header);
 		}
 		return cs_header;
 	}
 
-	private void fixColumnWidth(XSSFSheet sheet, int lastColumnIndex)
+	/**
+	 * auto size column
+	 * @param sheet
+	 * @param lastColumnIndex
+	 */
+	private void fixColumnWidth(Sheet sheet, int colCount)
 	{
-		for (short colnum = 0; colnum < lastColumnIndex; colnum++)
-		{
-			sheet.autoSizeColumn(colnum);
+		if (m_isUseSXSSF) {
+			// using streaming SXSSFWorkbook, the autoSizeColumn is not available
+			// so, we need to figure a default size depending on the display type
+			//  default here to:
+			//     10 characters for date fields
+			//     12 for numeric
+			//      5 for boolean
+			//     20 for all others
+			int colnum = 0;
+			for (int col = 0; col < getColumnCount(); col++) {				
+				if (isColumnPrinted(col)) {
+					int dt = getDisplayType(0, col);
+					int width = 20*256;
+					if (DisplayType.isDate(dt))
+						width = 10*256;
+					else if (DisplayType.isNumeric(dt))
+						width = 12*256;
+					else if (dt == DisplayType.YesNo)
+						width = 5*256;
+					sheet.setColumnWidth(colnum, width);
+					colnum++;
+				}
+			}
+		} else {
+			for (short colnum = 0; colnum < colCount; colnum++)
+			{
+				sheet.autoSizeColumn(colnum);
+			}
 		}
+
 	}
 
-	private void closeTableSheet(XSSFSheet prevSheet, String prevSheetName, int colCount)
+	/**
+	 * Update sheet setting prior to closing it
+	 * @param prevSheet
+	 * @param prevSheetName
+	 * @param colCount
+	 */
+	private void closeTableSheet(Sheet prevSheet, String prevSheetName, int colCount)
 	{
 		if (prevSheet == null)
 			return;
 		//
 		fixColumnWidth(prevSheet, colCount);
-		if (m_colSplit >= 0 || m_rowSplit >= 0)
+		if ((m_colSplit >= 0 || m_rowSplit >= 0) && !isForm())
 			prevSheet.createFreezePane(m_colSplit >= 0 ? m_colSplit : 0, m_rowSplit >= 0 ? m_rowSplit : 0);
 		if (!Util.isEmpty(prevSheetName, true) && m_sheetCount > 0)
 		{
@@ -344,22 +423,42 @@ public abstract class AbstractXLSXExporter
 		}
 	}
 
-	private XSSFSheet createTableSheet()
+	/**
+	 * Create new sheet
+	 * @return Sheet
+	 */
+	private Sheet createTableSheet()
 	{
-		XSSFSheet sheet = m_workbook.createSheet();
+		Sheet sheet = m_workbook.createSheet();
 		formatPage(sheet);
 		createHeaderFooter(sheet);
-		createTableHeader(sheet);
+		createParameter(sheet);
+		if (!isForm())
+		{
+			createTableHeader(sheet);
+		}
 		m_sheetCount++;
 		//
 		return sheet;
 	}
 
-	private void createTableHeader(XSSFSheet sheet)
+	/**
+	 * @param sheet
+	 */
+	private void createTableHeader(Sheet sheet)
+	{
+		createTableHeader(sheet, Math.max(noOfParameter, 0));
+	}
+	
+	/**
+	 * @param sheet
+	 * @param headerRowNum
+	 */
+	private void createTableHeader(Sheet sheet, int headerRowNum)
 	{
 		int colnumMax = 0;
 
-		XSSFRow row = sheet.createRow(0);
+		Row row = sheet.createRow(headerRowNum);
 		// for all columns
 		int colnum = 0;
 		for (int col = 0; col < getColumnCount(); col++)
@@ -369,22 +468,24 @@ public abstract class AbstractXLSXExporter
 			//
 			if (isColumnPrinted(col))
 			{
-				XSSFCell cell = row.createCell(colnum);
+				Cell cell = row.createCell(colnum);
 				// header row
-				XSSFCellStyle style = getHeaderStyle(col);
+				CellStyle style = getHeaderStyle(col);
 				cell.setCellStyle(style);
-				String str = fixString(getHeaderName(col));
+				String str = getHeaderName(col);
 				cell.setCellValue(new XSSFRichTextString(str));
 				colnum++;
 			} // printed
 		} // for all columns
 	}
 
-	protected void createHeaderFooter(XSSFSheet sheet)
+	protected void createHeaderFooter(Sheet sheet)
 	{
 		// Sheet Header
 		Header header = sheet.getHeader();
-		header.setRight(HSSFHeader.page() + " / " + HSSFHeader.numPages());
+		//&P == current page number
+	    //&N == page numbers
+		header.setRight("&P / &N");
 		// Sheet Footer
 		Footer footer = sheet.getFooter();
 		footer.setLeft(Env.getStandardReportFooterTrademarkText());
@@ -401,22 +502,36 @@ public abstract class AbstractXLSXExporter
 			footer.setRight(DisplayType.getDateFormat(DisplayType.DateTime, getLanguage()).format(now));
 	}
 
-	protected void formatPage(XSSFSheet sheet)
+	/**
+	 * Format sheet
+	 * @param sheet
+	 */
+	protected void formatPage(Sheet sheet)
 	{
 		sheet.setFitToPage(true);
 		// Print Setup
-		XSSFPrintSetup ps = sheet.getPrintSetup();
+		PrintSetup ps;
+		if (m_isUseSXSSF)
+			ps = ((SXSSFSheet)sheet).getPrintSetup();
+		else
+			ps = ((XSSFSheet)sheet).getPrintSetup();
 		ps.setFitWidth((short) 1);
 		ps.setNoColor(true);
-		ps.setPaperSize(XSSFPrintSetup.A4_PAPERSIZE);
+		ps.setPaperSize(PrintSetup.A4_PAPERSIZE);
 		ps.setLandscape(false);
 	}
 
+	/**
+	 * @return true if export current record only
+	 */
 	protected boolean isCurrentRowOnly()
 	{
 		return currentRowOnly;
 	}
 
+	/**
+	 * @param b
+	 */
 	protected void setCurrentRowOnly(boolean b)
 	{
 		currentRowOnly = b;
@@ -428,9 +543,19 @@ public abstract class AbstractXLSXExporter
 	 * @param out
 	 * @throws Exception
 	 */
-	private void export(OutputStream out) throws Exception
+	protected void export(OutputStream out) throws Exception
 	{
-		XSSFSheet sheet = createTableSheet();
+		Sheet sheet = null;
+		if (out != null) 
+		{
+			sheet = createTableSheet();
+		}
+		else  
+		{
+			m_dataFormat = m_workbook.createDataFormat();
+			sheet = m_workbook.getSheetAt(0);
+			createTableHeader(sheet, sheet.getLastRowNum()+2);
+		}
 		String sheetName = null;
 		//
 		int colnumMax = 0;
@@ -443,28 +568,57 @@ public abstract class AbstractXLSXExporter
 			preValues = new Object[colSuppressRepeats.length];
 		}
 
-		for (int xls_rownum = 1; rownum < lastRowNum; rownum++, xls_rownum++)
+		int initxls_rownum = 0;
+		if (out != null)
+			initxls_rownum = Math.max(noOfParameter+1, 1);
+		else 
+			initxls_rownum = Math.max(noOfParameter+1, sheet.getLastRowNum()+1);
+		
+		for (int xls_rownum = initxls_rownum; rownum < lastRowNum; rownum++, xls_rownum++)
 		{
 			if (!isCurrentRowOnly())
 				setCurrentRow(rownum);
 
 			boolean isPageBreak = false;
-			XSSFRow row = sheet.createRow(xls_rownum);
+			Row row = sheet.createRow(xls_rownum);
 			printColIndex = -1;
 			// for all columns
 			int colnum = 0;
 			for (int col = 0; col < getColumnCount(); col++)
-			{
-				if (colnum > colnumMax)
-					colnumMax = colnum;
+			{				
 				//
 				if (isColumnPrinted(col))
 				{
 					printColIndex++;
-					XSSFCell cell = row.createCell(colnum);
-
+					Cell cell = null;
 					// line row
 					Object obj = getValueAt(rownum, col);
+					if (isForm())
+					{
+						if (isVisible(rownum, col) && (!isSuppressNull(col) || (obj != null && !Util.isEmpty(obj.toString(), true))))
+						{
+							row = getFormRow(sheet, col);
+							cell = getFormCell(row, col);
+							String label = getHeaderName(col);
+							if (!Util.isEmpty(label, true))
+							{
+								cell.setCellValue(new XSSFRichTextString(label));
+								int index = cell.getColumnIndex()+1;
+								cell = row.getCell(index);
+								if (cell == null)
+									cell = row.createCell(index);
+							}
+						}
+						else if (isSetFormRowPosition(col))
+						{
+							row = getFormRow(sheet, col);
+						}
+					}
+					else
+					{
+						cell = row.createCell(colnum);
+					}
+					
 					int displayType = getDisplayType(rownum, col);
 					if (obj == null || !isDisplayed(rownum, col))
 					{
@@ -478,9 +632,17 @@ public abstract class AbstractXLSXExporter
 					{
 						// suppress
 					}
+					else if (!isVisible(rownum, col)) 
+					{
+						;
+					}
 					else if (DisplayType.isDate(displayType))
 					{
-						Timestamp value = (Timestamp) obj;
+						Timestamp value = null;
+						if (obj instanceof Date)
+							value = new Timestamp(((Date)obj).getTime());
+						else
+							value = (Timestamp)obj;
 						cell.setCellValue(value);
 					}
 					else if (DisplayType.isNumeric(displayType))
@@ -503,20 +665,27 @@ public abstract class AbstractXLSXExporter
 					}
 					else
 					{
-						String value = fixString(obj.toString()); // formatted
+						String value = obj.toString(); // formatted
 						cell.setCellValue(new XSSFRichTextString(value));
 					}
 					//
-					XSSFCellStyle style = getStyle(rownum, col);
-					cell.setCellStyle(style);
+					if (cell != null) 
+					{
+						CellStyle style = getStyle(rownum, col);
+						if (isForm())
+							style.setWrapText(true);
+						cell.setCellStyle(style);
+					}
 					// Page break
 					if (isPageBreak(rownum, col))
 					{
 						isPageBreak = true;
-						sheetName = fixString(cell.getRichStringCellValue().getString());
+						sheetName = cell.getRichStringCellValue().getString();
 					}
 					//
 					colnum++;
+					if (colnum > colnumMax)
+						colnumMax = colnum;
 					if (colSuppressRepeats != null)
 						preValues[printColIndex] = obj;
 				} // printed
@@ -531,7 +700,10 @@ public abstract class AbstractXLSXExporter
 				isPageBreak = false;
 			}
 		} // for all rows
-		closeTableSheet(sheet, sheetName, colnumMax);
+		if (out == null)
+			fixColumnWidth(sheet, colnumMax);
+		else
+			closeTableSheet(sheet, sheetName, colnumMax);
 		//
 
 		if (out != null)
@@ -580,10 +752,95 @@ public abstract class AbstractXLSXExporter
 			Env.startBrowser(file.toURI().toString());
 	}
 
-	public void exportToWorkbook(XSSFWorkbook workbook, Language language) throws Exception
+	/**
+	 * Export to workbook
+	 * @param workbook
+	 * @param language
+	 * @throws Exception
+	 */
+	public void exportToWorkbook(Workbook workbook, Language language) throws Exception
 	{
 		m_lang = language;
 		m_workbook = workbook;
 		export(null);
+	}
+	
+	/**
+	 * @return true if it is form layout
+	 */
+	protected boolean isForm()
+	{
+		return false;
+	}
+	
+	/**
+	 * @return number of parameter
+	 */
+	protected int getNoOfParameter()
+	{
+		return noOfParameter;
+	}
+
+	/**
+	 * @param noOfParameter
+	 */
+	protected void setNoOfParameter(int noOfParameter)
+	{
+		this.noOfParameter = noOfParameter;
+	}
+		
+	/**
+	 * Create parameter
+	 * @param sheet
+	 */
+	protected void createParameter(Sheet sheet)
+	{
+		
+	}
+	
+	/**
+	 * @param row
+	 * @param col
+	 * @return true if cell is visible
+	 */
+	protected boolean isVisible(int row, int col)
+	{
+		return true;
+	}
+	
+	/**
+	 * @param col
+	 * @return true if column should be hidden when it is null
+	 */
+	protected boolean isSuppressNull(int col) {
+		return false;
+	}
+	
+	/**
+	 * @param col
+	 * @return true if column is use to set new row position
+	 */
+	protected boolean isSetFormRowPosition(int col) {
+		return false;
+	}
+	
+	/**
+	 * get cell for column. use for form layout
+	 * @param row
+	 * @param colnum
+	 * @return cell for column
+	 */
+	protected Cell getFormCell(Row row, int colnum) {
+		return null;
+	}
+
+	/**
+	 * get row for column. use for form layout
+	 * @param sheet
+	 * @param colnum
+	 * @return row for column
+	 */
+	protected Row getFormRow(Sheet sheet, int colnum) {
+		return null;
 	}
 }

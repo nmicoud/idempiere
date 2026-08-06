@@ -11,8 +11,6 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,    *
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.                     *
  *****************************************************************************/
-
-
 package org.adempiere.webui.panel.action;
 
 import java.io.ByteArrayOutputStream;
@@ -38,11 +36,13 @@ import org.adempiere.webui.component.Panel;
 import org.adempiere.webui.component.Row;
 import org.adempiere.webui.component.Rows;
 import org.adempiere.webui.component.Window;
+import org.adempiere.webui.component.ZkCssHelper;
 import org.adempiere.webui.util.ZKUpdateUtil;
-import org.adempiere.webui.window.FDialog;
+import org.adempiere.webui.window.Dialog;
 import org.compiere.model.GridTab;
 import org.compiere.model.MQuery;
 import org.compiere.model.MRole;
+import org.compiere.model.MTable;
 import org.compiere.model.PrintInfo;
 import org.compiere.print.MPrintFormat;
 import org.compiere.print.ReportCtl;
@@ -53,19 +53,21 @@ import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
 import org.compiere.util.Msg;
+import org.idempiere.db.util.SQLFragment;
 import org.zkoss.util.media.AMedia;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.util.Clients;
+import org.zkoss.zul.Div;
 import org.zkoss.zul.Filedownload;
 import org.zkoss.zul.Popup;
 import org.zkoss.zul.Space;
 import org.zkoss.zul.Tabpanel;
-import org.zkoss.zul.Vbox;
 import org.zkoss.zul.impl.LabelImageElement;
 
 /**
+ * Action for Report toolbar button
  * @author Elaine
  * @date September 6, 2012
  */
@@ -85,12 +87,18 @@ public class ReportAction implements EventListener<Event>
 	
 	private List<KeyNamePair>	printFormatList = new ArrayList<KeyNamePair>();
 
+	/**
+	 * @param panel
+	 */
 	public ReportAction(AbstractADWindowContent panel)
 	{
 		this.panel = panel;		
 		getPrintFormats(panel.getActiveGridTab().getAD_Table_ID(), panel.getActiveGridTab().getAD_Window_ID());
 	}
 	
+	/**
+	 * Show report (print format) selection popup
+	 */
 	public void show() 
 	{
 		int AD_Table_ID=panel.getActiveGridTab().getAD_Table_ID();
@@ -103,6 +111,7 @@ public class ReportAction implements EventListener<Event>
 			winReport.setBorder("normal");
 			winReport.setStyle("position:absolute");
 			winReport.addEventListener("onValidate", this);
+			winReport.addCallback(Window.AFTER_PAGE_DETACHED, t -> panel.focusToLastFocusEditor());
 			
 			cboPrintFormat.setMold("select");
 			cboPrintFormat.getItems().clear();
@@ -143,22 +152,24 @@ public class ReportAction implements EventListener<Event>
 				chkAllColumns.setVisible(AD_PrintFormat_ID == -1);
 			}
 
-			Vbox vb = new Vbox();
+			Div vb = new Div();
+			ZkCssHelper.appendStyle(vb, "display: flex; flex-direction: column;");
 			ZKUpdateUtil.setWidth(vb, "100%");
+			ZKUpdateUtil.setHeight(vb, "200px");
 			winReport.appendChild(vb);
 			winReport.setSclass("toolbar-popup-window");
 			vb.setSclass("toolbar-popup-window-cnt");
-			vb.setAlign("stretch");
 			
 			Grid grid = GridFactory.newGridLayout();
+			ZkCssHelper.appendStyle(grid, "flex-grow: 1;");
 			vb.appendChild(grid);
 	        
 	        Columns columns = new Columns();
 	        Column column = new Column();
-	        ZKUpdateUtil.setHflex(column, "min");
+	        column.setWidth("25%");
 	        columns.appendChild(column);
 	        column = new Column();
-	        ZKUpdateUtil.setHflex(column, "1");
+	        column.setWidth("75%");
 	        columns.appendChild(column);
 	        grid.appendChild(columns);
 	        
@@ -169,7 +180,7 @@ public class ReportAction implements EventListener<Event>
 			rows.appendChild(row);
 			row.appendChild(new Label(Msg.translate(Env.getCtx(), "AD_PrintFormat_ID")));
 			row.appendChild(cboPrintFormat);
-			ZKUpdateUtil.setHflex(cboPrintFormat, "1");
+			cboPrintFormat.setWidth("100%");
 			cboPrintFormat.addEventListener(Events.ON_SELECT, this);
 			
 			row = new Row();
@@ -202,6 +213,7 @@ public class ReportAction implements EventListener<Event>
 			vb.appendChild(confirmPanel);
 			LayoutUtils.addSclass("dialog-footer", confirmPanel);
 			confirmPanel.addActionListener(this);
+			ZkCssHelper.appendStyle(confirmPanel, "flex-grow: 0;");
 		}
 
 		LabelImageElement toolbarItem = panel.getToolbar().getToolbarItem("Report");
@@ -247,7 +259,7 @@ public class ReportAction implements EventListener<Event>
 		ListItem li = cboPrintFormat.getSelectedItem();
 		if(li == null || li.getValue() == null)
 		{
-			FDialog.error(0, winReport, "PrintFormatMandatory");
+			Dialog.error(0, "PrintFormatMandatory");
 			return;
 		}
 		
@@ -259,7 +271,7 @@ public class ReportAction implements EventListener<Event>
 			li = cboExportType.getSelectedItem();
 			if(li == null || li.getValue() == null)
 			{
-				FDialog.error(0, winReport, "ExportFileTypeMandatory");
+				Dialog.error(0, "ExportFileTypeMandatory");
 				return;
 			}
 		}		
@@ -277,25 +289,42 @@ public class ReportAction implements EventListener<Event>
 		//	Query
 		boolean currentRowOnly = chkCurrentRowOnly.isChecked();
 		int Record_ID = 0;
-		List <Integer> RecordIDs = null;
+		String Record_UU = null;
+		List <Integer> jasperRecordIDs = null;
+		List <String> jasperRecordUUs = null;
 		MQuery query = new MQuery(gridTab.getTableName());
+		MTable table = MTable.get(gridTab.getAD_Table_ID());
 		StringBuilder whereClause = new StringBuilder("");
+		List<Object> params = new ArrayList<Object>();
 
 		if (currentRowOnly)
 		{
 			Record_ID = gridTab.getRecord_ID();
+			Record_UU = gridTab.getRecord_UU();
 			whereClause.append(gridTab.getTableModel().getWhereClause(gridTab.getCurrentRow()));
-			if (whereClause.length() == 0)
-				whereClause.append(gridTab.getTableModel().getSelectWhereClause());
-
+			if (whereClause.length() == 0) {
+				SQLFragment filter = gridTab.getTableModel().getSQLFilter();
+				whereClause.append(filter.sqlClause());
+				params.addAll(filter.parameters());
+			}
 		}
 		else
 		{
-			whereClause.append(gridTab.getTableModel().getSelectWhereClause());
-			RecordIDs = new ArrayList<Integer>();
-			for(int i = 0; i < gridTab.getRowCount(); i++)
-			{
-				RecordIDs.add(gridTab.getKeyID(i));
+			SQLFragment filter = gridTab.getTableModel().getSQLFilter();
+			whereClause.append(filter.sqlClause());
+			params.addAll(filter.parameters());
+			if (pf != null && pf.getJasperProcess_ID() > 0) {
+				if (table.isUUIDKeyTable()) {
+					jasperRecordUUs = new ArrayList<String>();
+					for(int i = 0; i < gridTab.getRowCount(); i++) {
+						jasperRecordUUs.add(gridTab.getKeyUUID(i));
+					}
+				} else {
+					jasperRecordIDs = new ArrayList<Integer>();
+					for(int i = 0; i < gridTab.getRowCount(); i++) {
+						jasperRecordIDs.add(gridTab.getKeyID(i));
+					}
+				}
 			}
 		}
 
@@ -303,15 +332,26 @@ public class ReportAction implements EventListener<Event>
 		{
 			if (whereClause.indexOf("@") != -1) //replace variables in context
 			{
-				String context = Env.parseContext(Env.getCtx(), panel.getWindowNo(), whereClause.toString(), false);
+				List<Object> tempParams = new ArrayList<Object>();
+				String context = Env.parseContextForSql(Env.getCtx(), panel.getWindowNo(), whereClause.toString(), false, tempParams);
 				if(context != null && context.trim().length() > 0)
 				{
+					if (params.size() > 0)
+					{
+						if (tempParams.size() > 0)
+							params = Env.mergeParameters(whereClause.toString(), context, params.toArray(), tempParams.toArray());
+					}
+					else
+					{
+						params = tempParams;
+					}
 					whereClause = new StringBuilder(context);
 				}
 				else
 				{
 					log.log(Level.WARNING, "Failed to parse where clause. whereClause= "+whereClause);
 					whereClause = new StringBuilder("1 = 2");
+					params.clear();
 				}
 			}
 		}
@@ -326,17 +366,22 @@ public class ReportAction implements EventListener<Event>
 			whereClause.append(")");
 		}
 
-		query.addRestriction(whereClause.toString());
+		if (whereClause.length() > 0)
+		{
+			query.addRestriction(new SQLFragment(whereClause.toString(), params));
+		}
 
-		PrintInfo info = new PrintInfo(pf.getName(), pf.getAD_Table_ID(), Record_ID);
+		PrintInfo info = new PrintInfo(pf.getName(), pf.getAD_Table_ID(), Record_ID, Record_UU);
 		info.setDescription(query.getInfo());
 		
 		if(pf != null && pf.getJasperProcess_ID() > 0)
 		{			
 			// It's a report using the JasperReports engine
-			ProcessInfo pi = new ProcessInfo ("", pf.getJasperProcess_ID(), pf.getAD_Table_ID(), Record_ID);
-			pi.setRecord_IDs(RecordIDs);
+			ProcessInfo pi = new ProcessInfo ("", pf.getJasperProcess_ID(), pf.getAD_Table_ID(), Record_ID, Record_UU);
+			pi.setRecord_IDs(jasperRecordIDs);
+			pi.setRecord_UUs(jasperRecordUUs);
 			//pi.setIsBatch(true);
+			pi.setTransientObject(pf);
 			
 			if (export)
 			{
@@ -368,9 +413,8 @@ public class ReportAction implements EventListener<Event>
 		else
 		{
 			// It's a default report using the standard printing engine
-			ReportEngine re = new ReportEngine (Env.getCtx(), pf, query, info);
-			re.setWhereExtended(gridTab.getWhereExtended());
-			re.setWindowNo(gridTab.getWindowNo());
+			ReportEngine re = new ReportEngine (Env.getCtx(), pf, query, info, null, gridTab.getWindowNo());
+			re.setExtendedFilter(gridTab.getExtendedFilter());
 			
 			if (export)
 				export(re);
@@ -394,7 +438,7 @@ public class ReportAction implements EventListener<Event>
 			ListItem li = cboExportType.getSelectedItem();
 			if(li == null || li.getValue() == null)
 			{
-				FDialog.error(0, winReport, "FileInvalidExtension");
+				Dialog.error(0, "FileInvalidExtension");
 				return;
 			}
 			
@@ -455,7 +499,7 @@ public class ReportAction implements EventListener<Event>
 			}
 			else
 			{
-				FDialog.error(0, winReport, "FileInvalidExtension");
+				Dialog.error(0, "FileInvalidExtension");
 				return;
 			}
 

@@ -20,27 +20,32 @@ import org.adempiere.base.Service;
 import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.factory.IFeedbackService;
 import org.adempiere.webui.session.SessionManager;
+import org.compiere.model.MSysConfig;
 import org.compiere.util.ByteArrayDataSource;
 import org.compiere.util.CLogErrorBuffer;
 import org.compiere.util.Env;
 
 /**
+ * Static methods for user feedback service
  * @author hengsin
- *
  */
 public class FeedbackManager {
 
 	/**
 	 * 
 	 * @param errorOnly
-	 * @return attachment datasource
+	 * @return attachment DataSource
 	 */
 	public static DataSource getLogAttachment(boolean errorOnly)
 	{
 		String context = CLogErrorBuffer.get(true).getErrorInfo(Env.getCtx(), errorOnly);
 		ClientInfo browserInfo = SessionManager.getAppDesktop().getClientInfo();
-		StringBuilder info = new StringBuilder(browserInfo.toString());
-		info.append("\r\n").append(context);
+		StringBuilder info = new StringBuilder();
+		if (MSysConfig.getBooleanValue(MSysConfig.ZK_SESSION_SAVE_USER_AGENT, false)) {
+			info.append(browserInfo.toString());
+			info.append("\r\n");
+		}
+		info.append(context);
 		
 		ByteArrayDataSource ds = new ByteArrayDataSource(info.toString(), "UTF-8", "text/plain");
 		ds.setName("idempiere-log.txt");
@@ -49,7 +54,8 @@ public class FeedbackManager {
 	}
 	
 	/**
-	 * 	EMail Support
+	 * EMail Support
+	 * @param errorOnly
 	 */
 	public static void emailSupport(boolean errorOnly)
 	{

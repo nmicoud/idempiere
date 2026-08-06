@@ -56,7 +56,7 @@ public class MTreeNode extends DefaultMutableTreeNode
 		int parent_ID, boolean isSummary, String imageIndicator, boolean onBar, Color color)
 	{
 		super();
-	//	log.fine( "MTreeNode Node_ID=" + node_ID + ", Parent_ID=" + parent_ID + " - " + name);
+
 		m_node_ID = node_ID;
 		m_seqNo = seqNo;
 		m_name = name;
@@ -70,6 +70,28 @@ public class MTreeNode extends DefaultMutableTreeNode
 		m_color = color;
 	}   //  MTreeNode
 
+	/**
+	 * Construct Model TreeNode [Used MTreeFavorite]
+	 * 
+	 * @param node_ID
+	 * @param seqNo
+	 * @param name
+	 * @param description
+	 * @param parent_ID
+	 * @param menu_ID
+	 * @param img
+	 * @param isSummary
+	 * @param isCollapsible
+	 * @param isFavourite
+	 */
+	public MTreeNode(int node_ID, int seqNo, String name, String description, int parent_ID, int menu_ID,
+			String img, boolean isSummary, boolean isCollapsible, boolean isFavourite)
+	{
+		this(node_ID, seqNo, name, description, parent_ID, isSummary, img, isFavourite, null);
+		setMenu_ID(menu_ID);
+		setCollapsible(isCollapsible);
+	}
+	
 	/** Node ID         */
 	private int     	m_node_ID;
 	/**	SeqNo			*/
@@ -80,7 +102,7 @@ public class MTreeNode extends DefaultMutableTreeNode
 	private String  	m_description;
 	/**	Parent ID		*/
 	private int     	m_parent_ID;
-	/**	Summaty			*/
+	/**	Summary			*/
 	private boolean 	m_isSummary;
 	/** Image Indicator				*/
 	private String      m_imageIndicator;
@@ -90,12 +112,14 @@ public class MTreeNode extends DefaultMutableTreeNode
 	private boolean 	m_onBar;
 	/**	Color			*/
 	private Color 		m_color;
-
+	/** Menu ID			*/
+	private int			m_menu_ID;
+	/** Is Collapsible	*/
+	private boolean		m_iscollapsible;
+	
 	/**	Logger			*/
 	private static CLogger log = CLogger.getCLogger(MTreeNode.class);
 	
-	/*************************************************************************/
-
 	/**	Window - 1			*/
 	public static int		TYPE_WINDOW = 1;
 	/**	Report - 2			*/
@@ -115,6 +139,7 @@ public class MTreeNode extends DefaultMutableTreeNode
 	/** Info - 9            */
 	public static int		TYPE_INFO = 9;
 
+	/** Image path for each node type (TYPE_*) */ 
 	public static String[] 	PATHS = new String[]
 	{
 		null,
@@ -128,7 +153,7 @@ public class MTreeNode extends DefaultMutableTreeNode
 		"mDocAction.png"
 	};
 
-	/** 16* 16 Icons		*/
+	/** 16* 16 Icons for each node type (TYPE_*) */
 	public static Icon[] 	IMAGES = new Icon[]
 	{
 		null,
@@ -142,8 +167,7 @@ public class MTreeNode extends DefaultMutableTreeNode
 		Env.getImageIcon("mDocAction.png")
 	};
 
-
-	/**************************************************************************
+	/**
 	 *  Get Node ID
 	 *  @return node id (e.g. AD_Menu_ID)
 	 */
@@ -197,13 +221,21 @@ public class MTreeNode extends DefaultMutableTreeNode
 	}	//	getParent
 
 	/**
+	 * @param parent_ID the m_parent_ID to set
+	 */
+	public void setParent_ID(int parent_ID)
+	{
+		this.m_parent_ID = parent_ID;
+	}
+	
+	/**
 	 *  Print Name
 	 *  @return info
 	 */
+	@Override
 	public String toString()
 	{
-		return //   m_node_ID + "/" + m_parent_ID + " " + m_seqNo + " - " +
-			m_name;
+		return m_name;
 	}   //  toString
 
 	/**
@@ -217,7 +249,7 @@ public class MTreeNode extends DefaultMutableTreeNode
 
 	/**
 	 *  Set Description
-	 *  @param name name
+	 *  @param description
 	 */
 	public void setDescription (String description)
 	{
@@ -227,7 +259,7 @@ public class MTreeNode extends DefaultMutableTreeNode
 			m_description = description;
 	}   //  setDescription
 
-	/**************************************************************************
+	/**
 	 *  Set Summary (allow children)
 	 *  @param isSummary summary node
 	 */
@@ -241,6 +273,7 @@ public class MTreeNode extends DefaultMutableTreeNode
 	 *  Set Summary (allow children)
 	 *  @param isSummary true if summary
 	 */
+	@Override
 	public void setAllowsChildren (boolean isSummary)
 	{
 		super.setAllowsChildren (isSummary);
@@ -256,8 +289,27 @@ public class MTreeNode extends DefaultMutableTreeNode
 		return m_isSummary;
 	}   //  isSummary
 
+	public int getMenu_ID()
+	{
+		return m_menu_ID;
+	}
 
-	/**************************************************************************
+	public void setMenu_ID(int m_menu_ID)
+	{
+		this.m_menu_ID = m_menu_ID;
+	}
+
+	public boolean isCollapsible()
+	{
+		return m_iscollapsible;
+	}
+
+	public void setCollapsible(boolean m_iscollapsible)
+	{
+		this.m_iscollapsible = m_iscollapsible;
+	}
+
+	/**
 	 *  Get Image Indicator/Index
 	 *  @param imageIndicator image indicator (W/X/R/P/F/T/B) MWFNode.ACTION_
 	 *  @return index of image
@@ -278,10 +330,6 @@ public class MTreeNode extends DefaultMutableTreeNode
 			imageIndex = TYPE_PROCESS;
 		else if (imageIndicator.equals(MWFNode.ACTION_SubWorkflow))		//	WorkFlow
 			imageIndex = TYPE_WORKFLOW;
-		/*
-		else if (imageIndicator.equals(MWFNode.ACTION_UserWorkbench))	//	Workbench
-			imageIndex = TYPE_WORKBENCH;
-		*/
 		else if (imageIndicator.equals(MWFNode.ACTION_SetVariable))		//	Set Variable
 			imageIndex = TYPE_SETVARIABLE;
 		else if (imageIndicator.equals(MWFNode.ACTION_UserChoice))		//	User Choice
@@ -348,7 +396,7 @@ public class MTreeNode extends DefaultMutableTreeNode
 	}	//	getIcon
 
 	/**
-	 *  Get Shortcut Bar info
+	 *  Is node on favorite bar
 	 *  @return true if node on bar
 	 */
 	public boolean isOnBar()
@@ -386,7 +434,9 @@ public class MTreeNode extends DefaultMutableTreeNode
 	/**
 	 * 	Is Workbench
 	 *	@return true if Workbench
+	 *  @deprecated
 	 */
+	@Deprecated (since="13", forRemoval=true)
 	public boolean isWorkbench()
 	{
 		return X_AD_Menu.ACTION_Workbench.equals(m_imageIndicator);
@@ -426,7 +476,7 @@ public class MTreeNode extends DefaultMutableTreeNode
 	public boolean isInfo()
 	{
 		return X_AD_Menu.ACTION_Info.equals(m_imageIndicator);
-	}	//	isTask
+	}	//	isInfo
 	
 	/**
 	 * 	Get Color
@@ -439,17 +489,15 @@ public class MTreeNode extends DefaultMutableTreeNode
 		return Color.black;
 	}	//	getColor
 	
-	/*************************************************************************/
-
 	/**	Last found ID				*/
 	private int                 m_lastID = -1;
 	/** Last found Node				*/
 	private MTreeNode           m_lastNode = null;
 
 	/**
-	 *	Return the Node with ID in list of children
+	 *	Find Node with ID in list of children
 	 *  @param ID id
-	 *  @return VTreeNode with ID or null
+	 *  @return MTreeNode with ID or null
 	 */
 	public MTreeNode findNode (int ID)
 	{

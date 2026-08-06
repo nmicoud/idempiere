@@ -4,4 +4,8 @@
 	<script src="layout.js" />
 	<script src="report.js" />
 	<script src="window.js" />
+	<script src="tree.js" />
+	<script src="mesh.js" />
+	<script src="input.js" />
+	<script src="calendar.js" />
 </package>

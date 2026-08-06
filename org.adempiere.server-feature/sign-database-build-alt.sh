@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 if [ "$JAVA_HOME" ]; then
-  JAVA=$JAVA_HOME/bin/java
+  JAVA="$JAVA_HOME/bin/java"
 else
   JAVA=java
   echo JAVA_HOME is not set.
@@ -10,4 +10,4 @@ else
 fi
 
 # sign database build
-$JAVA -jar plugins/org.eclipse.equinox.launcher_1.*.jar -install setup -configuration setup/configuration -application org.adempiere.base.SignDatabaseBuildApplication
+"$JAVA" -jar plugins/org.eclipse.equinox.launcher_1.*.jar -install setup -configuration setup/configuration -application org.adempiere.base.SignDatabaseBuildApplication

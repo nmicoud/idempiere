@@ -13,19 +13,33 @@
  *****************************************************************************/
 package org.adempiere.webui.factory;
 
+import org.compiere.model.MDashboardContent;
 import org.zkoss.zk.ui.Component;
 
 /**
+ * Factory interface for dashboard gadget
  * @author Antonio Cañaveral
  * @author hengsin
- *
  */
 public interface IDashboardGadgetFactory {
+	
 	/**
-     * 
-     * @param uri
-     * @param parent
-     * @return Component instance of DashboardPanel or null
+     * Create dashboard gadget from URI
+     * @param uri zul url
+     * @param parent Component
+     * @return new DashboardPanel component instance or null
      */
     public Component getGadget(String uri, Component parent);
+
+	/**
+	 * Create dashboard gadget from URL or MDashboardContent 
+	 * @param url zul url
+	 * @param parent Component
+	 * @param dc MDashboardContent
+     * @return new DashboardPanel component instance or null
+	 */
+    default public Component getGadget(String url, Component parent, MDashboardContent dc) {
+    	return getGadget(url, parent); // ignore the third method by default (backward compatibility)
+    }
+
 }

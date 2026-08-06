@@ -34,7 +34,7 @@ import org.compiere.util.Env;
  *
  *  @author Jorg Janke
  *  @version $Id: CalloutInOut.java,v 1.7 2006/07/30 00:51:05 jjanke Exp $
- *  @author victor.perez@e-evolution.com www.e-evolution.com [ 1867464 ] http://sourceforge.net/tracker/index.php?func=detail&aid=1867464&group_id=176962&atid=879332
+ *  @author victor.perez@e-evolution.com www.e-evolution.com [ 1867464 ] https://sourceforge.net/p/adempiere/bugs/923/
  */
 public class CalloutInOut extends CalloutEngine
 {
@@ -69,6 +69,8 @@ public class CalloutInOut extends CalloutEngine
 			mTab.setValue("C_Project_ID", Integer.valueOf(order.getC_Project_ID()));
 			mTab.setValue("User1_ID", Integer.valueOf(order.getUser1_ID()));
 			mTab.setValue("User2_ID", Integer.valueOf(order.getUser2_ID()));
+			mTab.setValue("C_CostCenter_ID", Integer.valueOf(order.getC_CostCenter_ID()));  
+			mTab.setValue("C_Department_ID", Integer.valueOf(order.getC_Department_ID()));
 			mTab.setValue("M_Warehouse_ID", Integer.valueOf(order.getM_Warehouse_ID()));
 			//
 			mTab.setValue("DeliveryRule", order.getDeliveryRule());
@@ -78,6 +80,7 @@ public class CalloutInOut extends CalloutEngine
 			mTab.setValue("FreightAmt", order.getFreightAmt());
 
 			mTab.setValue("C_BPartner_ID", Integer.valueOf(order.getC_BPartner_ID()));
+			mTab.setValue("SalesRep_ID", Integer.valueOf(order.getSalesRep_ID()));
 
 			//[ 1867464 ]
 			mTab.setValue("C_BPartner_Location_ID", Integer.valueOf(order.getC_BPartner_Location_ID()));
@@ -86,6 +89,13 @@ public class CalloutInOut extends CalloutEngine
 				mTab.setValue("AD_User_ID", Integer.valueOf(order.getAD_User_ID()));
 			else
 				mTab.setValue("AD_User_ID", null);
+
+			if (order.isDropShip()) {
+				mTab.setValue(MInOut.COLUMNNAME_IsDropShip, order.isDropShip());
+				mTab.setValue(MInOut.COLUMNNAME_DropShip_BPartner_ID, order.getDropShip_BPartner_ID());
+				mTab.setValue(MInOut.COLUMNNAME_DropShip_Location_ID, order.getDropShip_Location_ID());
+				mTab.setValue(MInOut.COLUMNNAME_DropShip_User_ID, order.getDropShip_User_ID());
+			}
 		}
         /**
          * Modification: set corresponding document type
@@ -125,7 +135,7 @@ public class CalloutInOut extends CalloutEngine
 		//	Get Details
 		MRMA rma = new MRMA (ctx, M_RMA_ID.intValue(), null);
         MInOut originalReceipt = rma.getShipment();
-		if (rma.get_ID() != 0)
+		if (rma.get_ID() > 0)
 		{
 			mTab.setValue("DateOrdered", originalReceipt.getDateOrdered());
 			mTab.setValue("POReference", originalReceipt.getPOReference());
@@ -136,6 +146,8 @@ public class CalloutInOut extends CalloutEngine
 			mTab.setValue("C_Project_ID", Integer.valueOf(originalReceipt.getC_Project_ID()));
 			mTab.setValue("User1_ID", Integer.valueOf(originalReceipt.getUser1_ID()));
 			mTab.setValue("User2_ID", Integer.valueOf(originalReceipt.getUser2_ID()));
+			mTab.setValue("C_CostCenter_ID", Integer.valueOf(originalReceipt.getC_CostCenter_ID()));  
+			mTab.setValue("C_Department_ID", Integer.valueOf(originalReceipt.getC_Department_ID()));
 			mTab.setValue("M_Warehouse_ID", Integer.valueOf(originalReceipt.getM_Warehouse_ID()));
 			//
 			mTab.setValue("DeliveryRule", originalReceipt.getDeliveryRule());
@@ -145,6 +157,7 @@ public class CalloutInOut extends CalloutEngine
 			mTab.setValue("FreightAmt", originalReceipt.getFreightAmt());
 
 			mTab.setValue("C_BPartner_ID", Integer.valueOf(originalReceipt.getC_BPartner_ID()));
+			mTab.setValue("SalesRep_ID", Integer.valueOf(originalReceipt.getSalesRep_ID()));
 
 			//[ 1867464 ]
 			mTab.setValue("C_BPartner_Location_ID", Integer.valueOf(originalReceipt.getC_BPartner_Location_ID()));
@@ -153,6 +166,12 @@ public class CalloutInOut extends CalloutEngine
 				mTab.setValue("AD_User_ID", Integer.valueOf(originalReceipt.getAD_User_ID()));
 			else
 				mTab.setValue("AD_User_ID", null);
+			
+	        //Set corresponding document type
+	        int docTypeId = rma.getC_DocType_ID();
+	        int relatedDocTypeId = MDocType.getShipmentReceiptDocType(docTypeId);
+	        if (relatedDocTypeId > 0)
+	        	mTab.setValue("C_DocType_ID", relatedDocTypeId);
 		}
 		return "";
 	}	//	rma
@@ -191,11 +210,11 @@ public class CalloutInOut extends CalloutEngine
 			if (rs.next())
 			{
 				//	Set Movement Type
-				String DocBaseType = rs.getString("DocBaseType");
 				// BF [2708789] Read IsSOTrx from C_DocType
 				String trxFlag = rs.getString("IsSOTrx");
 				Object isSOTrxValue = mTab.getValue("IsSOTrx");
 				String isSOTrxValueStr = null;
+				boolean IsSOTrx = "Y".equals(trxFlag);
 				if (isSOTrxValue != null)
 				{
 					if (isSOTrxValue instanceof Boolean)
@@ -206,28 +225,9 @@ public class CalloutInOut extends CalloutEngine
 				
 				if (!(trxFlag.equals(isSOTrxValueStr)))
 					mTab.setValue("IsSOTrx", trxFlag);
-				if (DocBaseType.equals("MMS"))					//	Material Shipments
-				/**solve 1648131 bug vpj-cd e-evolution */
-				{
-						boolean IsSOTrx = "Y".equals(trxFlag);
-						if (IsSOTrx)
-							mTab.setValue("MovementType", "C-");	// Customer Shipments
-						else
-							mTab.setValue("MovementType", "V-");	// Vendor Return
-
-				}
-				/**END vpj-cd e-evolution */
-				else if (DocBaseType.equals("MMR"))				//	Material Receipts
-			    /**solve 1648131 bug vpj-cd e-evolution  */
-				{
-						boolean IsSOTrx = "Y".equals(trxFlag);
-						if (IsSOTrx)
-							mTab.setValue("MovementType", "C+"); // Customer Return
-						else
-							mTab.setValue("MovementType", "V+"); // Vendor Receipts
-				}				
-				/**END vpj-cd e-evolution */
-
+				
+				mTab.setValue("MovementType", MInOut.getMovementType(ctx, C_DocType_ID, IsSOTrx, null));
+				
 				//	DocumentNo
 				if (rs.getString("IsDocNoControlled").equals("Y"))
 				{
@@ -454,6 +454,8 @@ public class CalloutInOut extends CalloutEngine
 			mTab.setValue("AD_OrgTrx_ID", Integer.valueOf(ol.getAD_OrgTrx_ID()));
 			mTab.setValue("User1_ID", Integer.valueOf(ol.getUser1_ID()));
 			mTab.setValue("User2_ID", Integer.valueOf(ol.getUser2_ID()));
+			mTab.setValue("C_CostCenter_ID", Integer.valueOf(ol.getC_CostCenter_ID()));  
+			mTab.setValue("C_Department_ID", Integer.valueOf(ol.getC_Department_ID()));
 		}
 		return "";
 	}	//	orderLine
@@ -502,6 +504,8 @@ public class CalloutInOut extends CalloutEngine
 			mTab.setValue("AD_OrgTrx_ID", Integer.valueOf(rl.getAD_OrgTrx_ID()));
 			mTab.setValue("User1_ID", Integer.valueOf(rl.getUser1_ID()));
 			mTab.setValue("User2_ID", Integer.valueOf(rl.getUser2_ID()));
+			mTab.setValue("C_CostCenter_ID", Integer.valueOf(rl.getC_CostCenter_ID()));  
+			mTab.setValue("C_Department_ID", Integer.valueOf(rl.getC_Department_ID()));  
 		}
 		return "";
 	}	//	rmaLine
@@ -535,7 +539,7 @@ public class CalloutInOut extends CalloutEngine
 				mTab.setValue("M_Locator_ID", Integer.valueOf(M_Locator_ID));
 		}
 		else
-			mTab.setValue("M_AttributeSetInstance_ID", null);
+			mTab.setValue("M_AttributeSetInstance_ID", 0);
 		//
 		int M_Warehouse_ID = Env.getContextAsInt(ctx, WindowNo, "M_Warehouse_ID");
 		boolean IsSOTrx = "Y".equals(Env.getContext(ctx, WindowNo, "IsSOTrx"));
@@ -581,7 +585,6 @@ public class CalloutInOut extends CalloutEngine
 			return "";
 
 		int M_Product_ID = Env.getContextAsInt(ctx, WindowNo, mTab.getTabNo(), "M_Product_ID");
-		//	log.log(Level.WARNING,"qty - init - M_Product_ID=" + M_Product_ID);
 		BigDecimal MovementQty, QtyEntered;
 
 		//	No Product

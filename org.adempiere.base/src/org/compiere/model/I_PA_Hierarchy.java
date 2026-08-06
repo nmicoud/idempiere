@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for PA_Hierarchy
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_PA_Hierarchy 
 {
@@ -44,8 +44,8 @@ public interface I_PA_Hierarchy
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -53,12 +53,12 @@ public interface I_PA_Hierarchy
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -75,6 +75,7 @@ public interface I_PA_Hierarchy
 	  */
 	public int getAD_Tree_Account_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Tree getAD_Tree_Account() throws RuntimeException;
 
     /** Column name AD_Tree_Activity_ID */
@@ -90,6 +91,7 @@ public interface I_PA_Hierarchy
 	  */
 	public int getAD_Tree_Activity_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Tree getAD_Tree_Activity() throws RuntimeException;
 
     /** Column name AD_Tree_BPartner_ID */
@@ -105,6 +107,7 @@ public interface I_PA_Hierarchy
 	  */
 	public int getAD_Tree_BPartner_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Tree getAD_Tree_BPartner() throws RuntimeException;
 
     /** Column name AD_Tree_Campaign_ID */
@@ -120,6 +123,7 @@ public interface I_PA_Hierarchy
 	  */
 	public int getAD_Tree_Campaign_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Tree getAD_Tree_Campaign() throws RuntimeException;
 
     /** Column name AD_Tree_Org_ID */
@@ -135,6 +139,7 @@ public interface I_PA_Hierarchy
 	  */
 	public int getAD_Tree_Org_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Tree getAD_Tree_Org() throws RuntimeException;
 
     /** Column name AD_Tree_Product_ID */
@@ -150,6 +155,7 @@ public interface I_PA_Hierarchy
 	  */
 	public int getAD_Tree_Product_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Tree getAD_Tree_Product() throws RuntimeException;
 
     /** Column name AD_Tree_Project_ID */
@@ -165,6 +171,7 @@ public interface I_PA_Hierarchy
 	  */
 	public int getAD_Tree_Project_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Tree getAD_Tree_Project() throws RuntimeException;
 
     /** Column name AD_Tree_SalesRegion_ID */
@@ -180,6 +187,7 @@ public interface I_PA_Hierarchy
 	  */
 	public int getAD_Tree_SalesRegion_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Tree getAD_Tree_SalesRegion() throws RuntimeException;
 
     /** Column name Created */

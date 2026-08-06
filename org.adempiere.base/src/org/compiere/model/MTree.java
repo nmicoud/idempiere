@@ -38,22 +38,20 @@ import org.compiere.util.Util;
 
 /**
  *  Builds Tree.
- *  Creates tree structure - maintained in VTreePanel
  *
  *  @author     Jorg Janke
  *  @version    $Id: MTree.java,v 1.2 2006/07/30 00:51:02 jjanke Exp $
  */
 public class MTree extends MTree_Base
 {
-
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -212066085945645584L;
+	private static final long serialVersionUID = -5471090207406467359L;
 
 	/**
 	 *  Default Constructor.
-	 * 	Need to call loadNodes explicitly
+	 * 	Need to call loadNodes explicitly.
 	 * 	@param ctx context for security
 	 *  @param AD_Tree_ID   The tree to build
 	 *  @param trxName transaction
@@ -64,11 +62,23 @@ public class MTree extends MTree_Base
 	}   //  MTree
 
 	/**
-	 *  Construct & Load Tree
+	 * Resultset constructor for model factory.
+	 * Need to call loadNodes explicitly.
+	 * @param ctx
+	 * @param rs
+	 * @param trxName
+	 */	
+	public MTree (Properties ctx, ResultSet rs, String trxName) 
+	{
+		super(ctx, rs, trxName);
+	}
+
+	/**
+	 *  Construct and Load Tree
+	 *  @param ctx
 	 *  @param AD_Tree_ID   The tree to build
 	 *  @param editable     True, if tree can be modified
 	 *  - includes inactive and empty summary nodes
-	 * 	@param ctx context for security
 	 *	@param clientTree the tree is displayed on the java client (not on web)
 	 *  @param trxName transaction
 	 */
@@ -78,18 +88,45 @@ public class MTree extends MTree_Base
 		this (ctx, AD_Tree_ID, editable, clientTree, false, trxName, null, 0);
 	}   //  MTree
 
+	/**
+	 * @param ctx
+	 * @param AD_Tree_ID
+	 * @param editable
+	 * @param clientTree
+	 * @param trxName
+	 * @param linkColName
+	 * @param linkID
+	 */
 	public MTree (Properties ctx, int AD_Tree_ID, 
 			boolean editable, boolean clientTree, String trxName, String linkColName, int linkID)
 	{
 		this (ctx, AD_Tree_ID, editable, clientTree, false, trxName, linkColName, linkID);
 	}   //  MTree
 
+	/**
+	 * @param ctx
+	 * @param AD_Tree_ID
+	 * @param editable
+	 * @param clientTree
+	 * @param allNodes
+	 * @param trxName
+	 */
 	public MTree (Properties ctx, int AD_Tree_ID, 
 			boolean editable, boolean clientTree, boolean allNodes, String trxName)
 	{
 		this (ctx, AD_Tree_ID, editable, clientTree, allNodes, trxName, null, 0);
 	}   //  MTree
 
+	/**
+	 * @param ctx
+	 * @param AD_Tree_ID
+	 * @param editable
+	 * @param clientTree
+	 * @param allNodes
+	 * @param trxName
+	 * @param linkColName
+	 * @param linkID
+	 */
 	public MTree (Properties ctx, int AD_Tree_ID, 
 			boolean editable, boolean clientTree, boolean allNodes, String trxName, String linkColName, int linkID)
 	{
@@ -128,9 +165,9 @@ public class MTree extends MTree_Base
 	/**	Cache						*/
 	private static CCache<String,Integer> tree_cache	= new CCache<String,Integer>("AD_Tree_ID", 5);
 	
-	/**************************************************************************
-	 *  Get default (oldest) complete AD_Tree_ID for KeyColumn.
-	 *  Called from GridController
+	/**
+	 *  Get default (oldest) AD_Tree_ID for KeyColumn.
+	 *  Called from GridController.
 	 *  @param keyColumnName key column name, eg. C_Project_ID
 	 *  @param AD_Client_ID client
 	 *  @return AD_Tree_ID
@@ -226,10 +263,8 @@ public class MTree extends MTree_Base
 		return AD_Tree_ID;
 	}   //  getDefaultAD_Tree_ID
 
-
-
-	/*************************************************************************
-	 *  Load Nodes and Bar
+	/**
+	 * Load Nodes and Bar (Favourites)
 	 * @param AD_User_ID user for tree bar
 	 * @param linkColName 
 	 * @param linkID 
@@ -240,14 +275,7 @@ public class MTree extends MTree_Base
 		StringBuilder sql = new StringBuilder();
 		if (getTreeType().equals(TREETYPE_Menu))	// specific sql, need to load TreeBar IDEMPIERE 329 - nmicoud
 		{
-			sql = new StringBuilder("SELECT "
-					+ "tn.Node_ID,tn.Parent_ID,tn.SeqNo,tb.IsActive "
-					+ "FROM ").append(getNodeTableName()).append(" tn"
-							+ " LEFT OUTER JOIN AD_TreeBar tb ON (tn.AD_Tree_ID=tb.AD_Tree_ID"
-							+ " AND tn.Node_ID=tb.Node_ID AND tb.IsFavourite = 'Y'"
-							+ (AD_User_ID != -1 ? " AND tb.AD_User_ID=? ": "") 	//	#1 (conditional)
-							+ ") "
-							+ "WHERE tn.AD_Tree_ID=?");								//	#2
+			sql = new StringBuilder("SELECT tn.Node_ID,tn.Parent_ID,tn.SeqNo,'N' FROM ").append(getNodeTableName()).append(" tn  WHERE tn.AD_Tree_ID=?");
 			if (!m_editable)
 				sql.append(" AND tn.IsActive='Y'");
 			sql.append(" ORDER BY COALESCE(tn.Parent_ID, -1), tn.SeqNo");
@@ -281,13 +309,10 @@ public class MTree extends MTree_Base
 		try
 		{
 			// load Node details - addToTree -> getNodeDetail
-			getNodeDetails(); 
+			getNodeDetails(linkColName, linkID); 
 			//
 			pstmt = DB.prepareStatement(sql.toString(), get_TrxName());
-			int idx = 1;
-			if (AD_User_ID != -1 && getTreeType().equals(TREETYPE_Menu))	// IDEMPIERE 329 - nmicoud
-				pstmt.setInt(idx++, AD_User_ID);
-			pstmt.setInt(idx++, getAD_Tree_ID());
+			pstmt.setInt(1, getAD_Tree_ID());
 			//	Get Tree & Bar
 			rs = pstmt.executeQuery();
 			m_root = new MTreeNode (0, 0, getName(), getDescription(), 0, true, null, false, null);
@@ -304,8 +329,6 @@ public class MTree extends MTree_Base
 					addToTree (node_ID, parent_ID, seqNo, onBar);	//	calls getNodeDetail
 			}
 			//
-			//closing the rowset will also close connection for oracle rowset implementation
-			//m_nodeRowSet.close();
 			m_nodeRowSet = null;
 			m_nodeIdMap = null;
 		}
@@ -363,14 +386,13 @@ public class MTree extends MTree_Base
 		//  clean up
 		if (!m_editable && m_root.getChildCount() > 0)
 			trimTree();
-//		diagPrintTree();
 		if (CLogMgt.isLevelFinest() || m_root.getChildCount() == 0)
 			if (log.isLoggable(Level.FINE)) log.fine("ChildCount=" + m_root.getChildCount());
 	}   //  loadNodes
 
 	/**
 	 *  Add Node to Tree.
-	 *  If not found add to buffer
+	 *  If not found add to buffer.
 	 *  @param node_ID Node_ID
 	 *  @param parent_ID Parent_ID
 	 *  @param seqNo SeqNo
@@ -428,24 +450,23 @@ public class MTree extends MTree_Base
 			}
 		}
 	}   //  checkBuffer
-
 	
-	
-	/**************************************************************************
+	/**
 	 *  Get Node Detail.
-	 * 	Loads data into RowSet m_nodeRowSet
+	 *  <pre>
+	 *  Loads data into RowSet m_nodeRowSet
 	 *  Columns:
-	 * 	- ID
+	 *  - ID
 	 *  - Name
 	 *  - Description
 	 *  - IsSummary
 	 *  - ImageIndicator
-	 * 	- additional for Menu
-	 *  Parameter:
-	 *  - Node_ID
-	 *  The SQL contains security/access control
+	 *  - additional for Menu
+	 *  </pre>
+	 *  @param linkColName
+	 *  @param linkID
 	 */
-	private void getNodeDetails ()
+	private void getNodeDetails (String linkColName, int linkID)
 	{
 		//  SQL for Node Info
 		StringBuilder sqlNode = new StringBuilder();
@@ -506,7 +527,19 @@ public class MTree extends MTree_Base
 			sqlNode.append("t.Description,t.IsSummary,").append(color)
 			.append(" FROM ").append(tableName).append(" t ");
 			if (!m_editable)
-			sqlNode.append(" WHERE t.IsActive='Y'");
+			{
+				if (Util.isEmpty(linkColName) || linkID==0 )
+					sqlNode.append(" WHERE t.IsActive='Y'");
+				else
+					sqlNode.append(" WHERE t.IsActive='Y' AND t.").append(linkColName).append("=").append(linkID);
+
+			}else {
+
+				if (!Util.isEmpty(linkColName) && linkID > 0)
+					sqlNode.append(" WHERE t.").append(linkColName).append("=").append(linkID);
+
+			}
+			
 		}  else if (isValueDisplayed()) {
 			sqlNode.append("SELECT t.").append(columnNameX)
 			.append("_ID, t.Value || ' - ' || t.Name, t.Description, t.IsSummary,").append(color)
@@ -528,7 +561,7 @@ public class MTree extends MTree_Base
 			sql = MRole.getDefault(getCtx(), false).addAccessSQL(sql, 
 				sourceTable, MRole.SQL_FULLYQUALIFIED, m_editable);
 		log.fine(sql);
-		m_nodeRowSet = DB.getRowSet (sql);
+		m_nodeRowSet = DB.getRowSet (sql, get_TrxName());
 		m_nodeIdMap = new HashMap<Integer, ArrayList<Integer>>(50);
 		try 
 		{
@@ -555,7 +588,7 @@ public class MTree extends MTree_Base
 
 	/**
 	 *  Get Menu Node Details.
-	 *  As SQL contains security access, not all nodes will be found
+	 *  As SQL contains security access, not all nodes will be found.
 	 *  @param  node_ID     Key of the record
 	 *  @param  parent_ID   Parent ID of the record
 	 *  @param  seqNo       Sort index
@@ -567,11 +600,10 @@ public class MTree extends MTree_Base
 		MTreeNode retValue = null;
 		try
 		{
-			//m_nodeRowSet.beforeFirst();
 			ArrayList<Integer> nodeList = m_nodeIdMap.get(Integer.valueOf(node_ID));
 			int size = nodeList != null ? nodeList.size() : 0;
 			int i = 0;
-			//while (m_nodeRowSet.next())
+
 			while (i < size)
 			{
 				Integer nodeId = nodeList.get(i);
@@ -614,10 +646,31 @@ public class MTree extends MTree_Base
 						}
 					}
 					else if (X_AD_Menu.ACTION_Process.equals(actionColor) 
-						|| X_AD_Menu.ACTION_Report.equals(actionColor))
+						|| X_AD_Menu.ACTION_Report.equals(actionColor)) {
 						access = role.getProcessAccess(AD_Process_ID);
-					else if (X_AD_Menu.ACTION_Form.equals(actionColor))
+
+						// Get ProcessCustomization
+						MUserDefProc userDef = null; 
+						userDef = MUserDefProc.getBestMatch(getCtx(), AD_Process_ID);
+						if (userDef != null)
+						{
+							if (userDef.getName() != null)
+								name = userDef.getName();
+							if (userDef.getDescription() != null)
+								description = userDef.getDescription();
+						}
+					}
+					else if (X_AD_Menu.ACTION_Form.equals(actionColor)) {
 						access = role.getFormAccess(AD_Form_ID);
+
+						MUserDefForm userDef = MUserDefForm.getBestMatch(getCtx(), AD_Form_ID);
+						if (userDef != null) {
+							if (userDef.getName() != null)
+								name = userDef.getName();
+							if (userDef.getDescription() != null)
+								description = userDef.getDescription();
+						}
+					}
 					else if (X_AD_Menu.ACTION_WorkFlow.equals(actionColor))
 						access = role.getWorkflowAccess(AD_Workflow_ID);
 					else if (X_AD_Menu.ACTION_Task.equals(actionColor))
@@ -636,7 +689,6 @@ public class MTree extends MTree_Base
 								description = userDef.getDescription();
 						}
 					}
-				//	log.fine("getNodeDetail - " + name + " - " + actionColor + " - " + access);
 					//
 					if (access != null		//	rw or ro for Role 
 						|| m_editable)		//	Menu Window can see all
@@ -668,9 +720,8 @@ public class MTree extends MTree_Base
 		}
 		return retValue;
 	}   //  getNodeDetails
-
 	
-	/**************************************************************************
+	/**
 	 *  Trim tree of empty summary nodes
 	 */
 	public void trimTree()
@@ -691,28 +742,6 @@ public class MTree extends MTree_Base
 			}
 		}
 	}   //  trimTree
-
-	/**
-	 *  Diagnostics: Print tree
-	 */
-	/*private void dumpTree()
-	{
-		Enumeration<?> en = m_root.preorderEnumeration();
-		int count = 0;
-		while (en.hasMoreElements())
-		{
-			StringBuilder sb = new StringBuilder();
-			MTreeNode nd = (MTreeNode)en.nextElement();
-			for (int i = 0; i < nd.getLevel(); i++)
-				sb.append(" ");
-			sb.append("ID=").append(nd.getNode_ID())
-				.append(", SeqNo=").append(nd.getSeqNo())
-				.append(" ").append(nd.getName());
-			System.out.println(sb.toString());
-			count++;
-		}
-		System.out.println("Count=" + count);
-	}   //  diagPrintTree*/
 
 	/**
 	 *  Get Root node
@@ -754,6 +783,7 @@ public class MTree extends MTree_Base
 	 *  String representation
 	 *  @return info
 	 */
+	@Override
 	public String toString()
 	{
 		StringBuilder sb = new StringBuilder("MTree[");
@@ -761,5 +791,78 @@ public class MTree extends MTree_Base
 			.append(", Name=").append(getName());
 		sb.append("]");
 		return sb.toString();
+	}
+
+	/**
+	 * Return the table name of the table driving a tree 
+	 * @param treeId
+	 * @return
+	 */
+	public static String getRefTableFromTree(int treeId) {
+		final String sqlTableTree = ""
+				+ "SELECT CASE "
+				+ "         WHEN TreeType = 'AY' THEN 'C_Activity' "
+				+ "         WHEN TreeType = 'BB' THEN 'M_BOM' "
+				+ "         WHEN TreeType = 'BP' THEN 'C_BPartner' "
+				+ "         WHEN TreeType = 'CC' THEN 'CM_Container' "
+				+ "         WHEN TreeType = 'CM' THEN 'CM_Media' "
+				+ "         WHEN TreeType = 'CS' THEN 'CM_CStage' "
+				+ "         WHEN TreeType = 'CT' THEN 'CM_Template' "
+				+ "         WHEN TreeType = 'EV' THEN 'C_ElementValue' "
+				+ "         WHEN TreeType = 'MC' THEN 'C_Campaign' "
+				+ "         WHEN TreeType = 'MM' THEN 'AD_Menu' "
+				+ "         WHEN TreeType = 'OO' THEN 'AD_Org' "
+				+ "         WHEN TreeType = 'PC' THEN 'M_Product_Category' "
+				+ "         WHEN TreeType = 'PJ' THEN 'C_Project' "
+				+ "         WHEN TreeType = 'PR' THEN 'M_Product' "
+				+ "         WHEN TreeType = 'SR' THEN 'C_SalesRegion' "
+				+ "         WHEN TreeType = 'U1' THEN 'C_ElementValue' "
+				+ "         WHEN TreeType = 'U2' THEN 'C_ElementValue' "
+				+ "         WHEN TreeType = 'U3' THEN 'C_ElementValue' "
+				+ "         WHEN TreeType = 'U4' THEN 'C_ElementValue' "
+				+ "         WHEN TreeType = 'TL' THEN AD_Table.TableName "
+				+ "         ELSE NULL "
+				+ "       END "
+				+ "FROM   AD_Tree "
+				+ "       LEFT JOIN AD_Table ON ( AD_Table.AD_Table_ID = AD_Tree.AD_Table_ID ) "
+				+ "WHERE  AD_Tree_ID = ?";
+		return DB.getSQLValueStringEx(null, sqlTableTree, treeId);
+	}
+
+	/**
+	 * Return the reference table name from the given tree node table name
+	 * @param tableName tree node table name (AD_TreeBar, AD_TreeNodeBP, etc)
+	 * @param treeId AD_Tree_ID (for AD_TreeNode)
+	 * @return reference table name
+	 */
+	public static String getRefTableNameFromTableName(String tableName, int treeId) {
+		String refTableName = null;
+		if ("AD_Tree_Favorite_Node".equalsIgnoreCase(tableName))
+			refTableName = "AD_Tree_Favorite_Node";
+		else if ("AD_TreeBar".equalsIgnoreCase(tableName)
+				|| "AD_TreeNodeMM".equalsIgnoreCase(tableName))
+			refTableName = "AD_Menu";
+		else if ("AD_TreeNodeBP".equalsIgnoreCase(tableName))
+			refTableName = "C_BPartner";
+		else if ("AD_TreeNodeCMC".equalsIgnoreCase(tableName))
+			refTableName = "CM_Container";
+		else if ("AD_TreeNodeCMM".equalsIgnoreCase(tableName))
+			refTableName = "CM_Media";
+		else if ("AD_TreeNodeCMS".equalsIgnoreCase(tableName))
+			refTableName = "CM_CStage";
+		else if ("AD_TreeNodeCMT".equalsIgnoreCase(tableName))
+			refTableName = "CM_Template";
+		else if ("AD_TreeNodePR".equalsIgnoreCase(tableName))
+			refTableName = "M_Product";
+		else if ("AD_TreeNodeU1".equalsIgnoreCase(tableName)
+				|| "AD_TreeNodeU2".equalsIgnoreCase(tableName) 
+				|| "AD_TreeNodeU3".equalsIgnoreCase(tableName)
+				|| "AD_TreeNodeU4".equalsIgnoreCase(tableName))
+			refTableName = "C_ElementValue";
+		else if ("AD_TreeNode".equalsIgnoreCase(tableName))
+		{
+			refTableName = MTree.getRefTableFromTree(treeId);
+		}
+		return refTableName;
 	}
 }   //  MTree

@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_Scheduler
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 14
  */
 public interface I_AD_Scheduler 
 {
@@ -44,8 +44,8 @@ public interface I_AD_Scheduler
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -53,12 +53,12 @@ public interface I_AD_Scheduler
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -75,6 +75,7 @@ public interface I_AD_Scheduler
 	  */
 	public int getAD_PrintFormat_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_PrintFormat getAD_PrintFormat() throws RuntimeException;
 
     /** Column name AD_Process_ID */
@@ -90,6 +91,7 @@ public interface I_AD_Scheduler
 	  */
 	public int getAD_Process_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Process getAD_Process() throws RuntimeException;
 
     /** Column name AD_Schedule_ID */
@@ -101,6 +103,7 @@ public interface I_AD_Scheduler
 	/** Get Schedule	  */
 	public int getAD_Schedule_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Schedule getAD_Schedule() throws RuntimeException;
 
     /** Column name AD_Scheduler_ID */
@@ -138,6 +141,7 @@ public interface I_AD_Scheduler
 	  */
 	public int getAD_Table_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Table getAD_Table() throws RuntimeException;
 
     /** Column name Created */
@@ -159,12 +163,12 @@ public interface I_AD_Scheduler
     /** Column name DateLastRun */
     public static final String COLUMNNAME_DateLastRun = "DateLastRun";
 
-	/** Set Date last run.
+	/** Set Date Last Run.
 	  * Date the process was last run.
 	  */
 	public void setDateLastRun (Timestamp DateLastRun);
 
-	/** Get Date last run.
+	/** Get Date Last Run.
 	  * Date the process was last run.
 	  */
 	public Timestamp getDateLastRun();
@@ -172,12 +176,12 @@ public interface I_AD_Scheduler
     /** Column name DateNextRun */
     public static final String COLUMNNAME_DateNextRun = "DateNextRun";
 
-	/** Set Date next run.
+	/** Set Date Next Run.
 	  * Date the process will run next
 	  */
 	public void setDateNextRun (Timestamp DateNextRun);
 
-	/** Get Date next run.
+	/** Get Date Next Run.
 	  * Date the process will run next
 	  */
 	public Timestamp getDateNextRun();
@@ -243,6 +247,22 @@ public interface I_AD_Scheduler
 	/** Get Process Now	  */
 	public boolean isProcessing();
 
+    /** Column name R_MailText_ID */
+    public static final String COLUMNNAME_R_MailText_ID = "R_MailText_ID";
+
+	/** Set Mail Template.
+	  * Text templates for mailings
+	  */
+	public void setR_MailText_ID (int R_MailText_ID);
+
+	/** Get Mail Template.
+	  * Text templates for mailings
+	  */
+	public int getR_MailText_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_R_MailText getR_MailText() throws RuntimeException;
+
     /** Column name Record_ID */
     public static final String COLUMNNAME_Record_ID = "Record_ID";
 
@@ -264,21 +284,6 @@ public interface I_AD_Scheduler
 
 	/** Get Report Output Type	  */
 	public String getReportOutputType();
-
-    /** Column name R_MailText_ID */
-    public static final String COLUMNNAME_R_MailText_ID = "R_MailText_ID";
-
-	/** Set Mail Template.
-	  * Text templates for mailings
-	  */
-	public void setR_MailText_ID (int R_MailText_ID);
-
-	/** Get Mail Template.
-	  * Text templates for mailings
-	  */
-	public int getR_MailText_ID();
-
-	public org.compiere.model.I_R_MailText getR_MailText() throws RuntimeException;
 
     /** Column name SchedulerState */
     public static final String COLUMNNAME_SchedulerState = "SchedulerState";
@@ -306,6 +311,7 @@ public interface I_AD_Scheduler
 	  */
 	public int getSupervisor_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_User getSupervisor() throws RuntimeException;
 
     /** Column name Updated */
@@ -323,4 +329,13 @@ public interface I_AD_Scheduler
 	  * User who updated this records
 	  */
 	public int getUpdatedBy();
+
+    /** Column name WebSessionLogic */
+    public static final String COLUMNNAME_WebSessionLogic = "WebSessionLogic";
+
+	/** Set Web Session Logic	  */
+	public void setWebSessionLogic (String WebSessionLogic);
+
+	/** Get Web Session Logic	  */
+	public String getWebSessionLogic();
 }

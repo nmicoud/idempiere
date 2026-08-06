@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for T_DistributionRunDetail
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_T_DistributionRunDetail 
 {
@@ -44,8 +44,8 @@ public interface I_T_DistributionRunDetail
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -53,28 +53,29 @@ public interface I_T_DistributionRunDetail
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
     /** Column name C_BPartner_ID */
     public static final String COLUMNNAME_C_BPartner_ID = "C_BPartner_ID";
 
-	/** Set Business Partner .
+	/** Set Business Partner.
 	  * Identifies a Business Partner
 	  */
 	public void setC_BPartner_ID (int C_BPartner_ID);
 
-	/** Get Business Partner .
+	/** Get Business Partner.
 	  * Identifies a Business Partner
 	  */
 	public int getC_BPartner_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_BPartner getC_BPartner() throws RuntimeException;
 
     /** Column name C_BPartner_Location_ID */
@@ -90,6 +91,7 @@ public interface I_T_DistributionRunDetail
 	  */
 	public int getC_BPartner_Location_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_BPartner_Location getC_BPartner_Location() throws RuntimeException;
 
     /** Column name Created */
@@ -121,21 +123,6 @@ public interface I_T_DistributionRunDetail
 	  */
 	public boolean isActive();
 
-    /** Column name M_DistributionList_ID */
-    public static final String COLUMNNAME_M_DistributionList_ID = "M_DistributionList_ID";
-
-	/** Set Distribution List.
-	  * Distribution Lists allow to distribute products to a selected list of partners
-	  */
-	public void setM_DistributionList_ID (int M_DistributionList_ID);
-
-	/** Get Distribution List.
-	  * Distribution Lists allow to distribute products to a selected list of partners
-	  */
-	public int getM_DistributionList_ID();
-
-	public org.compiere.model.I_M_DistributionList getM_DistributionList() throws RuntimeException;
-
     /** Column name M_DistributionListLine_ID */
     public static final String COLUMNNAME_M_DistributionListLine_ID = "M_DistributionListLine_ID";
 
@@ -149,22 +136,24 @@ public interface I_T_DistributionRunDetail
 	  */
 	public int getM_DistributionListLine_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_M_DistributionListLine getM_DistributionListLine() throws RuntimeException;
 
-    /** Column name M_DistributionRun_ID */
-    public static final String COLUMNNAME_M_DistributionRun_ID = "M_DistributionRun_ID";
+    /** Column name M_DistributionList_ID */
+    public static final String COLUMNNAME_M_DistributionList_ID = "M_DistributionList_ID";
 
-	/** Set Distribution Run.
-	  * Distribution Run create Orders to distribute products to a selected list of partners
+	/** Set Distribution List.
+	  * Distribution Lists allow to distribute products to a selected list of partners
 	  */
-	public void setM_DistributionRun_ID (int M_DistributionRun_ID);
+	public void setM_DistributionList_ID (int M_DistributionList_ID);
 
-	/** Get Distribution Run.
-	  * Distribution Run create Orders to distribute products to a selected list of partners
+	/** Get Distribution List.
+	  * Distribution Lists allow to distribute products to a selected list of partners
 	  */
-	public int getM_DistributionRun_ID();
+	public int getM_DistributionList_ID();
 
-	public org.compiere.model.I_M_DistributionRun getM_DistributionRun() throws RuntimeException;
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_M_DistributionList getM_DistributionList() throws RuntimeException;
 
     /** Column name M_DistributionRunLine_ID */
     public static final String COLUMNNAME_M_DistributionRunLine_ID = "M_DistributionRunLine_ID";
@@ -179,20 +168,24 @@ public interface I_T_DistributionRunDetail
 	  */
 	public int getM_DistributionRunLine_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_M_DistributionRunLine getM_DistributionRunLine() throws RuntimeException;
 
-    /** Column name MinQty */
-    public static final String COLUMNNAME_MinQty = "MinQty";
+    /** Column name M_DistributionRun_ID */
+    public static final String COLUMNNAME_M_DistributionRun_ID = "M_DistributionRun_ID";
 
-	/** Set Minimum Quantity.
-	  * Minimum quantity for the business partner
+	/** Set Distribution Run.
+	  * Distribution Run create Orders to distribute products to a selected list of partners
 	  */
-	public void setMinQty (BigDecimal MinQty);
+	public void setM_DistributionRun_ID (int M_DistributionRun_ID);
 
-	/** Get Minimum Quantity.
-	  * Minimum quantity for the business partner
+	/** Get Distribution Run.
+	  * Distribution Run create Orders to distribute products to a selected list of partners
 	  */
-	public BigDecimal getMinQty();
+	public int getM_DistributionRun_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_M_DistributionRun getM_DistributionRun() throws RuntimeException;
 
     /** Column name M_Product_ID */
     public static final String COLUMNNAME_M_Product_ID = "M_Product_ID";
@@ -207,7 +200,21 @@ public interface I_T_DistributionRunDetail
 	  */
 	public int getM_Product_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_M_Product getM_Product() throws RuntimeException;
+
+    /** Column name MinQty */
+    public static final String COLUMNNAME_MinQty = "MinQty";
+
+	/** Set Minimum Quantity.
+	  * Minimum quantity for the business partner
+	  */
+	public void setMinQty (BigDecimal MinQty);
+
+	/** Get Minimum Quantity.
+	  * Minimum quantity for the business partner
+	  */
+	public BigDecimal getMinQty();
 
     /** Column name Qty */
     public static final String COLUMNNAME_Qty = "Qty";

@@ -23,7 +23,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for T_BOMLine
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 @SuppressWarnings("all")
 public interface I_T_BOMLine 
@@ -46,8 +46,8 @@ public interface I_T_BOMLine
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -55,12 +55,12 @@ public interface I_T_BOMLine
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -77,6 +77,7 @@ public interface I_T_BOMLine
 	  */
 	public int getAD_PInstance_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_PInstance getAD_PInstance() throws RuntimeException;
 
     /** Column name C_AcctSchema_ID */
@@ -92,6 +93,7 @@ public interface I_T_BOMLine
 	  */
 	public int getC_AcctSchema_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_AcctSchema getC_AcctSchema() throws RuntimeException;
 
     /** Column name Cost */
@@ -107,19 +109,6 @@ public interface I_T_BOMLine
 	  */
 	public BigDecimal getCost();
 
-    /** Column name CostingMethod */
-    public static final String COLUMNNAME_CostingMethod = "CostingMethod";
-
-	/** Set Costing Method.
-	  * Indicates how Costs will be calculated
-	  */
-	public void setCostingMethod (String CostingMethod);
-
-	/** Get Costing Method.
-	  * Indicates how Costs will be calculated
-	  */
-	public String getCostingMethod();
-
     /** Column name CostStandard */
     public static final String COLUMNNAME_CostStandard = "CostStandard";
 
@@ -132,6 +121,19 @@ public interface I_T_BOMLine
 	  * Standard Costs
 	  */
 	public BigDecimal getCostStandard();
+
+    /** Column name CostingMethod */
+    public static final String COLUMNNAME_CostingMethod = "CostingMethod";
+
+	/** Set Costing Method.
+	  * Indicates how Costs will be calculated
+	  */
+	public void setCostingMethod (String CostingMethod);
+
+	/** Get Costing Method.
+	  * Indicates how Costs will be calculated
+	  */
+	public String getCostingMethod();
 
     /** Column name Created */
     public static final String COLUMNNAME_Created = "Created";
@@ -197,12 +199,16 @@ public interface I_T_BOMLine
     public static final String COLUMNNAME_Implosion = "Implosion";
 
 	/** Set Implosion.
-	  * Implosion of a Bill of Materials refers to finding all the BOM''s in which a component is used.
+	  * Implosion of a Bill of Materials refers to finding all the BOM&#039;
+&#039;
+s in which a component is used.
 	  */
 	public void setImplosion (boolean Implosion);
 
 	/** Get Implosion.
-	  * Implosion of a Bill of Materials refers to finding all the BOM''s in which a component is used.
+	  * Implosion of a Bill of Materials refers to finding all the BOM&#039;
+&#039;
+s in which a component is used.
 	  */
 	public boolean isImplosion();
 
@@ -263,6 +269,7 @@ public interface I_T_BOMLine
 	  */
 	public int getM_CostElement_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_M_CostElement getM_CostElement() throws RuntimeException;
 
     /** Column name M_CostType_ID */
@@ -278,6 +285,7 @@ public interface I_T_BOMLine
 	  */
 	public int getM_CostType_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_M_CostType getM_CostType() throws RuntimeException;
 
     /** Column name M_Product_ID */
@@ -293,22 +301,8 @@ public interface I_T_BOMLine
 	  */
 	public int getM_Product_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_M_Product getM_Product() throws RuntimeException;
-
-    /** Column name PP_Product_BOM_ID */
-    public static final String COLUMNNAME_PP_Product_BOM_ID = "PP_Product_BOM_ID";
-
-	/** Set BOM & Formula.
-	  * BOM & Formula
-	  */
-	public void setPP_Product_BOM_ID (int PP_Product_BOM_ID);
-
-	/** Get BOM & Formula.
-	  * BOM & Formula
-	  */
-	public int getPP_Product_BOM_ID();
-
-	public org.eevolution.model.I_PP_Product_BOM getPP_Product_BOM() throws RuntimeException;
 
     /** Column name PP_Product_BOMLine_ID */
     public static final String COLUMNNAME_PP_Product_BOMLine_ID = "PP_Product_BOMLine_ID";
@@ -323,18 +317,39 @@ public interface I_T_BOMLine
 	  */
 	public int getPP_Product_BOMLine_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.eevolution.model.I_PP_Product_BOMLine getPP_Product_BOMLine() throws RuntimeException;
+
+    /** Column name PP_Product_BOM_ID */
+    public static final String COLUMNNAME_PP_Product_BOM_ID = "PP_Product_BOM_ID";
+
+	/** Set BOM &amp;
+ Formula.
+	  * BOM &amp;
+ Formula
+	  */
+	public void setPP_Product_BOM_ID (int PP_Product_BOM_ID);
+
+	/** Get BOM &amp;
+ Formula.
+	  * BOM &amp;
+ Formula
+	  */
+	public int getPP_Product_BOM_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.eevolution.model.I_PP_Product_BOM getPP_Product_BOM() throws RuntimeException;
 
     /** Column name QtyBOM */
     public static final String COLUMNNAME_QtyBOM = "QtyBOM";
 
 	/** Set Quantity.
-	  * Indicate the Quantity  use in this BOM
+	  * Indicate the Quantity use in this BOM
 	  */
 	public void setQtyBOM (BigDecimal QtyBOM);
 
 	/** Get Quantity.
-	  * Indicate the Quantity  use in this BOM
+	  * Indicate the Quantity use in this BOM
 	  */
 	public BigDecimal getQtyBOM();
 

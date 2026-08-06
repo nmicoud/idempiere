@@ -30,12 +30,14 @@ import org.compiere.model.MAcctSchema;
 import org.compiere.model.MAttributeSet;
 import org.compiere.model.MAttributeSetInstance;
 import org.compiere.model.MCost;
+import org.compiere.model.MCostElement;
+import org.compiere.model.MDocType;
 import org.compiere.model.MInventory;
 import org.compiere.model.MInventoryLine;
+import org.compiere.model.MProcessPara;
 import org.compiere.model.MProduct;
 import org.compiere.model.MProductCategoryAcct;
 import org.compiere.model.ModelValidationEngine;
-import org.compiere.model.PO;
 import org.compiere.model.X_I_Inventory;
 import org.compiere.util.AdempiereUserError;
 import org.compiere.util.CLogger;
@@ -55,6 +57,7 @@ import org.compiere.util.ValueNamePair;
  *  Carlos Ruiz - globalqss - IDEMPIERE-281 Extend Import Inventory to support also internal use
  *  Deepak Pansheriya - logilite - IDEMPIERE-2314 Making import inventory process extendible
  */
+@org.adempiere.base.annotation.Process
 public class ImportInventory extends SvrProcess implements ImportProcess
 {
 	/**	Client to be imported to		*/
@@ -121,7 +124,7 @@ public class ImportInventory extends SvrProcess implements ImportProcess
 			else if (name.equals("C_DocType_ID"))
 				p_C_DocType_ID = ((BigDecimal)para[i].getParameter()).intValue();
 			else
-				log.log(Level.WARNING, "Unknown Parameter: " + name);
+				MProcessPara.validateUnknownParameter(getProcessInfo().getAD_Process_ID(), para[i]);
 		}
 	}	//	prepare
 
@@ -351,12 +354,9 @@ public class ImportInventory extends SvrProcess implements ImportProcess
 		sql = new StringBuilder ("SELECT * FROM I_Inventory ")
 			.append("WHERE I_IsImported='N'").append (clientCheck)
 			.append(" ORDER BY M_Warehouse_ID, TRUNC(MovementDate), I_Inventory_ID");
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		try
+		try (PreparedStatement pstmt = DB.prepareStatement (sql.toString (), get_TrxName());)
 		{
-			pstmt = DB.prepareStatement (sql.toString (), get_TrxName());
-			rs = pstmt.executeQuery ();
+			ResultSet rs = pstmt.executeQuery ();
 			//
 			int x_M_Warehouse_ID = -1;
 			int x_C_DocType_ID = -1;
@@ -472,12 +472,12 @@ public class ImportInventory extends SvrProcess implements ImportProcess
 				if (!DocumentEngine.processIt(costingDoc, DocAction.ACTION_Complete)) 
 				{
 					StringBuilder msg = new StringBuilder();
-					I_C_DocType docType = costingDoc.getC_DocType();
+					MDocType docType = MDocType.get(getCtx(), costingDoc.getC_DocType_ID());
 					msg.append(Msg.getMsg(getCtx(), "ProcessFailed")).append(": ");
 					if (Env.isBaseLanguage(getCtx(), I_C_DocType.Table_Name))
 						msg.append(docType.getName());
 					else
-						msg.append(((PO)docType).get_Translation(I_C_DocType.COLUMNNAME_Name));
+						msg.append(docType.get_Translation(I_C_DocType.COLUMNNAME_Name));
 					throw new AdempiereUserError(msg.toString());
 				}
 				costingDoc.saveEx();
@@ -486,11 +486,6 @@ public class ImportInventory extends SvrProcess implements ImportProcess
 		catch (Exception e)
 		{
 			throw new AdempiereException(e);
-		}
-		finally
-		{
-			DB.close(rs, pstmt);
-			rs = null; pstmt = null;
 		}
 
 		//	Set Error to indicator to not imported
@@ -555,7 +550,8 @@ public class ImportInventory extends SvrProcess implements ImportProcess
 		if (costingDoc == null) {
 			costingDoc = new MInventory(getCtx(), 0, get_TrxName());
 			costingDoc.setC_DocType_ID(p_C_DocType_ID);
-			costingDoc.setCostingMethod(cost.getM_CostElement().getCostingMethod());
+			MCostElement costElement = MCostElement.get(cost.getM_CostElement_ID());
+			costingDoc.setCostingMethod(costElement.getCostingMethod());
 			costingDoc.setAD_Org_ID(imp.getAD_Org_ID());
 			costingDoc.setDocAction(DocAction.ACTION_Complete);
 			costingDoc.saveEx();

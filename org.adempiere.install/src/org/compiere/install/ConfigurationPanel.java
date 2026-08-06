@@ -25,20 +25,13 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.util.ResourceBundle;
 
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
-import javax.swing.JFileChooser;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JPasswordField;
-import javax.swing.JSeparator;
-import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
+import javax.swing.border.Border;
+import javax.swing.border.LineBorder;
 import javax.swing.border.TitledBorder;
 
 import org.adempiere.install.DBConfigStatus;
@@ -105,6 +98,8 @@ public class ConfigurationPanel extends JPanel implements ActionListener, IDBCon
 	JTextField 	fJavaHome = new JTextField(FIELDLENGTH);
 	JCheckBox 	okJavaHome = new JCheckBox();
 	private JButton 	bJavaHome = new JButton(iOpen);
+	private JLabel 		lJavaOptions = new JLabel();
+	JTextField 	fJavaOptions = new JTextField(FIELDLENGTH);
 	//	Adempiere - KeyStore
 	private JLabel 		lAdempiereHome = new JLabel();
 	JTextField 	fAdempiereHome = new JTextField(FIELDLENGTH);
@@ -179,6 +174,7 @@ public class ConfigurationPanel extends JPanel implements ActionListener, IDBCon
 		lJavaHome.setToolTipText(res.getString("JavaHomeInfo"));
 		lJavaHome.setText(res.getString("JavaHome"));
 		fJavaHome.setText(".");
+		setFieldBorder(fJavaHome);
 		okJavaHome.setEnabled(false);
 		bJavaHome.setMargin(bInsets);
 		bJavaHome.setToolTipText(res.getString("JavaHomeInfo"));
@@ -199,77 +195,90 @@ public class ConfigurationPanel extends JPanel implements ActionListener, IDBCon
 			,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(5, 0, 2, 5), 0, 0));
 		this.add(bJavaHome,    new GridBagConstraints(3, 2, 1, 1, 0.0, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0));
+		
+		lJavaOptions.setText(res.getString("JavaOptions"));
+		this.add(lJavaOptions,    new GridBagConstraints(0, 3, 1, 1, 0.0, 0.0
+				,GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(5, 5, 2, 5), 0, 0));
+		this.add(fJavaOptions,    new GridBagConstraints(1, 3, 5, 1, 1.0, 0.0
+				,GridBagConstraints.WEST, GridBagConstraints.BOTH, new Insets(5, 5, 5, 0), 0, 0));
+		setFieldBorder(fJavaOptions);
+
 		//	AdempiereHome - KeyStore
 		lAdempiereHome.setToolTipText(res.getString("AdempiereHomeInfo"));
 		lAdempiereHome.setText(res.getString("AdempiereHome"));
 		fAdempiereHome.setText(".");
+		setFieldBorder(fAdempiereHome);
 		okAdempiereHome.setEnabled(false);
 		bAdempiereHome.setMargin(bInsets);
 		bAdempiereHome.setToolTipText(res.getString("AdempiereHomeInfo"));
 		lKeyStore.setText(res.getString("KeyStorePassword"));
 		lKeyStore.setToolTipText(res.getString("KeyStorePasswordInfo"));
 		fKeyStore.setText("");
+		setFieldBorder(fKeyStore);
 		okKeyStore.setEnabled(false);
 
 		sectionLabel = new JLabel("iDempiere");
 		sectionLabel.setForeground(titledBorder.getTitleColor());
 		separator = new JSeparator();
-		this.add(sectionLabel,    new GridBagConstraints(0, 3, 7, 1, 0.0, 0.0
+		this.add(sectionLabel,    new GridBagConstraints(0, 4, 7, 1, 0.0, 0.0
 				,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(15, 5, 0, 0), 0, 0));
-		this.add(separator,    new GridBagConstraints(0, 4, 7, 1, 1.0, 0.0
+		this.add(separator,    new GridBagConstraints(0, 5, 7, 1, 1.0, 0.0
 				,GridBagConstraints.WEST, GridBagConstraints.HORIZONTAL, new Insets(0, 5, 0, 10), 0, 0));
-		this.add(lAdempiereHome,		new GridBagConstraints(0, 5, 1, 1, 0.0, 0.0
+		this.add(lAdempiereHome,		new GridBagConstraints(0, 6, 1, 1, 0.0, 0.0
 			,GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(5, 5, 2, 5), 0, 0));
-		this.add(fAdempiereHome,		new GridBagConstraints(1, 5, 1, 1, 0.5, 0.0
+		this.add(fAdempiereHome,		new GridBagConstraints(1, 6, 1, 1, 0.5, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.BOTH, new Insets(5, 5, 2, 0), 0, 0));
-		this.add(okAdempiereHome,	new GridBagConstraints(2, 5, 1, 1, 0.0, 0.0
+		this.add(okAdempiereHome,	new GridBagConstraints(2, 6, 1, 1, 0.0, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(5, 0, 2, 5), 0, 0));
-		this.add(bAdempiereHome,     new GridBagConstraints(3, 5, 1, 1, 0.0, 0.0
+		this.add(bAdempiereHome,     new GridBagConstraints(3, 6, 1, 1, 0.0, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0));
-		this.add(lKeyStore,  		new GridBagConstraints(4, 5, 1, 1, 0.0, 0.0
+		this.add(lKeyStore,  		new GridBagConstraints(4, 6, 1, 1, 0.0, 0.0
 			,GridBagConstraints.CENTER, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0));
-		this.add(fKeyStore,  		new GridBagConstraints(5, 5, 1, 1, 0.0, 0.0
+		this.add(fKeyStore,  		new GridBagConstraints(5, 6, 1, 1, 0.0, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.HORIZONTAL, new Insets(5, 5, 2, 0), 0, 0));
-		this.add(okKeyStore,  		new GridBagConstraints(6, 5, 1, 1, 0.0, 0.0
+		this.add(okKeyStore,  		new GridBagConstraints(6, 6, 1, 1, 0.0, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(5, 5, 2, 5), 0, 0));
 		//	Apps Server - Type
 		lAppsServer.setToolTipText(res.getString("AppsServerInfo"));
 		lAppsServer.setText(res.getString("AppsServer"));
 		lAppsServer.setFont(lAppsServer.getFont().deriveFont(Font.BOLD));
 		fAppsServer.setText(".");
+		setFieldBorder(fAppsServer);
 		okAppsServer.setEnabled(false);
 		sectionLabel = new JLabel(res.getString("AppsServer"));
 		sectionLabel.setForeground(titledBorder.getTitleColor());
 		separator = new JSeparator();
-		this.add(sectionLabel,    new GridBagConstraints(0, 6, 6, 1, 0.0, 0.0
+		this.add(sectionLabel,    new GridBagConstraints(0, 7, 6, 1, 0.0, 0.0
 				,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(15, 5, 0, 0), 0, 0));
-		this.add(separator,    new GridBagConstraints(0, 7, 7, 1, 1.0, 0.0
+		this.add(separator,    new GridBagConstraints(0, 8, 7, 1, 1.0, 0.0
 				,GridBagConstraints.WEST, GridBagConstraints.HORIZONTAL, new Insets(0, 5, 0, 10), 0, 0));
-		this.add(lAppsServer,   new GridBagConstraints(0, 8, 1, 1, 0.0, 0.0
+		this.add(lAppsServer,   new GridBagConstraints(0, 9, 1, 1, 0.0, 0.0
 			,GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(5, 5, 2, 5), 0, 0));
-		this.add(fAppsServer,   new GridBagConstraints(1, 8, 1, 1, 0.5, 0.0
+		this.add(fAppsServer,   new GridBagConstraints(1, 9, 1, 1, 0.5, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.BOTH, new Insets(5, 5, 2, 0), 0, 0));
-		this.add(okAppsServer,  new GridBagConstraints(2, 8, 1, 1, 0.0, 0.0
+		this.add(okAppsServer,  new GridBagConstraints(2, 9, 1, 1, 0.0, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(5, 0, 2, 5), 0, 0));
 		//	Web Ports
 		lWebPort.setToolTipText(res.getString("WebPortInfo"));
 		lWebPort.setText(res.getString("WebPort"));
 		fWebPort.setText(".");
+		setFieldBorder(fWebPort);
 		okWebPort.setEnabled(false);
 		lSSLPort.setText("SSL");
 		fSSLPort.setText(".");
+		setFieldBorder(fSSLPort);
 		okSSLPort.setEnabled(false);
-		this.add(lWebPort,   new GridBagConstraints(0, 10, 1, 1, 0.0, 0.0
+		this.add(lWebPort,   new GridBagConstraints(0, 11, 1, 1, 0.0, 0.0
 			,GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(2, 5, 2, 5), 0, 0));
-		this.add(fWebPort,   new GridBagConstraints(1, 10, 1, 1, 0.5, 0.0
+		this.add(fWebPort,   new GridBagConstraints(1, 11, 1, 1, 0.5, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.BOTH, new Insets(2, 5, 2, 0), 0, 0));
-		this.add(okWebPort,  new GridBagConstraints(2, 10, 1, 1, 0.0, 0.0
+		this.add(okWebPort,  new GridBagConstraints(2, 11, 1, 1, 0.0, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(2, 0, 2, 5), 0, 0));
-		this.add(lSSLPort,   new GridBagConstraints(4, 10, 1, 1, 0.0, 0.0
+		this.add(lSSLPort,   new GridBagConstraints(4, 11, 1, 1, 0.0, 0.0
 			,GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(2, 5, 2, 5), 0, 0));
-		this.add(fSSLPort,   new GridBagConstraints(5, 10, 1, 1, 0.0, 0.0
+		this.add(fSSLPort,   new GridBagConstraints(5, 11, 1, 1, 0.0, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.BOTH, new Insets(2, 5, 2, 0), 0, 0));
-		this.add(okSSLPort,  new GridBagConstraints(6, 10, 1, 1, 0.0, 0.0
+		this.add(okSSLPort,  new GridBagConstraints(6, 11, 1, 1, 0.0, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(2, 0, 2, 5), 0, 0));
 		//	Database Server - Type
 		lDatabaseServer.setToolTipText(res.getString("DatabaseServerInfo"));
@@ -279,140 +288,152 @@ public class ConfigurationPanel extends JPanel implements ActionListener, IDBCon
 		lDatabaseType.setToolTipText(res.getString("DatabaseTypeInfo"));
 		lDatabaseType.setText(res.getString("DatabaseType"));
 		fDatabaseType.setPreferredSize(fDatabaseServer.getPreferredSize());
+		fDatabaseType.setBorder(BorderFactory.createLineBorder(Color.lightGray));
 		sectionLabel = new JLabel(res.getString("DatabaseServer"));
 		sectionLabel.setForeground(titledBorder.getTitleColor());
 		separator = new JSeparator();
 		ldbExists.setToolTipText(res.getString("DbExists"));
 		ldbExists.setText(res.getString("DbExists"));
 			
-		this.add(sectionLabel,    new GridBagConstraints(0, 11, 6, 1, 0.0, 0.0
+		this.add(sectionLabel,    new GridBagConstraints(0, 12, 6, 1, 0.0, 0.0
 				,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(15, 5, 0, 0), 0, 0));		
-		this.add(separator,    new GridBagConstraints(0, 12, 7, 1, 1.0, 0.0
+		this.add(separator,    new GridBagConstraints(0, 13, 7, 1, 1.0, 0.0
 				,GridBagConstraints.WEST, GridBagConstraints.HORIZONTAL, new Insets(0, 5, 0, 10), 0, 0));
-		this.add(ldbExists,  new GridBagConstraints(0, 13, 1, 1, 0.0, 0.0
+		this.add(ldbExists,  new GridBagConstraints(0, 14, 1, 1, 0.0, 0.0
 				,GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(5, 5, 2, 5), 0, 0));
-		this.add(okdbExists,  new GridBagConstraints(1, 13, 1, 1, 0.0, 0.0
+		this.add(okdbExists,  new GridBagConstraints(1, 14, 1, 1, 0.0, 0.0
 				,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(5, 0, 2, 5), 0, 0));
-		this.add(lDatabaseServer,	new GridBagConstraints(0, 14, 1, 1, 0.0, 0.0
+		this.add(lDatabaseServer,	new GridBagConstraints(0, 15, 1, 1, 0.0, 0.0
 			,GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(5, 5, 2, 5), 0, 0));
-		this.add(fDatabaseServer,   new GridBagConstraints(1, 14, 1, 1, 0.5, 0.0
+		this.add(fDatabaseServer,   new GridBagConstraints(1, 15, 1, 1, 0.5, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.BOTH, new Insets(5, 5, 2, 0), 0, 0));
-		this.add(okDatabaseServer,  new GridBagConstraints(2, 14, 1, 1, 0.0, 0.0
+		this.add(okDatabaseServer,  new GridBagConstraints(2, 15, 1, 1, 0.0, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(5, 0, 2, 5), 0, 0));
-		this.add(lDatabaseType,		new GridBagConstraints(4, 14, 1, 1, 0.0, 0.0
+		this.add(lDatabaseType,		new GridBagConstraints(4, 15, 1, 1, 0.0, 0.0
 			,GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(5, 5, 2, 5), 0, 0));
-		this.add(fDatabaseType,     new GridBagConstraints(5, 14, 1, 1, 0.0, 0.0
+		this.add(fDatabaseType,     new GridBagConstraints(5, 15, 1, 1, 0.0, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.HORIZONTAL, new Insets(5, 5, 2, 0), 0, 0));
 		//Database/Service Name
 		lDatabaseName.setToolTipText(res.getString("DatabaseNameInfo"));
 		lDatabaseName.setText(res.getString("DatabaseName"));
 		fDatabaseName.setText(".");
+		setFieldBorder(fDatabaseName);
+		setFieldBorder(fDatabaseServer);
 
 		//TNS/Native connection
 		lDatabaseDiscovered.setToolTipText(res.getString("TNSNameInfo"));
 		lDatabaseDiscovered.setText(res.getString("TNSName"));
 		fDatabaseDiscovered.setEditable(true);
 		fDatabaseDiscovered.setPreferredSize(fDatabaseName.getPreferredSize());
+		fDatabaseDiscovered.setBorder(BorderFactory.createLineBorder(Color.lightGray));
 		okDatabaseSQL.setEnabled(false);
-		this.add(lDatabaseName,		new GridBagConstraints(0, 15, 1, 1, 0.0, 0.0
+		this.add(lDatabaseName,		new GridBagConstraints(0, 16, 1, 1, 0.0, 0.0
 			,GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(2, 5, 2, 5), 0, 0));
-		this.add(fDatabaseName,		new GridBagConstraints(1, 15, 1, 1, 0.5, 0.0
+		this.add(fDatabaseName,		new GridBagConstraints(1, 16, 1, 1, 0.5, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.BOTH, new Insets(2, 5, 2, 0), 0, 0));
-		this.add(okDatabaseSQL, 		new GridBagConstraints(2, 15, 1, 1, 0.0, 0.0
+		this.add(okDatabaseSQL, 		new GridBagConstraints(2, 16, 1, 1, 0.0, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(2, 0, 2, 5), 0, 0));
-		this.add(lDatabaseDiscovered,  	new GridBagConstraints(4, 15, 1, 1, 0.0, 0.0
+		this.add(lDatabaseDiscovered,  	new GridBagConstraints(4, 16, 1, 1, 0.0, 0.0
 			,GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(2, 0, 2, 5), 0, 0));
-		this.add(fDatabaseDiscovered,  	new GridBagConstraints(5, 15, 1, 1, 0.5, 0.0
+		this.add(fDatabaseDiscovered,  	new GridBagConstraints(5, 16, 1, 1, 0.5, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.BOTH, new Insets(2, 5, 2, 0), 0, 0));
 		//	Port - System
 		lDatabasePort.setToolTipText(res.getString("DatabasePortInfo"));
 		lDatabasePort.setText(res.getString("DatabasePort"));
 		fDatabasePort.setText(".");
+		setFieldBorder(fDatabasePort);
 		lSystemPassword.setToolTipText(res.getString("SystemPasswordInfo"));
 		lSystemPassword.setText(res.getString("SystemPassword"));
 		fSystemPassword.setText(".");
+		setFieldBorder(fSystemPassword);
 		okDatabaseSystem.setEnabled(false);
-		this.add(lDatabasePort,		new GridBagConstraints(0, 16, 1, 1, 0.0, 0.0
+		this.add(lDatabasePort,		new GridBagConstraints(0, 17, 1, 1, 0.0, 0.0
 			,GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(2, 5, 2, 5), 0, 0));
-		this.add(fDatabasePort,     new GridBagConstraints(1, 16, 1, 1, 0.5, 0.0
+		this.add(fDatabasePort,     new GridBagConstraints(1, 17, 1, 1, 0.5, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.BOTH, new Insets(2, 5, 2, 0), 0, 0));
-		this.add(lSystemPassword,   new GridBagConstraints(4, 16, 1, 1, 0.0, 0.0
+		this.add(lSystemPassword,   new GridBagConstraints(4, 17, 1, 1, 0.0, 0.0
 			,GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(2, 5, 2, 5), 0, 0));
-		this.add(fSystemPassword,   new GridBagConstraints(5, 16, 1, 1, 0.5, 0.0
+		this.add(fSystemPassword,   new GridBagConstraints(5, 17, 1, 1, 0.5, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.HORIZONTAL, new Insets(2, 5, 2, 0), 0, 0));
-		this.add(okDatabaseSystem,	new GridBagConstraints(6, 16, 1, 1, 0.0, 0.0
+		this.add(okDatabaseSystem,	new GridBagConstraints(6, 17, 1, 1, 0.0, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(2, 0, 2, 5), 0, 0));
 
 		//	User - Password
 		lDatabaseUser.setToolTipText(res.getString("DatabaseUserInfo"));
 		lDatabaseUser.setText(res.getString("DatabaseUser"));
 		fDatabaseUser.setText(".");
+		setFieldBorder(fDatabaseUser);
 		lDatabasePassword.setToolTipText(res.getString("DatabasePasswordInfo"));
 		lDatabasePassword.setText(res.getString("DatabasePassword"));
 		fDatabasePassword.setText(".");
+		setFieldBorder(fDatabasePassword);
 		okDatabaseUser.setEnabled(false);
-		this.add(lDatabaseUser,     new GridBagConstraints(0, 17, 1, 1, 0.0, 0.0
+		this.add(lDatabaseUser,     new GridBagConstraints(0, 18, 1, 1, 0.0, 0.0
 			,GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(2, 5, 2, 5), 0, 0));
-		this.add(fDatabaseUser,		new GridBagConstraints(1, 17, 1, 1, 0.5, 0.0
+		this.add(fDatabaseUser,		new GridBagConstraints(1, 18, 1, 1, 0.5, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.BOTH, new Insets(2, 5, 2, 0), 0, 0));
-		this.add(lDatabasePassword, new GridBagConstraints(4, 17, 1, 1, 0.0, 0.0
+		this.add(lDatabasePassword, new GridBagConstraints(4, 18, 1, 1, 0.0, 0.0
 			,GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(2, 5, 2, 5), 0, 0));
-		this.add(fDatabasePassword, new GridBagConstraints(5, 17, 1, 1, 0.5, 0.0
+		this.add(fDatabasePassword, new GridBagConstraints(5, 18, 1, 1, 0.5, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.HORIZONTAL, new Insets(2, 5, 2, 0), 0, 0));
-		this.add(okDatabaseUser,	new GridBagConstraints(6, 17, 1, 1, 0.0, 0.0
+		this.add(okDatabaseUser,	new GridBagConstraints(6, 18, 1, 1, 0.0, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(2, 0, 2, 5), 0, 0));
 
 		sectionLabel = new JLabel(res.getString("MailServer"));
 		sectionLabel.setForeground(titledBorder.getTitleColor());
 		separator = new JSeparator();
-		this.add(sectionLabel,    new GridBagConstraints(0, 18, 6, 1, 0.0, 0.0
+		this.add(sectionLabel,    new GridBagConstraints(0, 19, 6, 1, 0.0, 0.0
 				,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(15, 5, 0, 0), 0, 0));
-		this.add(separator,    new GridBagConstraints(0, 19, 7, 1, 1.0, 0.0
+		this.add(separator,    new GridBagConstraints(0, 20, 7, 1, 1.0, 0.0
 				,GridBagConstraints.WEST, GridBagConstraints.HORIZONTAL, new Insets(0, 5, 0, 10), 0, 0));
 		//	Mail Server - Email
 		lMailServer.setToolTipText(res.getString("MailServerInfo"));
 		lMailServer.setText(res.getString("MailServer"));
 		lMailServer.setFont(lMailServer.getFont().deriveFont(Font.BOLD));
 		fMailServer.setText(".");
+		setFieldBorder(fMailServer);
 		lAdminEMail.setToolTipText(res.getString("AdminEMailInfo"));
 		lAdminEMail.setText(res.getString("AdminEMail"));
 		fAdminEMail.setText(".");
+		setFieldBorder(fAdminEMail);
 		okMailServer.setEnabled(false);
-		this.add(lMailServer,   new GridBagConstraints(0, 20, 1, 1, 0.0, 0.0
+		this.add(lMailServer,   new GridBagConstraints(0, 21, 1, 1, 0.0, 0.0
 			,GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(5, 5, 2, 5), 0, 0));
-		this.add(fMailServer,   new GridBagConstraints(1, 20, 1, 1, 0.5, 0.0
+		this.add(fMailServer,   new GridBagConstraints(1, 21, 1, 1, 0.5, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.BOTH, new Insets(5, 5, 2, 0), 0, 0));
-		this.add(okMailServer,	new GridBagConstraints(2, 20, 1, 1, 0.0, 0.0
+		this.add(okMailServer,	new GridBagConstraints(2, 21, 1, 1, 0.0, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(5, 0, 2, 5), 0, 0));
-		this.add(lAdminEMail,   new GridBagConstraints(4, 20, 1, 1, 0.0, 0.0
+		this.add(lAdminEMail,   new GridBagConstraints(4, 21, 1, 1, 0.0, 0.0
 			,GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(5, 5, 2, 5), 0, 0));
-		this.add(fAdminEMail,   new GridBagConstraints(5, 20, 1, 1, 0.5, 0.0
+		this.add(fAdminEMail,   new GridBagConstraints(5, 21, 1, 1, 0.5, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.BOTH, new Insets(5, 5, 2, 0), 0, 0));
 
 		//	Mail User = Password
 		lMailUser.setToolTipText(res.getString("MailUserInfo"));
 		lMailUser.setText(res.getString("MailUser"));
 		fMailUser.setText(".");
+		setFieldBorder(fMailUser);
 		lMailPassword.setToolTipText(res.getString("MailPasswordInfo"));
 		lMailPassword.setText(res.getString("MailPassword"));
 		fMailPassword.setText(".");
+		setFieldBorder(fMailPassword);
 		okMailUser.setEnabled(false);
-		this.add(lMailUser,		new GridBagConstraints(0, 21, 1, 1, 0.0, 0.0
+		this.add(lMailUser,		new GridBagConstraints(0, 22, 1, 1, 0.0, 0.0
 			,GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(2, 5, 2, 5), 0, 0));
-		this.add(fMailUser,     new GridBagConstraints(1, 21, 1, 1, 0.5, 0.0
+		this.add(fMailUser,     new GridBagConstraints(1, 22, 1, 1, 0.5, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.BOTH, new Insets(2, 5, 2, 0), 0, 0));
-		this.add(lMailPassword, new GridBagConstraints(4, 21, 1, 1, 0.0, 0.0
+		this.add(lMailPassword, new GridBagConstraints(4, 22, 1, 1, 0.0, 0.0
 			,GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(2, 5, 2, 5), 0, 0));
-		this.add(fMailPassword, new GridBagConstraints(5, 21, 1, 1, 0.5, 0.0
+		this.add(fMailPassword, new GridBagConstraints(5, 22, 1, 1, 0.5, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.HORIZONTAL, new Insets(2, 5, 2, 0), 0, 0));
-		this.add(okMailUser,	new GridBagConstraints(6, 21, 1, 1, 0.0, 0.0
+		this.add(okMailUser,	new GridBagConstraints(6, 22, 1, 1, 0.0, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(2, 0, 2, 5), 0, 0));
 
 		//grap extra space when window is maximized
 		JPanel filler = new JPanel();
 		filler.setOpaque(false);
 		filler.setBorder(null);
-		this.add(filler,    		new GridBagConstraints(0, 22, 1, 1, 0.0, 1.0
+		this.add(filler,    		new GridBagConstraints(0, 23, 1, 1, 0.0, 1.0
 				,GridBagConstraints.WEST, GridBagConstraints.VERTICAL, new Insets(0, 0, 0, 0), 0, 0));
 
 		//	End
@@ -421,11 +442,11 @@ public class ConfigurationPanel extends JPanel implements ActionListener, IDBCon
 		bSave.setToolTipText(res.getString("SaveInfo"));
 		bSave.setText(res.getString("Save"));
 		bHelp.setToolTipText(res.getString("HelpInfo"));
-		this.add(bTest,    		new GridBagConstraints(0, 23, 1, 1, 0.0, 0.0
+		this.add(bTest,    		new GridBagConstraints(0, 24, 1, 1, 0.0, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(15, 5, 10, 5), 0, 0));
-		this.add(bHelp,         new GridBagConstraints(3, 23, 2, 1, 0.0, 0.0
+		this.add(bHelp,         new GridBagConstraints(3, 24, 2, 1, 0.0, 0.0
 			,GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(15, 5, 10, 5), 0, 0));
-		this.add(bSave,         new GridBagConstraints(5, 23, 2, 1, 0.0, 0.0
+		this.add(bSave,         new GridBagConstraints(5, 24, 2, 1, 0.0, 0.0
 			,GridBagConstraints.EAST, GridBagConstraints.NONE, new Insets(15, 5, 10, 5), 0, 0));
 		//
 		bAdempiereHome.addActionListener(this);
@@ -436,6 +457,26 @@ public class ConfigurationPanel extends JPanel implements ActionListener, IDBCon
 		bTest.addActionListener(this);
 		bSave.addActionListener(this);
 	}	//	jbInit
+
+	private void setFieldBorder(JComponent textField) {
+		Border innerBorder = BorderFactory.createEmptyBorder(3, 3, 3, 3);
+		LineBorder defaultBorder = new LineBorder(Color.GRAY); // Default border
+		LineBorder focusBorder = new LineBorder(Color.BLUE.brighter(), 1); // Focus border
+
+		textField.setBorder(BorderFactory.createCompoundBorder(defaultBorder, innerBorder));
+
+		textField.addFocusListener(new FocusAdapter() {
+			@Override
+			public void focusGained(FocusEvent e) {
+				textField.setBorder(BorderFactory.createCompoundBorder(focusBorder, innerBorder));
+			}
+
+			@Override
+			public void focusLost(FocusEvent e) {
+				textField.setBorder(BorderFactory.createCompoundBorder(defaultBorder, innerBorder));
+			}
+		});
+	}
 
 	/**
 	 * 	Dynamic Initial.
@@ -653,7 +694,6 @@ public class ConfigurationPanel extends JPanel implements ActionListener, IDBCon
 
 		//	To be sure
 		((Frame)SwingUtilities.getWindowAncestor(this)).dispose();
-//		System.exit(0);		//	remains active when License Dialog called
 		/** **/
 	}	//	save
 

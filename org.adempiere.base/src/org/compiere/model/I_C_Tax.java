@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for C_Tax
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_C_Tax 
 {
@@ -44,8 +44,8 @@ public interface I_C_Tax
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -53,12 +53,12 @@ public interface I_C_Tax
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -71,6 +71,7 @@ public interface I_C_Tax
 	/** Get Rule	  */
 	public int getAD_Rule_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Rule getAD_Rule() throws RuntimeException;
 
     /** Column name C_CountryGroupFrom_ID */
@@ -82,6 +83,7 @@ public interface I_C_Tax
 	/** Get Country Group From	  */
 	public int getC_CountryGroupFrom_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_CountryGroup getC_CountryGroupFrom() throws RuntimeException;
 
     /** Column name C_CountryGroupTo_ID */
@@ -93,6 +95,7 @@ public interface I_C_Tax
 	/** Get Country Group To	  */
 	public int getC_CountryGroupTo_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_CountryGroup getC_CountryGroupTo() throws RuntimeException;
 
     /** Column name C_Country_ID */
@@ -107,6 +110,72 @@ public interface I_C_Tax
 	  * Country 
 	  */
 	public int getC_Country_ID();
+
+    /** Column name C_Region_ID */
+    public static final String COLUMNNAME_C_Region_ID = "C_Region_ID";
+
+	/** Set Region.
+	  * Identifies a geographical Region
+	  */
+	public void setC_Region_ID (int C_Region_ID);
+
+	/** Get Region.
+	  * Identifies a geographical Region
+	  */
+	public int getC_Region_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_C_Region getC_Region() throws RuntimeException;
+
+    /** Column name C_TaxCategory_ID */
+    public static final String COLUMNNAME_C_TaxCategory_ID = "C_TaxCategory_ID";
+
+	/** Set Tax Category.
+	  * Tax Category
+	  */
+	public void setC_TaxCategory_ID (int C_TaxCategory_ID);
+
+	/** Get Tax Category.
+	  * Tax Category
+	  */
+	public int getC_TaxCategory_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_C_TaxCategory getC_TaxCategory() throws RuntimeException;
+
+    /** Column name C_TaxProvider_ID */
+    public static final String COLUMNNAME_C_TaxProvider_ID = "C_TaxProvider_ID";
+
+	/** Set Tax Provider	  */
+	public void setC_TaxProvider_ID (int C_TaxProvider_ID);
+
+	/** Get Tax Provider	  */
+	public int getC_TaxProvider_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_C_TaxProvider getC_TaxProvider() throws RuntimeException;
+
+    /** Column name C_Tax_ID */
+    public static final String COLUMNNAME_C_Tax_ID = "C_Tax_ID";
+
+	/** Set Tax.
+	  * Tax identifier
+	  */
+	public void setC_Tax_ID (int C_Tax_ID);
+
+	/** Get Tax.
+	  * Tax identifier
+	  */
+	public int getC_Tax_ID();
+
+    /** Column name C_Tax_UU */
+    public static final String COLUMNNAME_C_Tax_UU = "C_Tax_UU";
+
+	/** Set C_Tax_UU	  */
+	public void setC_Tax_UU (String C_Tax_UU);
+
+	/** Get C_Tax_UU	  */
+	public String getC_Tax_UU();
 
     /** Column name Created */
     public static final String COLUMNNAME_Created = "Created";
@@ -123,69 +192,6 @@ public interface I_C_Tax
 	  * User who created this records
 	  */
 	public int getCreatedBy();
-
-    /** Column name C_Region_ID */
-    public static final String COLUMNNAME_C_Region_ID = "C_Region_ID";
-
-	/** Set Region.
-	  * Identifies a geographical Region
-	  */
-	public void setC_Region_ID (int C_Region_ID);
-
-	/** Get Region.
-	  * Identifies a geographical Region
-	  */
-	public int getC_Region_ID();
-
-	public org.compiere.model.I_C_Region getC_Region() throws RuntimeException;
-
-    /** Column name C_TaxCategory_ID */
-    public static final String COLUMNNAME_C_TaxCategory_ID = "C_TaxCategory_ID";
-
-	/** Set Tax Category.
-	  * Tax Category
-	  */
-	public void setC_TaxCategory_ID (int C_TaxCategory_ID);
-
-	/** Get Tax Category.
-	  * Tax Category
-	  */
-	public int getC_TaxCategory_ID();
-
-	public org.compiere.model.I_C_TaxCategory getC_TaxCategory() throws RuntimeException;
-
-    /** Column name C_Tax_ID */
-    public static final String COLUMNNAME_C_Tax_ID = "C_Tax_ID";
-
-	/** Set Tax.
-	  * Tax identifier
-	  */
-	public void setC_Tax_ID (int C_Tax_ID);
-
-	/** Get Tax.
-	  * Tax identifier
-	  */
-	public int getC_Tax_ID();
-
-    /** Column name C_TaxProvider_ID */
-    public static final String COLUMNNAME_C_TaxProvider_ID = "C_TaxProvider_ID";
-
-	/** Set Tax Provider	  */
-	public void setC_TaxProvider_ID (int C_TaxProvider_ID);
-
-	/** Get Tax Provider	  */
-	public int getC_TaxProvider_ID();
-
-	public org.compiere.model.I_C_TaxProvider getC_TaxProvider() throws RuntimeException;
-
-    /** Column name C_Tax_UU */
-    public static final String COLUMNNAME_C_Tax_UU = "C_Tax_UU";
-
-	/** Set C_Tax_UU	  */
-	public void setC_Tax_UU (String C_Tax_UU);
-
-	/** Get C_Tax_UU	  */
-	public String getC_Tax_UU();
 
     /** Column name Description */
     public static final String COLUMNNAME_Description = "Description";
@@ -304,6 +310,7 @@ public interface I_C_Tax
 	  */
 	public int getParent_Tax_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_Tax getParent_Tax() throws RuntimeException;
 
     /** Column name Rate */
@@ -358,6 +365,19 @@ public interface I_C_Tax
 	  */
 	public String getTaxIndicator();
 
+    /** Column name TaxPostingIndicator */
+    public static final String COLUMNNAME_TaxPostingIndicator = "TaxPostingIndicator";
+
+	/** Set Posting Indicator.
+	  * Type of input tax (deductible and non deductible)
+	  */
+	public void setTaxPostingIndicator (String TaxPostingIndicator);
+
+	/** Get Posting Indicator.
+	  * Type of input tax (deductible and non deductible)
+	  */
+	public String getTaxPostingIndicator();
+
     /** Column name To_Country_ID */
     public static final String COLUMNNAME_To_Country_ID = "To_Country_ID";
 
@@ -384,6 +404,7 @@ public interface I_C_Tax
 	  */
 	public int getTo_Region_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_Region getTo_Region() throws RuntimeException;
 
     /** Column name Updated */

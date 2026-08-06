@@ -24,9 +24,13 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 
+import org.adempiere.base.event.EventManager;
+import org.adempiere.base.event.IEventTopics;
 import org.adempiere.util.ServerContext;
 import org.compiere.Adempiere;
+import org.compiere.model.MPackageImp;
 import org.compiere.model.MSession;
 import org.compiere.model.Query;
 import org.compiere.model.ServerStateChangeEvent;
@@ -34,9 +38,11 @@ import org.compiere.model.ServerStateChangeListener;
 import org.compiere.model.X_AD_Package_Imp;
 import org.compiere.util.AdempiereSystemError;
 import org.compiere.util.CLogger;
+import org.compiere.util.CacheMgt;
 import org.compiere.util.Env;
 import org.compiere.util.Trx;
 import org.osgi.framework.BundleContext;
+import org.osgi.service.event.Event;
 
 /**
  * 
@@ -72,10 +78,10 @@ public class Incremental2PackActivator extends AbstractActivator {
 	}
 
 	private void installPackage() {
-		String where = "Name=? AND PK_Status = 'Completed successfully'";
+		String where = "Name=? AND PK_Status = ?";
 		Query q = new Query(Env.getCtx(), X_AD_Package_Imp.Table_Name,
 				where.toString(), null);
-		q.setParameters(new Object[] { getName() });
+		q.setParameters(new Object[] { getName(), MPackageImp.PACKAGE_STATUS_COMPLETED });
 		List<X_AD_Package_Imp> pkgs = q.list();
 		List<String> installedVersions = new ArrayList<String>();
 		if (pkgs != null && !pkgs.isEmpty()) {
@@ -99,6 +105,10 @@ public class Incremental2PackActivator extends AbstractActivator {
 			this.url=url;
 			this.version = version;
 		}
+		@Override
+		public String toString() {
+			return "TwoPackEntry [url=" + url + ", version=" + version + "]";
+		}		
 	}
 	
 	protected void packIn(List<String> installedVersions) {
@@ -115,19 +125,19 @@ public class Incremental2PackActivator extends AbstractActivator {
 		}
 		
 		X_AD_Package_Imp firstImp = new Query(Env.getCtx(), X_AD_Package_Imp.Table_Name, "Name=? AND PK_Version=? AND PK_Status=?", null)
-				.setParameters(getName(), "0.0.0", "Completed successfully")
+				.setParameters(getName(), "0.0.0", MPackageImp.PACKAGE_STATUS_COMPLETED)
 				.setClient_ID()
 				.first();
 		if (firstImp == null) {
 			Trx trx = Trx.get(Trx.createTrxName(), true);
 			trx.setDisplayName(getClass().getName()+"_packIn");
 			try {
-				Env.getCtx().put("#AD_Client_ID", 0);
+				Env.getCtx().put(Env.AD_CLIENT_ID, 0);
 				
 				firstImp = new X_AD_Package_Imp(Env.getCtx(), 0, trx.getTrxName());
 				firstImp.setName(getName());
 				firstImp.setPK_Version("0.0.0");
-				firstImp.setPK_Status("Completed successfully");
+				firstImp.setPK_Status(MPackageImp.PACKAGE_STATUS_COMPLETED);
 				firstImp.setProcessed(true);
 				firstImp.saveEx();
 				
@@ -152,7 +162,7 @@ public class Incremental2PackActivator extends AbstractActivator {
 							X_AD_Package_Imp pi = new X_AD_Package_Imp(Env.getCtx(), 0, trx.getTrxName());
 							pi.setName(getName());
 							pi.setPK_Version(entry.version);
-							pi.setPK_Status("Completed successfully");
+							pi.setPK_Status(MPackageImp.PACKAGE_STATUS_COMPLETED);
 							pi.setProcessed(true);
 							pi.saveEx();
 													
@@ -170,20 +180,37 @@ public class Incremental2PackActivator extends AbstractActivator {
 				trx.close();
 			}
 		}
-		Collections.sort(list, new Comparator<TwoPackEntry>() {
-			@Override
-			public int compare(TwoPackEntry o1, TwoPackEntry o2) {
-				return new Version(o1.version).compareTo(new Version(o2.version));
-			}
-		});		
-				
+		try {
+			Collections.sort(list, new Comparator<TwoPackEntry>() {
+				@Override
+				public int compare(TwoPackEntry o1, TwoPackEntry o2) {
+					return new Version(o1.version).compareTo(new Version(o2.version));
+				}
+			});		
+		} catch (Exception e) {
+			logger.log(Level.WARNING, "Exception sorting 2packs on " + getName(), e);
+			return;
+		}
+
+		boolean success = true;
+		boolean cacheReset = false;
+
+		if (!list.isEmpty()) {
+			String csv = list.stream().map(e -> e.url.toString()).collect(Collectors.joining(","));
+			Event event = EventManager.newEvent(IEventTopics.PRE_INCREMENTAL_PACK_IN, 
+				new String[] {getName(), csv}, true);
+			EventManager.getInstance().sendEvent(event);
+		}
+		
 		try {
 			if (getDBLock()) {
 				for(TwoPackEntry entry : list) {
 					if (!installedVersions.contains(entry.version)) {
-						if (!packIn(entry.url)) {
-							// stop processing further packages if one fail
-							break;
+						if (packIn(entry.url))
+							cacheReset = true;
+						else {
+							success = false;
+							break; // stop processing further packages if one fail							
 						}
 					}
 				}
@@ -195,6 +222,16 @@ public class Incremental2PackActivator extends AbstractActivator {
 		} finally {
 			releaseLock();
 		}
+
+		if (!list.isEmpty()) {
+			Event event = EventManager.newEvent(IEventTopics.POST_INCREMENTAL_PACK_IN, new Object[] {getName(), success}, true);
+			EventManager.getInstance().postEvent(event);
+		}
+
+		if (logger.isLoggable(Level.INFO))
+			logger.log(Level.INFO, "Cache Reset: " + cacheReset);
+		if (cacheReset)
+			CacheMgt.get().reset();
 	}
 
 	private String extractVersionString(URL u) {
@@ -209,15 +246,26 @@ public class Incremental2PackActivator extends AbstractActivator {
 
 	protected boolean packIn(URL packout) {
 		if (packout != null && service != null) {
+			MSession localSession = null;
 			//Create Session to be able to create records in AD_ChangeLog
-			MSession.get(Env.getCtx(), true);
+			if (Env.getContextAsInt(Env.getCtx(), Env.AD_SESSION_ID) <= 0) {
+				localSession = MSession.get(Env.getCtx());
+				if(localSession == null) {
+					localSession = MSession.create(Env.getCtx());
+				} else {
+					localSession = new MSession(Env.getCtx(), localSession.getAD_Session_ID(), null);
+				}
+				localSession.setWebSession("Incremental2PackActivator");
+				localSession.saveEx();
+			}
 			String path = packout.getPath();
 			String suffix = "_"+path.substring(path.lastIndexOf("2Pack_"));
 			logger.log(Level.WARNING, "Installing " + getName() + " " + path + " ...");
 			FileOutputStream zipstream = null;
+			InputStream stream = null;
 			try {
 				// copy the resource to a temporary file to process it with 2pack
-				InputStream stream = packout.openStream();
+				stream = packout.openStream();
 				File zipfile = File.createTempFile(getName()+"_", suffix);
 				zipstream = new FileOutputStream(zipfile);
 			    byte[] buffer = new byte[1024];
@@ -237,6 +285,13 @@ public class Incremental2PackActivator extends AbstractActivator {
 						zipstream.close();
 					} catch (Exception e2) {}
 				}
+				if (stream != null) {
+					try {
+						stream.close();
+					} catch (Exception e2) {}
+				}
+				if (localSession != null)
+					localSession.logout();
 			}
 			logger.log(Level.WARNING, getName() + " " + packout.getPath() + " installed");
 		} 
@@ -256,14 +311,14 @@ public class Incremental2PackActivator extends AbstractActivator {
 
 	protected void setupPackInContext() {
 		Properties serverContext = new Properties();
-		serverContext.setProperty("#AD_Client_ID", "0");
+		serverContext.setProperty(Env.AD_CLIENT_ID, "0");
 		ServerContext.setCurrentInstance(serverContext);
 	};
 
 	@Override
 	protected void frameworkStarted() {
 		if (service != null) {
-			if (Adempiere.getThreadPoolExecutor() != null) {
+			if (Adempiere.isStarted()) {
 				Adempiere.getThreadPoolExecutor().execute(new Runnable() {			
 					@Override
 					public void run() {

@@ -1,6 +1,27 @@
-/**
- * 
- */
+/***********************************************************************
+ * This file is part of iDempiere ERP Open Source                      *
+ * http://www.idempiere.org                                            *
+ *                                                                     *
+ * Copyright (C) Contributors                                          *
+ *                                                                     *
+ * This program is free software; you can redistribute it and/or       *
+ * modify it under the terms of the GNU General Public License         *
+ * as published by the Free Software Foundation; either version 2      *
+ * of the License, or (at your option) any later version.              *
+ *                                                                     *
+ * This program is distributed in the hope that it will be useful,     *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of      *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the        *
+ * GNU General Public License for more details.                        *
+ *                                                                     *
+ * You should have received a copy of the GNU General Public License   *
+ * along with this program; if not, write to the Free Software         *
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,          *
+ * MA 02110-1301, USA.                                                 *
+ *                                                                     *
+ * Contributors:                                                       *
+ * - hengsin                         								   *
+ **********************************************************************/
 package org.adempiere.webui.apps.form;
 
 import java.io.StringWriter;
@@ -19,6 +40,7 @@ import org.adempiere.webui.component.Row;
 import org.adempiere.webui.component.Rows;
 import org.adempiere.webui.panel.ADForm;
 import org.adempiere.webui.session.SessionManager;
+import org.adempiere.webui.util.CKEditor;
 import org.compiere.model.GridTab;
 import org.compiere.model.X_AD_CtxHelpMsg;
 import org.compiere.util.Env;
@@ -37,26 +59,33 @@ import org.zkoss.zul.Timer;
 import org.zkoss.zul.Vlayout;
 
 /**
+ * Form to compare suggested text from AD_CtxHelpSuggestion with the original text from AD_CtxHelpMsg.
  * @author hengsin
- *
  */
+@org.idempiere.ui.zk.annotation.Form
 public class CompareCtxHelpSuggestion extends ADForm {
 
-	private static final String NEW_VALUE = "newValue";
+	/** {@link #helpTimer} attribute to store text value from {@link #helpTextbox} onChanging event. */
+	private static final String NEW_VALUE_ATTR = "newValue";
+	
 	/**
 	 * generated serial id
 	 */
 	private static final long serialVersionUID = -100362034024824442L;
+	/** Grid layout for content of form */
 	private Grid grid;
 	private ConfirmPanel confirmPanel;
+	/** Cell to show diff between original and changed text */
 	private Cell helpDiff;
 	private CKeditor helpTextbox;
 	private X_AD_CtxHelpMsg ctxHelpMsg;
+	/** AD Language from calling GridTab */
 	private String AD_Language;
+	/** Timer to process onChanging text from {@link #helpTextbox} asynchronously */
 	private Timer helpTimer;
 
 	/**
-	 * 
+	 * default constructor
 	 */
 	public CompareCtxHelpSuggestion() {
 	}
@@ -99,6 +128,9 @@ public class CompareCtxHelpSuggestion extends ADForm {
 		renderGrid();
 	}
 
+	/**
+	 * Render content grid.
+	 */
 	private void renderGrid() {
 		Component c = SessionManager.getAppDesktop().getActiveWindow();
 		ADWindow adwindow = ADWindow.findADWindow(c);
@@ -132,12 +164,13 @@ public class CompareCtxHelpSuggestion extends ADForm {
 		if (original != null)
 			original = removeHeaderTag(original);
 		row.appendCellChild(new Html(original));
+		//suggestion from AD_CtxHelpSuggestion 
 		String changed = (String) gridTab.getValue("MsgText");
 		if (changed != null)
 			changed = removeHeaderTag(changed);
 		helpTextbox = new CKeditor();
-		helpTextbox.setCustomConfigurationsPath("/js/ckeditor/config-min.js");
-		helpTextbox.setToolbar("MyToolbar");
+		helpTextbox.setCustomConfigurationsPath(CKEditor.getCustomConfigurationsPath(true));
+		helpTextbox.setToolbar(CKEditor.getToolbar());
 		row.appendCellChild(helpTextbox);
 		helpTextbox.addEventListener(Events.ON_CHANGE, this);
 		helpTextbox.addEventListener(Events.ON_CHANGING, this);
@@ -153,6 +186,11 @@ public class CompareCtxHelpSuggestion extends ADForm {
 		this.addEventListener(Events.ON_OK, this);
 	}
 
+	/**
+	 * @param original
+	 * @param changed
+	 * @return difference between original and changed
+	 */
 	private Html diff(String original, String changed) {
 		if (original == null) 
 			original = "";
@@ -209,7 +247,7 @@ public class CompareCtxHelpSuggestion extends ADForm {
 		} else if (event.getTarget() == helpTextbox) {
 			if (event.getName().equals(Events.ON_CHANGING)) {
 				InputEvent inputEvent = (InputEvent) event;
-				helpTimer.setAttribute(NEW_VALUE, inputEvent.getValue());
+				helpTimer.setAttribute(NEW_VALUE_ATTR, inputEvent.getValue());
 				if (helpTimer.isRunning()) {
 					return;
 				} else {
@@ -221,17 +259,25 @@ public class CompareCtxHelpSuggestion extends ADForm {
 					helpTimer.stop();
 			}
 		} else if (event.getTarget() == helpTimer) {
-			onHelpChanged((String) helpTimer.removeAttribute(NEW_VALUE));
+			onHelpChanged((String) helpTimer.removeAttribute(NEW_VALUE_ATTR));
 		} else {
 			super.onEvent(event);
 		}
 	}
 
+	/**
+	 * Handle changes from {@link #helpTextbox}.
+	 * @param text
+	 */
 	private void onHelpChanged(String text) {
 		helpDiff.getChildren().clear();
 		Html html = diff(ctxHelpMsg.get_Translation("MsgText", AD_Language), text);
 		helpDiff.appendChild(html);
 	}
+	
+	/**
+	 * Apply changes to calling GridTab (AD_CtxHelpSuggestion).
+	 */
 	private void applyChanges() {
 		Component c = SessionManager.getAppDesktop().getActiveWindow();
 		ADWindow adwindow = ADWindow.findADWindow(c);
@@ -249,6 +295,10 @@ public class CompareCtxHelpSuggestion extends ADForm {
 		return Mode.HIGHLIGHTED;
 	}
 	
+	/**
+	 * @param htmlString
+	 * @return htmlString after removal of html header tag
+	 */
 	private String removeHeaderTag(String htmlString) {
 		htmlString = htmlString
 				.replace("<html>", "")
@@ -260,6 +310,11 @@ public class CompareCtxHelpSuggestion extends ADForm {
 		return htmlString;
 	}
 	
+	/**
+	 * @param s1
+	 * @param s2
+	 * @return difference between s1 and s2
+	 */
 	private String htmlDiff(String s1, String s2) {
 
 		try {

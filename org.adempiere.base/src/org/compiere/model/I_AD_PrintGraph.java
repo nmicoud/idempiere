@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_PrintGraph
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_AD_PrintGraph 
 {
@@ -44,8 +44,8 @@ public interface I_AD_PrintGraph
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -53,12 +53,12 @@ public interface I_AD_PrintGraph
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -75,6 +75,7 @@ public interface I_AD_PrintGraph
 	  */
 	public int getAD_PrintFormat_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_PrintFormat getAD_PrintFormat() throws RuntimeException;
 
     /** Column name AD_PrintGraph_ID */
@@ -128,6 +129,7 @@ public interface I_AD_PrintGraph
 	  */
 	public int getData1_PrintFormatItem_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_PrintFormatItem getData1_PrintFormatItem() throws RuntimeException;
 
     /** Column name Data2_PrintFormatItem_ID */
@@ -143,6 +145,7 @@ public interface I_AD_PrintGraph
 	  */
 	public int getData2_PrintFormatItem_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_PrintFormatItem getData2_PrintFormatItem() throws RuntimeException;
 
     /** Column name Data3_PrintFormatItem_ID */
@@ -158,6 +161,7 @@ public interface I_AD_PrintGraph
 	  */
 	public int getData3_PrintFormatItem_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_PrintFormatItem getData3_PrintFormatItem() throws RuntimeException;
 
     /** Column name Data4_PrintFormatItem_ID */
@@ -173,6 +177,7 @@ public interface I_AD_PrintGraph
 	  */
 	public int getData4_PrintFormatItem_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_PrintFormatItem getData4_PrintFormatItem() throws RuntimeException;
 
     /** Column name Data_PrintFormatItem_ID */
@@ -188,6 +193,7 @@ public interface I_AD_PrintGraph
 	  */
 	public int getData_PrintFormatItem_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_PrintFormatItem getData_PrintFormatItem() throws RuntimeException;
 
     /** Column name Description */
@@ -216,6 +222,7 @@ public interface I_AD_PrintGraph
 	  */
 	public int getDescription_PrintFormatItem_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_PrintFormatItem getDescription_PrintFormatItem() throws RuntimeException;
 
     /** Column name GraphType */

@@ -20,6 +20,7 @@ import java.awt.Graphics2D;
 import java.awt.geom.Point2D;
 import java.util.Properties;
 
+import org.adempiere.base.GeneratedCodeCoverageExclusion;
 import org.compiere.print.MPrintGraph;
 
 /**
@@ -27,11 +28,15 @@ import org.compiere.print.MPrintGraph;
  *
  * 	@author 	Jorg Janke
  * 	@version 	$Id: GraphElement.java,v 1.2 2006/07/30 00:53:02 jjanke Exp $
+ *  @deprecated not fully implemented
  */
+@Deprecated (since="13", forRemoval=true)
+@SuppressWarnings("removal")
+@GeneratedCodeCoverageExclusion
 public class GraphElement extends PrintElement
 {
 	/**
-	 * 
+	 * generated serial id
 	 */
 	private static final long serialVersionUID = -1723609598698053387L;
 
@@ -45,7 +50,7 @@ public class GraphElement extends PrintElement
 
 	/**
 	 * 	Layout and Calculate Size
-	 * 	Set p_width & p_height
+	 * 	Set p_width and p_height
 	 * 	@return true if calculated
 	 */
 	protected boolean calculateSize()

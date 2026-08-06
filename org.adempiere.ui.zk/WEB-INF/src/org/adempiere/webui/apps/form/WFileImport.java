@@ -29,11 +29,15 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 
 import org.adempiere.webui.AdempiereWebUI;
+import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.component.Button;
 import org.adempiere.webui.component.ConfirmPanel;
+import org.adempiere.webui.component.FlexHlayout;
+import org.adempiere.webui.component.FlexVlayout;
 import org.adempiere.webui.component.Label;
 import org.adempiere.webui.component.ListItem;
 import org.adempiere.webui.component.Listbox;
@@ -42,15 +46,17 @@ import org.adempiere.webui.panel.ADForm;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.util.ReaderInputStream;
 import org.adempiere.webui.util.ZKUpdateUtil;
-import org.adempiere.webui.window.FDialog;
+import org.adempiere.webui.window.Dialog;
 import org.compiere.impexp.ImpFormat;
 import org.compiere.impexp.ImpFormatRow;
+import org.compiere.model.MQuery;
 import org.compiere.model.MRole;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Ini;
 import org.compiere.util.Msg;
+import org.idempiere.db.util.SQLFragment;
 import org.zkoss.util.media.Media;
 import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.event.Event;
@@ -61,78 +67,98 @@ import org.zkoss.zul.Borderlayout;
 import org.zkoss.zul.Cell;
 import org.zkoss.zul.Center;
 import org.zkoss.zul.Div;
-import org.zkoss.zul.Hbox;
 import org.zkoss.zul.North;
 import org.zkoss.zul.Separator;
 import org.zkoss.zul.South;
-import org.zkoss.zul.Vbox;
 
 /**
- * 	Fixed length file import
+ * 	Fixed length file import.<br/>
+ *  Import data from text file into DB with definition from AD_ImpFormat.
  *
  *  @author 	Niraj Sohun
  *  			Aug 16, 2007
- *  
  */
-
+@org.idempiere.ui.zk.annotation.Form(name = "org.compiere.apps.form.VFileImport")
 public class WFileImport extends ADForm implements EventListener<Event>
 {
 	/**
-	 * 
+	 * generated serial id
 	 */
-	private static final long serialVersionUID = -5779187375101512112L;
+	private static final long serialVersionUID = -7462842139127270429L;
 	private static final int MAX_LOADED_LINES = 100;
 	private static final int MAX_SHOWN_LINES = 10;
 	
-	/**	Logger			*/
+	/**	Logger */
 	private static final CLogger log = CLogger.getCLogger(WFileImport.class);
 	
+	/** Current index pointer for {@link #m_data} */
 	private int	m_record = -1;
 	
-	private Listbox pickFormat = new Listbox();
-	private Listbox fCharset = new Listbox();
-	
+	/** Lines of loaded text file */
 	private ArrayList<String> m_data = new ArrayList<String>();
 	private static final String s_none = "----";	//	no format indicator
 
+	/** Import format helper */
 	private ImpFormat m_format;
 	
-	private ConfirmPanel confirmPanel = new ConfirmPanel(true);
-
+	/** Parameter fields, child of {@link #northPanel} */
+	
+	/** Button to load import file */ 
 	private Button bFile = new Button();
-	private Button bNext = new Button();
+	/** Character set of import file */
+	private Listbox fCharset = new Listbox();
+	/** Info text for loaded file */
+	private Label info = new Label();
+	/** Label for {@link #pickFormat} */
+	private Label labelFormat = new Label();
+	/**  List of import format (AD_ImpFormat) */
+	private Listbox pickFormat = new Listbox();
+	/** Button to decrease {@link #m_record} by 1 */
 	private Button bPrevious = new Button();
+	/** Info text for {@link #m_record} */
+	private Label record = new Label();
+	/** Button to increase {@link #m_record} by 1 */
+	private Button bNext = new Button();
+	/** Raw text from import file */
+	private Textbox rawData = new Textbox();
 
+	/** Input file stream */
 	private InputStream m_file_istream;
 	
-	private Textbox rawData = new Textbox();
+	/** Array of column/field. Child of {@link #previewPanel}. */
 	private Textbox[] m_fields;
 	
-	private Label info = new Label();
+	/** Array of label for {@link #m_fields}. Child of {@link #previewPanel}. */
 	private Label[] m_labels;
-	private Label record = new Label();
-	private Label labelFormat = new Label();
-
+		
+	/** Preview panel, child of {@link #centerPanel} */
 	private Div previewPanel = new Div();
 
-	private Vbox northPanel = new Vbox();
+	/** North part of form */
+	private FlexVlayout northPanel = new FlexVlayout();
 
+	/** Center part of form */
 	private Div centerPanel = new Div();
 
+	/** Action buttons panel. South of form */
+	private ConfirmPanel confirmPanel = new ConfirmPanel(true);
+	
+	/** 
+	 * Default constructor
+	 */
 	public WFileImport()
 	{
 	}
 	
 	/**
-	 *	Initialize Panel
-	 *  @param WindowNo window
+	 *	Initialize form
 	 */
 	protected void initForm()
 	{
-		log.info("");
+		if (log.isLoggable(Level.INFO)) log.info("");
 		try
 		{
-			jbInit();
+			zkInit();
 			dynInit();
 			
 			ZKUpdateUtil.setWidth(this, "100%");
@@ -163,11 +189,10 @@ public class WFileImport extends ADForm implements EventListener<Event>
 	}	//	init
 
 	/**
-	 *	Static Init
+	 *	Layout form
 	 *  @throws Exception
-	 */
-	
-	private void jbInit() throws Exception
+	 */	
+	private void zkInit() throws Exception
 	{
 		Charset[] charsets = Ini.getAvailableCharsets();
 		
@@ -201,8 +226,8 @@ public class WFileImport extends ADForm implements EventListener<Event>
 		bPrevious.setLabel("<");
 		bPrevious.addEventListener(Events.ON_CLICK, this);
 				
-		Hbox hbox = new Hbox();
-		hbox.setAlign("center");
+		FlexHlayout hbox = new FlexHlayout();
+		hbox.setAlign(FlexHlayout.AlignType.CENTER);
 		hbox.appendChild(bFile);
 		hbox.appendChild(fCharset);
 		hbox.appendChild(info);
@@ -234,14 +259,13 @@ public class WFileImport extends ADForm implements EventListener<Event>
 	
 	/**
 	 *	Dynamic Init
-	 */
-	
+	 */	
 	private void dynInit()
 	{
 		//	Load Formats
 		pickFormat.appendItem(s_none, s_none);
 		
-		String sql = MRole.getDefault().addAccessSQL("SELECT Name,AD_Impformat_ID FROM AD_ImpFormat WHERE isactive='Y'", "AD_ImpFormat",
+		String sql = MRole.getDefault().addAccessSQL("SELECT Name, AD_Impformat_ID FROM AD_ImpFormat WHERE IsActive='Y' ORDER BY Name", "AD_ImpFormat",
 				MRole.SQL_FULLYQUALIFIED, MRole.SQL_RO);
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
@@ -287,7 +311,7 @@ public class WFileImport extends ADForm implements EventListener<Event>
 		confirmPanel.setEnabled("Ok", false);
 	}	//	dynInit
 
-	
+	@Override
 	public void onEvent(Event e) throws Exception 
 	{
 		if (e instanceof UploadEvent) 
@@ -382,8 +406,7 @@ public class WFileImport extends ADForm implements EventListener<Event>
 	
 	/**
 	 * Reload/Load file
-	 */
-	
+	 */	
 	private void cmd_reloadFile()
 	{
 		if (m_file_istream == null)
@@ -450,8 +473,7 @@ public class WFileImport extends ADForm implements EventListener<Event>
 
 	/**
 	 *	Load Format
-	 */
-	
+	 */	
 	private void cmd_loadFormat()
 	{
 		//	clear panel
@@ -473,7 +495,7 @@ public class WFileImport extends ADForm implements EventListener<Event>
 		
 		if (m_format == null)
 		{
-			FDialog.error(m_WindowNo, this, formatName);
+			Dialog.error(m_WindowNo, formatName);
 			return;
 		}
 
@@ -489,7 +511,8 @@ public class WFileImport extends ADForm implements EventListener<Event>
 			
 			m_labels[i] = new Label(row.getName());
 			
-			Hbox hbox = new Hbox();
+			@SuppressWarnings("deprecation")
+			org.zkoss.zul.Hbox hbox = new org.zkoss.zul.Hbox();
 			hbox.setAlign("center");
 			ZKUpdateUtil.setWidth(hbox, "100%");
 			hbox.setStyle("padding-bottom: 3px");
@@ -524,8 +547,7 @@ public class WFileImport extends ADForm implements EventListener<Event>
 	/**
 	 *	Apply Current Pattern
 	 *  @param next next
-	 */
-	
+	 */	
 	private void cmd_applyFormat (boolean next)
 	{
 		if (m_format == null || m_data.size() == 0)
@@ -560,15 +582,14 @@ public class WFileImport extends ADForm implements EventListener<Event>
 		}
 	}	//	cmd_applyFormat
 
-	/**************************************************************************
+	/**
 	 *	Process File
-	 */
-	
+	 */	
 	private void cmd_process()
 	{
 		if (m_format == null)
 		{
-			FDialog.error(m_WindowNo, this, "FileImportNoFormat");
+			Dialog.error(m_WindowNo, "FileImportNoFormat");
 			return;
 		}
 		
@@ -582,9 +603,18 @@ public class WFileImport extends ADForm implements EventListener<Event>
 		for (row = 0; row < m_data.size(); row++)
 			if (m_format.updateDB(Env.getCtx(), m_data.get(row).toString(), null))
 				imported++;
-		
-		FDialog.info(m_WindowNo, this, "FileImportR/I", row + " / " + imported + "#");
-		
-		SessionManager.getAppDesktop().closeActiveWindow();
+
+		final int importedFinal = imported;
+		Dialog.info(m_WindowNo, "FileImportR/I", row + " / " + imported + "#", Msg.getMsg(Env.getCtx(), "FileImport"),
+			    result -> {
+			        if (importedFinal > 0) {
+			            MQuery query = new MQuery(m_format.getAD_Table_ID());
+			            query.addRestriction(new SQLFragment("I_IsImported=?", List.of("N")));
+			            AEnv.zoom(m_format.getAD_Table_ID(), 0, query);
+			        }
+			    });
+
+		if (imported > 0)
+			SessionManager.getAppDesktop().closeActiveWindow();
 	}	//	cmd_process
 }

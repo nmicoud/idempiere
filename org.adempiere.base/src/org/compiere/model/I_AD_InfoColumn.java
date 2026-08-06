@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_InfoColumn
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_AD_InfoColumn 
 {
@@ -44,8 +44,8 @@ public interface I_AD_InfoColumn
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -62,6 +62,7 @@ public interface I_AD_InfoColumn
 	  */
 	public int getAD_Element_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Element getAD_Element() throws RuntimeException;
 
     /** Column name AD_FieldStyle_ID */
@@ -77,6 +78,7 @@ public interface I_AD_InfoColumn
 	  */
 	public int getAD_FieldStyle_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Style getAD_FieldStyle() throws RuntimeException;
 
     /** Column name AD_InfoColumn_ID */
@@ -114,18 +116,19 @@ public interface I_AD_InfoColumn
 	  */
 	public int getAD_InfoWindow_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_InfoWindow getAD_InfoWindow() throws RuntimeException;
 
     /** Column name AD_Org_ID */
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -142,6 +145,7 @@ public interface I_AD_InfoColumn
 	  */
 	public int getAD_Reference_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Reference getAD_Reference() throws RuntimeException;
 
     /** Column name AD_Reference_Value_ID */
@@ -157,6 +161,7 @@ public interface I_AD_InfoColumn
 	  */
 	public int getAD_Reference_Value_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Reference getAD_Reference_Value() throws RuntimeException;
 
     /** Column name AD_Val_Rule_ID */
@@ -172,6 +177,7 @@ public interface I_AD_InfoColumn
 	  */
 	public int getAD_Val_Rule_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Val_Rule getAD_Val_Rule() throws RuntimeException;
 
     /** Column name ColumnName */
@@ -217,6 +223,21 @@ public interface I_AD_InfoColumn
 
 	  */
 	public String getDefaultValue();
+
+    /** Column name DefaultValue2 */
+    public static final String COLUMNNAME_DefaultValue2 = "DefaultValue2";
+
+	/** Set Default Logic 2.
+	  * Default value hierarchy, separated by ;
+
+	  */
+	public void setDefaultValue2 (String DefaultValue2);
+
+	/** Get Default Logic 2.
+	  * Default value hierarchy, separated by ;
+
+	  */
+	public String getDefaultValue2();
 
     /** Column name Description */
     public static final String COLUMNNAME_Description = "Description";
@@ -276,12 +297,12 @@ public interface I_AD_InfoColumn
     public static final String COLUMNNAME_InputFieldValidation = "InputFieldValidation";
 
 	/** Set Input field validation.
-	  * Input field validaton query
+	  * Input field validation query
 	  */
 	public void setInputFieldValidation (String InputFieldValidation);
 
 	/** Get Input field validation.
-	  * Input field validaton query
+	  * Input field validation query
 	  */
 	public String getInputFieldValidation();
 
@@ -301,13 +322,13 @@ public interface I_AD_InfoColumn
     /** Column name IsAutocomplete */
     public static final String COLUMNNAME_IsAutocomplete = "IsAutocomplete";
 
-	/** Set Autocomplete.
-	  * Automatic completion for textfields
+	/** Set Auto complete.
+	  * Automatic completion for text fields
 	  */
 	public void setIsAutocomplete (boolean IsAutocomplete);
 
-	/** Get Autocomplete.
-	  * Automatic completion for textfields
+	/** Get Auto complete.
+	  * Automatic completion for text fields
 	  */
 	public boolean isAutocomplete();
 
@@ -376,6 +397,19 @@ public interface I_AD_InfoColumn
 	  */
 	public boolean isMandatory();
 
+    /** Column name IsQueryAfterChange */
+    public static final String COLUMNNAME_IsQueryAfterChange = "IsQueryAfterChange";
+
+	/** Set Query After Change.
+	  * Issues a query request after the user has made changes to the field
+	  */
+	public void setIsQueryAfterChange (boolean IsQueryAfterChange);
+
+	/** Get Query After Change.
+	  * Issues a query request after the user has made changes to the field
+	  */
+	public boolean isQueryAfterChange();
+
     /** Column name IsQueryCriteria */
     public static final String COLUMNNAME_IsQueryCriteria = "IsQueryCriteria";
 
@@ -388,6 +422,19 @@ public interface I_AD_InfoColumn
 	  * The column is also used as a query criteria
 	  */
 	public boolean isQueryCriteria();
+
+    /** Column name IsRange */
+    public static final String COLUMNNAME_IsRange = "IsRange";
+
+	/** Set Range.
+	  * The parameter is a range of values
+	  */
+	public void setIsRange (boolean IsRange);
+
+	/** Get Range.
+	  * The parameter is a range of values
+	  */
+	public boolean isRange();
 
     /** Column name IsReadOnly */
     public static final String COLUMNNAME_IsReadOnly = "IsReadOnly";
@@ -423,6 +470,15 @@ public interface I_AD_InfoColumn
 
 	/** Get Placeholder	  */
 	public String getPlaceholder();
+
+    /** Column name Placeholder2 */
+    public static final String COLUMNNAME_Placeholder2 = "Placeholder2";
+
+	/** Set Placeholder2	  */
+	public void setPlaceholder2 (String Placeholder2);
+
+	/** Get Placeholder2	  */
+	public String getPlaceholder2();
 
     /** Column name QueryFunction */
     public static final String COLUMNNAME_QueryFunction = "QueryFunction";

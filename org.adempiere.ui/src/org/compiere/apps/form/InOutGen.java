@@ -24,6 +24,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.logging.Level;
 
+import org.adempiere.base.GeneratedCodeCoverageExclusion;
 import org.compiere.apps.IStatusBar;
 import org.compiere.minigrid.IDColumn;
 import org.compiere.minigrid.IMiniTable;
@@ -42,8 +43,11 @@ import org.compiere.util.Trx;
 
 /**
  * Generate Shipment (manual) controller class
- * 
+ * @deprecated ticket IDEMPIERE-1963 replaced this with an Info Window
  */
+@Deprecated (since="13", forRemoval=true)
+@SuppressWarnings("removal")
+@GeneratedCodeCoverageExclusion
 public class InOutGen extends GenForm
 {
 	/**	Logger			*/
@@ -211,8 +215,7 @@ public class InOutGen extends GenForm
 	}   //  executeQuery
 	
 	/**
-	 *	Save Selection & return selection Query or ""
-	 *  @return where clause like C_Order_ID IN (...)
+	 *	Save Selection and return selection Query or ""
 	 */
 	public void saveSelection(IMiniTable miniTable)
 	{
@@ -240,7 +243,7 @@ public class InOutGen extends GenForm
 	
 	/**************************************************************************
 	 *	Generate Shipments
-	 */
+	 */	
 	public String generate(IStatusBar statusBar, KeyNamePair docTypeKNPair, String docActionSelected)
 	{
 		String info = "";

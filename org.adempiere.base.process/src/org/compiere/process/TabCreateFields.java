@@ -23,6 +23,7 @@ import java.util.logging.Level;
 
 import org.compiere.model.MColumn;
 import org.compiere.model.MField;
+import org.compiere.model.MProcessPara;
 import org.compiere.model.MTab;
 import org.compiere.model.MTable;
 import org.compiere.model.PO;
@@ -41,12 +42,13 @@ import org.compiere.util.Util;
  * 
  * @author Teo Sarca
  * 			<li>BF [ 2827782 ] TabCreateFields process not setting entity type well
- * 				https://sourceforge.net/tracker/?func=detail&atid=879332&aid=2827782&group_id=176962
+ * 				https://sourceforge.net/p/adempiere/bugs/1994/
  * 
  * @author Silvano Trinchero
  *      <li>BF [ 2891218] Wrong behavior in entity type settings for customization entity types
- *        https://sourceforge.net/tracker/?func=detail&aid=2891218&group_id=176962&atid=879332 
+ *        https://sourceforge.net/p/adempiere/bugs/2197/ 
  */
+@org.adempiere.base.annotation.Process
 public class TabCreateFields extends SvrProcess
 {
 	/**	Tab Number				*/
@@ -70,7 +72,7 @@ public class TabCreateFields extends SvrProcess
 			else if (name.equals("CreatedSince"))
 				p_CreatedSince = para[i].getParameterAsTimestamp();
 			else
-				log.log(Level.SEVERE, "Unknown Parameter: " + name);
+				MProcessPara.validateUnknownParameter(getProcessInfo().getAD_Process_ID(), para[i]);
 		}
 		p_AD_Tab_ID = getRecord_ID();
 	}	//	prepare
@@ -98,11 +100,11 @@ public class TabCreateFields extends SvrProcess
 			+ " AND IsActive='Y' ";
 
 		if(!Util.isEmpty(p_EntityType))
-			sql += " AND c.entitytype = ?";
+			sql += " AND c.entitytype = ? ";
 		if(p_CreatedSince != null)
 			sql += " AND c.created >= ? ";
 
-		sql += "ORDER  BY CASE "
+		sql += " ORDER  BY CASE "
 			+ "            WHEN c.ColumnName = 'AD_Client_ID' THEN -100 "
 			+ "            WHEN c.ColumnName = 'AD_Org_ID' THEN -90 "
 			+ "            WHEN c.IsParent = 'Y' THEN -85 "
@@ -131,7 +133,8 @@ public class TabCreateFields extends SvrProcess
 			if(p_CreatedSince != null)
 				pstmt.setTimestamp(i++, p_CreatedSince);
 			rs = pstmt.executeQuery ();
-			String uuidcolname = PO.getUUIDColumnName(tab.getAD_Table().getTableName());
+			
+			String uuidcolname = PO.getUUIDColumnName(MTable.get(tab.getAD_Table_ID()).getTableName());
 			while (rs.next ())
 			{
 				MColumn column = new MColumn (getCtx(), rs, get_TrxName());
@@ -165,12 +168,12 @@ public class TabCreateFields extends SvrProcess
 				}
 				if (column.getAD_Reference_ID() == DisplayType.Text) {
 					field.setNumLines(3);
-				} else if (column.getAD_Reference_ID() == DisplayType.TextLong) {
+				} else if (column.getAD_Reference_ID() == DisplayType.TextLong || column.getAD_Reference_ID() == DisplayType.JSON) {
 					field.setNumLines(5);
 				} else if (column.getAD_Reference_ID() == DisplayType.Memo) {
 					field.setNumLines(8);
 				}
-				String accessLevel = tab.getAD_Table().getAccessLevel();
+				String accessLevel = MTable.get(tab.getAD_Table_ID()).getAccessLevel();
 				if (column.getColumnName().equals("AD_Org_ID")) {
 					field.setXPosition(4);
 					if (   accessLevel.equals(MTable.ACCESSLEVEL_ClientOnly)
@@ -208,7 +211,20 @@ public class TabCreateFields extends SvrProcess
 					field.setDisplayLogic("@$Element_U1@=Y");
 				} else if (column.getColumnName().equalsIgnoreCase("User2_ID")) {
 					field.setDisplayLogic("@$Element_U2@=Y");
-				}  
+				} else if (column.getColumnName().equalsIgnoreCase("C_CostCenter_ID")) {
+					field.setDisplayLogic("@$Element_CC@=Y");
+				} else if (column.getColumnName().equalsIgnoreCase("C_Department_ID")) {
+					field.setDisplayLogic("@$Element_DP@=Y");
+				}				
+
+				// set read-only for usual known-fields
+				if (   column.getColumnName().equalsIgnoreCase("IsApproved")
+					|| column.getColumnName().equalsIgnoreCase("DocStatus")
+					|| column.getColumnName().equalsIgnoreCase("Processed")
+					|| column.getColumnName().equalsIgnoreCase("ProcessedOn")
+					|| column.getColumnName().equalsIgnoreCase("Processing")) {
+					field.setIsReadOnly(true);
+				}
 
 				if (field.save())
 				{

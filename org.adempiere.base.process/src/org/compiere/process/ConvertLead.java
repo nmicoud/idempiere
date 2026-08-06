@@ -20,7 +20,6 @@ package org.compiere.process;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.List;
-import java.util.logging.Level;
 
 import org.adempiere.exceptions.FillMandatoryException;
 import org.compiere.model.I_C_ContactActivity;
@@ -28,6 +27,7 @@ import org.compiere.model.MBPartner;
 import org.compiere.model.MBPartnerLocation;
 import org.compiere.model.MLocation;
 import org.compiere.model.MOpportunity;
+import org.compiere.model.MProcessPara;
 import org.compiere.model.MUser;
 import org.compiere.model.PO;
 import org.compiere.model.Query;
@@ -43,6 +43,7 @@ import org.compiere.util.Util;
  * @author Paul Bowden, Adaxa Pty Ltd
  *
  */
+@org.adempiere.base.annotation.Process
 public class ConvertLead extends SvrProcess {
 
 	private boolean p_createOpportunity = true;
@@ -80,7 +81,7 @@ public class ConvertLead extends SvrProcess {
 		
 		if (lead.getC_Location_ID() != 0)
 		{
-			MLocation leadAddress = (MLocation) lead.getC_Location();
+			MLocation leadAddress = MLocation.get(lead.getC_Location_ID());
 			MBPartnerLocation loc = new MBPartnerLocation(bp);
 			MLocation address = new MLocation(getCtx(), 0, get_TrxName());
 			PO.copyValues(leadAddress, address);
@@ -100,7 +101,7 @@ public class ConvertLead extends SvrProcess {
 		// company address
 		if (lead.getBP_Location_ID() != 0)
 		{
-			MLocation leadAddress = (MLocation) lead.getBP_Location();
+			MLocation leadAddress = MLocation.get(lead.getBP_Location_ID());
 			MBPartnerLocation loc = new MBPartnerLocation(bp);
 			MLocation address = new MLocation(getCtx(), 0, get_TrxName());
 			PO.copyValues(leadAddress, address);
@@ -132,14 +133,14 @@ public class ConvertLead extends SvrProcess {
 			if ( p_C_Currency_ID > 0 )
 				op.setC_Currency_ID(p_C_Currency_ID);
 			else
-				op.setC_Currency_ID(Env.getContextAsInt(getCtx(), "$C_Currency_ID"));
+				op.setC_Currency_ID(Env.getContextAsInt(getCtx(), Env.C_CURRENCY_ID));
 			
 			if (p_SalesRep_ID > 0 )
 				op.setSalesRep_ID(p_SalesRep_ID);
 			else if ( lead.getSalesRep_ID() > 0 ) 
 				op.setSalesRep_ID(lead.getSalesRep_ID());
 			else
-				op.setSalesRep_ID(Env.getContextAsInt(getCtx(), "#SalesRep_ID"));
+				op.setSalesRep_ID(Env.getContextAsInt(getCtx(), Env.SALESREP_ID));
 			
 			op.setC_Campaign_ID(lead.getC_Campaign_ID());
 			
@@ -195,7 +196,7 @@ public class ConvertLead extends SvrProcess {
 				p_C_Currency_ID  = para.getParameterAsInt();
 			else 
 			{
-				log.log(Level.WARNING, "Unknown parameter: " + name);
+				MProcessPara.validateUnknownParameter(getProcessInfo().getAD_Process_ID(), para);
 			}
 			
 			if ( MUser.Table_ID == getTable_ID() )

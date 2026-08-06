@@ -25,6 +25,7 @@ import java.util.logging.Level;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.Util;
 import org.idempiere.cache.ImmutableIntPOCache;
 import org.idempiere.cache.ImmutablePOSupport;
 
@@ -33,7 +34,7 @@ import org.idempiere.cache.ImmutablePOSupport;
  *	
  *  @author Jorg Janke
  *  @author victor.perez@e-evolution.com
- *  @see FR [ 1966337 ] New Method to get the Transit Warehouse based in ID Org http://sourceforge.net/tracker/index.php?func=detail&aid=1966337&group_id=176962&atid=879335
+ *  see FR [ 1966337 ] New Method to get the Transit Warehouse based in ID Org https://sourceforge.net/p/adempiere/feature-requests/430/
  *  @author Teo Sarca, http://www.arhipac.ro
  *  			<li>BF [ 1874419 ] JDBC Statement not close in a finally block
  *  @version $Id: MWarehouse.java,v 1.3 2006/07/30 00:58:05 jjanke Exp $
@@ -41,7 +42,7 @@ import org.idempiere.cache.ImmutablePOSupport;
 public class MWarehouse extends X_M_Warehouse implements ImmutablePOSupport
 {
 	/**
-	 * 
+	 * generated serial id 
 	 */
 	private static final long serialVersionUID = 5425515002759989733L;
 	
@@ -67,11 +68,11 @@ public class MWarehouse extends X_M_Warehouse implements ImmutablePOSupport
 	}
 	
 	/**
-	 * Retrieves warehouse from cache (immutable)
+	 * Get warehouse from cache (immutable)
 	 * @param ctx				context
 	 * @param M_Warehouse_ID	id of warehouse to load
 	 * @param trxName			transaction name
-	 * @return					warehouse
+	 * @return warehouse
 	 */
 	public static MWarehouse get (Properties ctx, int M_Warehouse_ID, String trxName)
 	{
@@ -90,10 +91,10 @@ public class MWarehouse extends X_M_Warehouse implements ImmutablePOSupport
 	}	//	get
 
 	/**
-	 * 	Get Warehouses for Org
+	 * 	Get Warehouses for Organization
 	 *	@param ctx context
-	 *	@param AD_Org_ID id
-	 *	@return warehouse
+	 *	@param AD_Org_ID organization id
+	 *	@return array of warehouses
 	 */
 	public static MWarehouse[] getForOrg (Properties ctx, int AD_Org_ID)
 	{
@@ -107,11 +108,10 @@ public class MWarehouse extends X_M_Warehouse implements ImmutablePOSupport
 	}	//	get
 	
 	/**
-	 *  FR [ 1966337 ] 
-	 * 	Get Warehouses Transit for Org
+	 * 	Get Warehouse In Transit for Organization
 	 *	@param ctx context
-	 *	@param AD_Org_ID id
-	 *	@return warehouse
+	 *	@param AD_Org_ID organization id
+	 *	@return array of warehouse
 	 */
 	public static MWarehouse[] getInTransitForOrg (Properties ctx, int AD_Org_ID)
 	{
@@ -125,7 +125,20 @@ public class MWarehouse extends X_M_Warehouse implements ImmutablePOSupport
 	}	//	get
 	
 	/**	Cache					*/
-	protected static ImmutableIntPOCache<Integer,MWarehouse> s_cache = new ImmutableIntPOCache<Integer,MWarehouse>(Table_Name, 50 );	
+	protected static ImmutableIntPOCache<Integer,MWarehouse> s_cache = new ImmutableIntPOCache<Integer,MWarehouse>(Table_Name, 50 );
+	
+    /**
+     * UUID based Constructor
+     * @param ctx  Context
+     * @param M_Warehouse_UU  UUID key
+     * @param trxName Transaction
+     */
+    public MWarehouse(Properties ctx, String M_Warehouse_UU, String trxName) {
+        super(ctx, M_Warehouse_UU, trxName);
+		if (Util.isEmpty(M_Warehouse_UU))
+			setInitialDefaults();
+    }
+
 	/**
 	 * 	Standard Constructor
 	 *	@param ctx context
@@ -136,13 +149,15 @@ public class MWarehouse extends X_M_Warehouse implements ImmutablePOSupport
 	{
 		super(ctx, M_Warehouse_ID, trxName);
 		if (M_Warehouse_ID == 0)
-		{
-		//	setValue (null);
-		//	setName (null);
-		//	setC_Location_ID (0);
-			setSeparator ("*");	// *
-		}
+			setInitialDefaults();
 	}	//	MWarehouse
+
+	/**
+	 * Set the initial defaults for a new record
+	 */
+	private void setInitialDefaults() {
+		setSeparator ("*");	// *
+	}
 
 	/**
 	 * 	Load Constructor
@@ -170,7 +185,7 @@ public class MWarehouse extends X_M_Warehouse implements ImmutablePOSupport
 	}	//	MWarehouse
 
 	/**
-	 * 
+	 * Copy constructor
 	 * @param copy
 	 */
 	public MWarehouse(MWarehouse copy) 
@@ -179,7 +194,7 @@ public class MWarehouse extends X_M_Warehouse implements ImmutablePOSupport
 	}
 
 	/**
-	 * 
+	 * Copy constructor
 	 * @param ctx
 	 * @param copy
 	 */
@@ -189,7 +204,7 @@ public class MWarehouse extends X_M_Warehouse implements ImmutablePOSupport
 	}
 
 	/**
-	 * 
+	 * Copy constructor
 	 * @param ctx
 	 * @param copy
 	 * @param trxName
@@ -266,17 +281,13 @@ public class MWarehouse extends X_M_Warehouse implements ImmutablePOSupport
 		return loc;
 	}	//	getLocators
 	
-	/**
-	 * Before Save
-	 * @param newRecord new
-	 * @param success success
-	 * @return success
-	 */
 	@Override
 	protected boolean beforeSave(boolean newRecord) 
 	{
-		/* Disallow Negative Inventory cannot be checked if there are storage records 
-		with negative onhand. */
+		/**
+		 *  Disallow Negative Inventory cannot be checked if there are storage records 
+		 *  with negative onhand. 
+		 */
 		if (is_ValueChanged("IsDisallowNegativeInv") && isDisallowNegativeInv())
 		{
 			String sql = "SELECT M_Product_ID FROM M_StorageOnHand s "+
@@ -292,6 +303,7 @@ public class MWarehouse extends X_M_Warehouse implements ImmutablePOSupport
 			}
 		}
 		
+		// Validate that AD_Org_ID is > 0
 		if (getAD_Org_ID() == 0)
 		{
 			int context_AD_Org_ID = Env.getAD_Org_ID(getCtx());
@@ -310,14 +322,10 @@ public class MWarehouse extends X_M_Warehouse implements ImmutablePOSupport
 		return true;
 	}
 	
-	/**
-	 * 	After Save
-	 *	@param newRecord new
-	 *	@param success success
-	 *	@return success
-	 */
+	@Override
 	protected boolean afterSave (boolean newRecord, boolean success)
 	{
+		// Create accounting record
 		if (newRecord && success)
 			insert_Accounting("M_Warehouse_Acct", "C_AcctSchema_Default", null);
 		
@@ -336,6 +344,5 @@ public class MWarehouse extends X_M_Warehouse implements ImmutablePOSupport
 		
 		return this;
 	}
-
 
 }	//	MWarehouse

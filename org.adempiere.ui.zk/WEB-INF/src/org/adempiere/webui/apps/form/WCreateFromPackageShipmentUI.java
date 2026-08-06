@@ -22,22 +22,24 @@ import org.compiere.grid.CreateFromPackageShipment;
 import org.compiere.model.GridTab;
 import org.compiere.model.MPackage;
 import org.compiere.model.MPackageMPS;
-import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 
 /**
- * 
+ * Form to create shipment package lines (M_PackageLine) from shipment lines (through M_PackageMPS).
  * @author Elaine
- *
  */
 public class WCreateFromPackageShipmentUI extends CreateFromPackageShipment
 {
+	/** Create from window instance */
 	private WCreateFromWindow window;
 
+	/**
+	 * @param mTab
+	 */
 	public WCreateFromPackageShipmentUI(GridTab mTab) 
 	{
 		super(mTab);
-		log.info(mTab.toString());
+		if (log.isLoggable(Level.INFO)) log.info(mTab.toString());
 
 		window = new WCreateFromWindow(this, getGridTab().getWindowNo());
 
@@ -55,12 +57,13 @@ public class WCreateFromPackageShipmentUI extends CreateFromPackageShipment
 		AEnv.showWindow(window);
 	}
 
-	/**	Logger			*/
-	private static final CLogger log = CLogger.getCLogger(WCreateFromPackageShipmentUI.class);
-	
-	public boolean dynInit() throws Exception
+	/**
+	 * Load shipments lines
+	 */
+	@Override
+	protected boolean dynInit() throws Exception
 	{
-		log.config("");
+		if (log.isLoggable(Level.CONFIG)) log.config("");
 		
 		super.dynInit();
 		
@@ -74,6 +77,10 @@ public class WCreateFromPackageShipmentUI extends CreateFromPackageShipment
 		return true;
 	}
 	
+	/**
+	 * load data into list box
+	 * @param data
+	 */
 	protected void loadTableOIS (Vector<?> data)
 	{
 		window.getWListbox().clear();
@@ -89,11 +96,13 @@ public class WCreateFromPackageShipmentUI extends CreateFromPackageShipment
 		configureMiniTable(window.getWListbox());
 	}
 	
+	@Override
 	public void showWindow()
 	{
 		window.setVisible(true);
 	}
 	
+	@Override
 	public void closeWindow()
 	{
 		window.dispose();

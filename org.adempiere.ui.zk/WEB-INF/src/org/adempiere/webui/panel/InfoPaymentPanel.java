@@ -42,11 +42,13 @@ import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.minigrid.ColumnInfo;
 import org.compiere.minigrid.IDColumn;
 import org.compiere.model.MLookupFactory;
+import org.compiere.model.MPayment;
 import org.compiere.model.MQuery;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
+import org.idempiere.db.util.SQLFragment;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
@@ -71,7 +73,7 @@ import org.zkoss.zul.Vbox;
 * @version	InfoPayment.java Adempiere Swing UI 3.4.1
 */
 
-@Deprecated // replaced with InfoPaymentWindow IDEMPIERE-325
+@Deprecated (since="13", forRemoval=true) // replaced with InfoPaymentWindow IDEMPIERE-325
 public class InfoPaymentPanel extends InfoPanel implements ValueChangeListener, EventListener<Event>
 {
 	/**
@@ -127,7 +129,6 @@ public class InfoPaymentPanel extends InfoPanel implements ValueChangeListener, 
 	/**
 	 *  Detail Protected Constructor
 	 *
-	 *  @param modal modal
 	 *  @param WindowNo window no
 	 *  @param value query value
 	 *  @param multiSelection multiple selections
@@ -142,16 +143,31 @@ public class InfoPaymentPanel extends InfoPanel implements ValueChangeListener, 
 	/**
 	 *  Detail Protected Constructor
 	 *
-	 *  @param modal modal
 	 *  @param WindowNo window no
 	 *  @param value query value
 	 *  @param multiSelection multiple selections
 	 *  @param whereClause where clause
+	 *  @param lookup
 	 */
 	public InfoPaymentPanel(int WindowNo, String value,
 			boolean multiSelection, String whereClause, boolean lookup)
 	{
-		super(WindowNo, "p", "C_Payment_ID", multiSelection, whereClause, lookup);
+		this(WindowNo, value, multiSelection, lookup, new SQLFragment(whereClause));
+	}
+	
+	/**
+	 *  Detail Protected Constructor
+	 *
+	 *  @param WindowNo window no
+	 *  @param value query value
+	 *  @param multiSelection multiple selections
+	 *  @param lookup
+	 *  @param sqlFilter SQL Filter
+	 */
+	public InfoPaymentPanel(int WindowNo, String value,
+			boolean multiSelection, boolean lookup, SQLFragment sqlFilter)
+	{
+		super(WindowNo, "p", "C_Payment_ID", multiSelection, lookup, sqlFilter);
 
 		log.info( "InfoPaymentPanel");
 		setTitle(Msg.getMsg(Env.getCtx(), "InfoPayment"));
@@ -275,6 +291,7 @@ public class InfoPaymentPanel extends InfoPanel implements ValueChangeListener, 
 	 *	@return true, if success
 	 */
 
+	@SuppressWarnings("removal")
 	private boolean initInfo ()
 	{
 		//  Set Defaults
@@ -478,7 +495,7 @@ public class InfoPaymentPanel extends InfoPanel implements ValueChangeListener, 
 	public void zoom()
 	{
 		log.info( "InfoPayment.zoom");
-		Integer C_Payment_ID = getSelectedRowKey();
+		Integer C_Payment_ID = getIntSelectedRowKey(MPayment.Table_ID);
 		if (C_Payment_ID == null)
 			return;
 		MQuery query = new MQuery("C_Payment");

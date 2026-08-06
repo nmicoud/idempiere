@@ -16,18 +16,20 @@
  *****************************************************************************/
 package org.compiere.process;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 
-import org.adempiere.exceptions.AdempiereException;
 import org.compiere.model.MAllocationHdr;
+import org.compiere.model.MProcessPara;
+import org.compiere.model.POResultSet;
+import org.compiere.model.Query;
 import org.compiere.util.AdempiereUserError;
 import org.compiere.util.DB;
-import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
+import org.compiere.util.Util;
 
 /**
  *	Reset (delete) Allocations	
@@ -35,6 +37,7 @@ import org.compiere.util.Trx;
  *  @author Jorg Janke
  *  @version $Id: AllocationReset.java,v 1.2 2006/07/30 00:51:01 jjanke Exp $
  */
+@org.adempiere.base.annotation.Process
 public class AllocationReset extends SvrProcess
 {
 	/** BP Group				*/
@@ -50,8 +53,10 @@ public class AllocationReset extends SvrProcess
 	/** All Allocations */
 	private boolean		p_AllAllocations = false;
 	/** Transaction				*/
-	private Trx			m_trx = null;
-	
+	protected Trx		m_trx = null;
+
+	private String m_lastError = null;
+
 	/**
 	 *  Prepare - e.g., get Parameters.
 	 */
@@ -78,7 +83,7 @@ public class AllocationReset extends SvrProcess
 			else if (name.equals("AllAllocations"))
 				p_AllAllocations = "Y".equals(para[i].getParameter());
 			else
-				log.log(Level.SEVERE, "Unknown Parameter: " + name);
+				MProcessPara.validateUnknownParameter(getProcessInfo().getAD_Process_ID(), para[i]);
 		}
 		
 		if ( !p_AllAllocations && getTable_ID() == MAllocationHdr.Table_ID && getRecord_ID() > 0 )
@@ -109,111 +114,123 @@ public class AllocationReset extends SvrProcess
 
 		if (p_C_AllocationHdr_ID != 0)
 		{
-			MAllocationHdr hdr = new MAllocationHdr(getCtx(), p_C_AllocationHdr_ID, m_trx.getTrxName());
-			if (delete(hdr))
-				count++;
-			else
-				throw new AdempiereException("Cannot delete");
-			m_trx.close();
+			try {
+				MAllocationHdr hdr = new MAllocationHdr(getCtx(), p_C_AllocationHdr_ID, m_trx.getTrxName());
+				
+				String err = testIfDeleteable(hdr);
+				if (!Util.isEmpty(err))
+					return "@Error@ " + err;
+
+				err = deleteAndGetError(hdr);
+				if (Util.isEmpty(err))
+					count++;
+				else
+					return err;
+			} finally {
+				m_trx.close();
+			}
 			StringBuilder msgreturn = new StringBuilder("@Deleted@ #").append(count);
 			return msgreturn.toString();
 		}
-		
-		//	Selection
-		StringBuilder sql = new StringBuilder("SELECT * FROM C_AllocationHdr ah ")
-			.append("WHERE EXISTS (SELECT * FROM C_AllocationLine al ")
-				.append("WHERE ah.C_AllocationHdr_ID=al.C_AllocationHdr_ID");
-		if (p_C_BPartner_ID != 0)
-			sql.append(" AND al.C_BPartner_ID=?");
-		else if (p_C_BP_Group_ID != 0)
-			sql.append(" AND EXISTS (SELECT * FROM C_BPartner bp ")
-					.append("WHERE bp.C_BPartner_ID=al.C_BPartner_ID AND bp.C_BP_Group_ID=?)");
-		else
-			sql.append(" AND AD_Client_ID=?");
-		if (p_DateAcct_From != null)
-			sql.append(" AND TRIM(ah.DateAcct) >= ?");
-		if (p_DateAcct_To != null)
-			sql.append(" AND TRIM(ah.DateAcct) <= ?");
+
+		List<Object> params = new ArrayList<Object>();
+		StringBuilder where = new StringBuilder("EXISTS (SELECT * FROM C_AllocationLine al WHERE C_AllocationHdr.C_AllocationHdr_ID=al.C_AllocationHdr_ID");
+		if (p_C_BPartner_ID != 0) {
+			where.append(" AND al.C_BPartner_ID=?");
+			params.add(p_C_BPartner_ID);
+		} else if (p_C_BP_Group_ID != 0) {
+			where.append(" AND EXISTS (SELECT * FROM C_BPartner bp WHERE bp.C_BPartner_ID=al.C_BPartner_ID AND bp.C_BP_Group_ID=?)");
+			params.add(p_C_BP_Group_ID);
+		} else {
+			where.append(" AND AD_Client_ID=?");
+			params.add(getAD_Client_ID());
+		}
+		if (p_DateAcct_From != null) {
+			where.append(" AND TRUNC(C_AllocationHdr.DateAcct) >= ?");
+			params.add(p_DateAcct_From);
+		}
+		if (p_DateAcct_To != null) {
+			where.append(" AND TRUNC(C_AllocationHdr.DateAcct) <= ?");
+			params.add(p_DateAcct_To);
+		}
 		//	Do not delete Cash Trx
-		sql.append(" AND al.C_CashLine_ID IS NULL)");
+		where.append(" AND al.C_CashLine_ID IS NULL)");
 		//	Open Period
-		sql.append(" AND EXISTS (SELECT * FROM C_Period p")
+		where.append(" AND EXISTS (SELECT * FROM C_Period p")
 			.append(" INNER JOIN C_PeriodControl pc ON (p.C_Period_ID=pc.C_Period_ID AND pc.DocBaseType='CMA') ")
-			.append("WHERE ah.DateAcct BETWEEN p.StartDate AND p.EndDate)");
-		//
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		try
-		{
-			pstmt = DB.prepareStatement (sql.toString(), m_trx.getTrxName());
-			int index = 1;
-			if (p_C_BPartner_ID != 0)
-				pstmt.setInt(index++, p_C_BPartner_ID);
-			else if (p_C_BP_Group_ID != 0)
-				pstmt.setInt(index++, p_C_BP_Group_ID);
-			else
-				pstmt.setInt(index++, Env.getAD_Client_ID(getCtx()));
-			if (p_DateAcct_From != null)
-				pstmt.setTimestamp(index++, p_DateAcct_From);
-			if (p_DateAcct_To != null)
-				pstmt.setTimestamp(index++, p_DateAcct_To);
-			rs = pstmt.executeQuery ();
-			while (rs.next ())
-			{
-				MAllocationHdr hdr = new MAllocationHdr(getCtx(), rs, m_trx.getTrxName());
-				if (delete(hdr))
+			.append("WHERE C_AllocationHdr.DateAcct BETWEEN p.StartDate AND p.EndDate)");
+
+		try (POResultSet<MAllocationHdr> pors = new Query(getCtx(), MAllocationHdr.Table_Name, where.toString(), m_trx.getTrxName())
+				.setClient_ID()
+				.setParameters(params)
+				.scroll()) {
+			while (pors.hasNext()) {
+				MAllocationHdr hdr = pors.next();
+
+				String err = testIfDeleteable(hdr);
+				if (!Util.isEmpty(err))
+					return "@Error@ " + err;
+
+				err = deleteAndGetError(hdr);
+				if (!Util.isEmpty(err))
+					return err;
+				else
 					count++;
 			}
- 		}
-		catch (Exception e)
-		{
-			log.log(Level.SEVERE, sql.toString(), e);
-			m_trx.rollback();
+		} finally {
+			m_trx.close();
 		}
-		finally
-		{
-			DB.close(rs, pstmt);
-			rs = null; pstmt = null;
-		}
-		m_trx.close();
+
 		StringBuilder msgreturn = new StringBuilder("@Deleted@ #").append(count);
 		return msgreturn.toString();
 	}	//	doIt
 
-	
-	private boolean delete(MAllocationHdr hdr)
-	{
-	//	m_trx.start();
-		boolean success = false;
-		if (hdr.delete(true, m_trx.getTrxName()))
+	protected String testIfDeleteable(MAllocationHdr hdr) {
+
+		if (DB.getSQLValueEx(m_trx.getTrxName(), "SELECT 1 FROM Fact_Reconciliation WHERE Fact_Acct_ID IN (SELECT Fact_Acct_ID FROM Fact_Acct WHERE AD_Table_ID = ? AND Record_ID = ?)", MAllocationHdr.Table_ID, hdr.getC_AllocationHdr_ID()) == 1)
+			return Msg.getMsg(getCtx(), "AllocationDeletionFailedReconciliation", new Object[] {hdr.getDocumentNo()});
+
+		return "";
+	}
+
+	protected boolean delete(MAllocationHdr hdr) {
+		if (log.isLoggable(Level.FINE)) log.fine(hdr.toString());
+		String documentInfo = hdr.getDocumentInfo();
+		boolean success = hdr.delete(true, m_trx.getTrxName());
+		if (!success)
 		{
-			if (log.isLoggable(Level.FINE)) log.fine(hdr.toString());
-			success = true;
-		}
-		if (success)
-			success = m_trx.commit();
-		else
+			m_lastError = "@DeleteError@" + documentInfo;
 			m_trx.rollback();
-		return success;
+			return false;
+		}
+		else {
+			try {
+				success = m_trx.commit(true);
+
+				if (!success) {
+					m_lastError = "CommitError" + " " + documentInfo;
+					m_trx.rollback();
+					return false;
+			    }
+			}
+			catch (Exception e) {
+				m_lastError = "CommitError" + " " + documentInfo + ": " + e.getMessage();
+				m_trx.rollback();
+			    return false;
+			}
+		}
+		return true;
 	}	//	delete
-	
-	
-	/**
-	 * 	Set BPartner (may not be required
-	 */
-	/*private void setBPartner()
+
+	protected String deleteAndGetError(MAllocationHdr hdr)
 	{
+		 m_lastError = null;
+
+		    if (!delete(hdr))
+		        return m_lastError;
+
+		   return "";
 		
-		UPDATE C_AllocationLine al
-		SET C_BPartner_ID=(SELECT C_BPartner_ID FROM C_Payment p WHERE al.C_Payment_ID=p.C_Payment_ID)
-		WHERE C_BPartner_ID IS NULL AND C_Payment_ID IS NOT NULL;
-		UPDATE C_AllocationLine al
-		SET C_BPartner_ID=(SELECT C_BPartner_ID FROM C_Invoice i WHERE al.C_Invoice_ID=i.C_Invoice_ID)
-		WHERE C_BPartner_ID IS NULL AND C_Invoice_ID IS NOT NULL;
-		UPDATE C_AllocationLine al
-		SET C_BPartner_ID=(SELECT C_BPartner_ID FROM C_Order o WHERE al.C_Order_ID=o.C_Order_ID)
-		WHERE C_BPartner_ID IS NULL AND C_Order_ID IS NOT NULL;
-		COMMIT
-	}	//	setBPartner*/
+	}	//	deleteAndGetError
 
 }	//	AllocationReset

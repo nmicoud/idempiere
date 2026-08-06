@@ -16,6 +16,7 @@
  *****************************************************************************/
 package org.adempiere.webui.window;
 
+import static org.adempiere.webui.LayoutUtils.isLabelAboveInputForSmallWidth;
 import static org.compiere.model.SystemIDs.WINDOW_ACCOUNTCOMBINATION;
 
 import java.sql.PreparedStatement;
@@ -43,6 +44,7 @@ import org.adempiere.webui.event.ValueChangeListener;
 import org.adempiere.webui.panel.StatusBarPanel;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ThemeManager;
+import org.adempiere.webui.util.Icon;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.model.DataStatusEvent;
 import org.compiere.model.DataStatusListener;
@@ -55,6 +57,7 @@ import org.compiere.model.MAccountLookup;
 import org.compiere.model.MAcctSchema;
 import org.compiere.model.MAcctSchemaElement;
 import org.compiere.model.MQuery;
+import org.compiere.model.MSysConfig;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -65,15 +68,13 @@ import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.Borderlayout;
-import org.zkoss.zul.Caption;
 import org.zkoss.zul.Cell;
 import org.zkoss.zul.Center;
 import org.zkoss.zul.Div;
-import org.zkoss.zul.Groupbox;
-import org.zkoss.zul.Hbox;
+import org.adempiere.webui.component.FlexHlayout;
 import org.zkoss.zul.North;
 import org.zkoss.zul.South;
-import org.zkoss.zul.Vbox;
+import org.adempiere.webui.component.FlexVlayout;
 import org.zkoss.zul.Vlayout;
 
 /**
@@ -85,17 +86,20 @@ public final class WAccountDialog extends Window
 	implements EventListener<Event>, DataStatusListener, ValueChangeListener
 {
 	/**
-	 * 
+	 * generated serial id
 	 */
 	private static final long serialVersionUID = 3041802296879719489L;
 
 	private Callback<Integer> m_callback;
+	/* SysConfig USE_ESC_FOR_TAB_CLOSING */
+	private boolean isUseEscForTabClosing = MSysConfig.getBooleanValue(MSysConfig.USE_ESC_FOR_TAB_CLOSING, false, Env.getAD_Client_ID(Env.getCtx()));
 	
 	/**
 	 * 	Constructor
 	 *  @param title title
 	 *  @param mAccount account info
 	 *  @param C_AcctSchema_ID as
+	 *  @param callback
 	 */
 	public WAccountDialog (String title,
 		MAccountLookup mAccount, int C_AcctSchema_ID, Callback<Integer> callback)
@@ -144,7 +148,7 @@ public final class WAccountDialog extends Window
 	protected boolean			m_changed = false;
 
 	/** Accounting Schema           */
-	private volatile static MAcctSchema	s_AcctSchema = null;
+	private MAcctSchema	m_AcctSchema = null;
 	/** MWindow for AccountCombination  */
 	private GridWindow             m_mWindow = null;
 	/** MTab for AccountCombination     */
@@ -180,11 +184,11 @@ public final class WAccountDialog extends Window
 	private boolean				m_newRow = true;
 	//
 	@SuppressWarnings("unused")
-	private Vbox panel = new Vbox();
+	private FlexVlayout panel = new FlexVlayout();
 	private ConfirmPanel confirmPanel = new ConfirmPanel(true);
 	private StatusBarPanel statusBar = new StatusBarPanel();
-	private Hbox northPanel = new Hbox();
-	private Groupbox parameterPanel = new Groupbox();
+	private FlexHlayout northPanel = new FlexHlayout();
+	private Div parameterPanel = new Div();
 	private Grid parameterLayout = new Grid();
 	private ToolBar toolBar = new ToolBar();
 	private ToolBarButton bRefresh = new ToolBarButton();
@@ -195,10 +199,8 @@ public final class WAccountDialog extends Window
 
 	private boolean m_smallWidth;
 
-
-
 	/**
-	 *	Static component init.
+	 *	Create components and layout dialog
 	 *  <pre>
 	 *  - north
 	 *    - parameterPanel
@@ -211,31 +213,28 @@ public final class WAccountDialog extends Window
 	 *  </pre>
 	 *  @throws Exception
 	 */
-	void init() throws Exception
+	protected void init() throws Exception
 	{
 		//
-		Caption caption = new Caption(Msg.getMsg(Env.getCtx(),"Parameter"));
-		parameterPanel.appendChild(caption);
 		ZKUpdateUtil.setHflex(parameterPanel, "min");
-		parameterPanel.setStyle("background-color: transparent;");
 		toolBar.setOrient("vertical");
 		toolBar.setStyle("border: none; padding: 5px");
 		ZKUpdateUtil.setHflex(toolBar, "min");
 
 		if (ThemeManager.isUseFontIconForImage())
-			bSave.setIconSclass("z-icon-Save");
+			bSave.setIconSclass(Icon.getIconSclass(Icon.SAVE));
 		else
 			bSave.setImage(ThemeManager.getThemeResource("images/Save24.png"));
 		bSave.setTooltiptext(Msg.getMsg(Env.getCtx(),"AccountNewUpdate"));
 		bSave.addEventListener(Events.ON_CLICK, this);
 		if (ThemeManager.isUseFontIconForImage())
-			bRefresh.setIconSclass("z-icon-Refresh");
+			bRefresh.setIconSclass(Icon.getIconSclass(Icon.REFRESH));
 		else
 			bRefresh.setImage(ThemeManager.getThemeResource("images/Refresh24.png"));
 		bRefresh.setTooltiptext(Msg.getMsg(Env.getCtx(),"Refresh"));
 		bRefresh.addEventListener(Events.ON_CLICK, this);
 		if (ThemeManager.isUseFontIconForImage())
-			bIgnore.setIconSclass("z-icon-Ignore");
+			bIgnore.setIconSclass(Icon.getIconSclass(Icon.IGNORE));
 		else
 			bIgnore.setImage(ThemeManager.getThemeResource("images/Ignore24.png"));
 		bIgnore.setTooltiptext(Msg.getMsg(Env.getCtx(),"Ignore"));
@@ -251,7 +250,6 @@ public final class WAccountDialog extends Window
 		toolBar.appendChild(bIgnore);
 		toolBar.appendChild(bSave);
 		//
-
 		northPanel.appendChild(parameterPanel);
 		northPanel.appendChild(toolBar);
 		ZKUpdateUtil.setWidth(northPanel, "100%");
@@ -267,21 +265,20 @@ public final class WAccountDialog extends Window
 		North nRegion = new North();
 		nRegion.setParent(layout);
 		ZKUpdateUtil.setHflex(northPanel, "false");
-		ZKUpdateUtil.setVflex(northPanel, "min");
 		ZKUpdateUtil.setVflex(parameterPanel, "min");
 		nRegion.appendChild(northPanel);
-		nRegion.setStyle("background-color: transparent; border: none");
-		northPanel.setStyle("background-color: transparent;");
+		nRegion.setStyle("border: none");
 		nRegion.setCollapsible(true);
 		nRegion.setSplittable(true);
 		nRegion.setAutoscroll(true);
+		nRegion.setTitle(Msg.getMsg(Env.getCtx(),"Parameter"));
 
 		Center cRegion = new Center();
 		cRegion.setParent(layout);
 		ZKUpdateUtil.setHflex(m_adTabPanel, "true");
 		ZKUpdateUtil.setVflex(m_adTabPanel, "true");
 		cRegion.appendChild(m_adTabPanel);
-		ZKUpdateUtil.setVflex(cRegion, "min");
+		ZKUpdateUtil.setVflex(cRegion, "1");
 
 		South sRegion = new South();
 		sRegion.setParent(layout);
@@ -308,22 +305,19 @@ public final class WAccountDialog extends Window
 		if (ClientInfo.isMobile()) {
 			ClientInfo.onClientInfo(this, this::onClientInfo);
 		}
-	}	//	jbInit
+		
+		addEventListener(Events.ON_CANCEL, e -> onCancel());
+	}	//	init
 
 	/**
-	 *	Dyanmic Init.
-	 *  When a row is selected, the editor values are set
-	 *  (editors do not change grid)
+	 *  Load account (valid combination) details
 	 *  @return true if initialized
 	 */
 	private boolean initAccount()
 	{
 		m_AD_Client_ID = Env.getContextAsInt(Env.getCtx(), m_WindowNo, "AD_Client_ID");
 		//	Get AcctSchema Info
-		if (s_AcctSchema == null || s_AcctSchema.getC_AcctSchema_ID() != m_C_AcctSchema_ID)
-			s_AcctSchema = new MAcctSchema (Env.getCtx(), m_C_AcctSchema_ID, null);
-		if (log.isLoggable(Level.CONFIG)) log.config(s_AcctSchema.toString()
-			+ ", #" + s_AcctSchema.getAcctSchemaElements().length);
+		m_AcctSchema = new MAcctSchema (Env.getCtx(), m_C_AcctSchema_ID, null);
 		Env.setContext(Env.getCtx(), m_WindowNo, "C_AcctSchema_ID", m_C_AcctSchema_ID);
 
 		//  Model
@@ -357,7 +351,7 @@ public final class WAccountDialog extends Window
 		}
 
 		//  GridController
-		m_adTabPanel.init(null, m_WindowNo, m_mTab, null);
+		m_adTabPanel.init(null, m_mTab);
 
 		//  Prepare Parameter
 		parameterLayout.makeNoStrip();
@@ -370,10 +364,8 @@ public final class WAccountDialog extends Window
 		//	Finish
 		m_query = new MQuery();
 		m_query.addRestriction("C_AcctSchema_ID", MQuery.EQUAL, m_C_AcctSchema_ID);
-		//action_save doesn't filter by IsFullyQualified
-//		m_query.addRestriction("IsFullyQualified", MQuery.EQUAL, "Y");
 		if (m_mAccount.C_ValidCombination_ID == 0)
-			m_mTab.setQuery(MQuery.getEqualQuery("1", "2"));
+			m_mTab.setQuery(MQuery.getEqualQuery("1", 2));
 		else
 		{
 			MQuery query = new MQuery();
@@ -387,7 +379,7 @@ public final class WAccountDialog extends Window
 		if (!m_adTabPanel.isGridView())
 			m_adTabPanel.switchRowPresentation();
 
-		statusBar.setStatusLine(s_AcctSchema.toString());
+		statusBar.setStatusLine(m_AcctSchema.toString());
 		statusBar.setStatusDB("");
 
 		//	Initial value
@@ -402,18 +394,26 @@ public final class WAccountDialog extends Window
 			}
 		}
 
-		log.config("fini");
+		//auto collapse parameter region
+		if (isAutoCollapseParameterPane() && northPanel.getParent() instanceof North northRegion)
+			northRegion.setOpen(false);
+
 		return true;
 	}	//	initAccount
 
+	/**
+	 * Layout parameter panel
+	 */
 	protected void layoutParameters() {
 		m_smallWidth = ClientInfo.maxWidth(ClientInfo.SMALL_WIDTH-1);
 		
 		m_rows = new Rows();
 		m_rows.setParent(parameterLayout);
+		if (isLabelAboveInputForSmallWidth())
+			LayoutUtils.addSclass("form-label-above-input", parameterLayout);
 
 		//	Alias
-		if (s_AcctSchema.isHasAlias())
+		if (m_AcctSchema.isHasAlias())
 		{
 			GridField alias = m_mTab.getField("Alias");
 			if (f_Alias == null)
@@ -422,6 +422,7 @@ public final class WAccountDialog extends Window
 		}	//	Alias
 
 		//	Combination
+		m_newRow = isLabelAboveInputForSmallWidth();
 		GridField combination = m_mTab.getField("Combination");
 		if (f_Combination == null)
 			f_Combination = WebEditorFactory.getEditor(combination, false);
@@ -431,9 +432,11 @@ public final class WAccountDialog extends Window
 		/**
 		 *	Create Fields in Element Order
 		 */
-		MAcctSchemaElement[] elements = s_AcctSchema.getAcctSchemaElements();
+		MAcctSchemaElement[] elements = m_AcctSchema.getAcctSchemaElements();
 		for (int i = 0; i < elements.length; i++)
 		{
+			if (isLabelAboveInputForSmallWidth())
+				m_newRow = true;
 			MAcctSchemaElement ase = elements[i];
 			String type = ase.getElementType();
 			boolean isMandatory = ase.isMandatory();
@@ -555,8 +558,8 @@ public final class WAccountDialog extends Window
 	}
 
 	/**
-	 *	Add Editor to parameterPanel alernative right/left depending on m_newRow.
-	 *  Field Value changes update Editors
+	 *	Add Editor to parameterPanel alternate right/left depending on m_newRow.<br/>
+	 *  Editor will listen to value change event of field.
 	 *  @param field field
 	 *  @param editor editor
 	 *  @param mandatory mandatory
@@ -577,8 +580,7 @@ public final class WAccountDialog extends Window
 			m_row.setStyle("background-color: transparent");
 			m_rows.appendChild(m_row);
 		}
-//		else
-//			m_gbc.gridx = 2;
+
 		if (ClientInfo.maxWidth(ClientInfo.SMALL_WIDTH-1))
 		{
 			Vlayout vlayout = new Vlayout();
@@ -586,7 +588,7 @@ public final class WAccountDialog extends Window
 			vlayout.setSpacing("0px");
 			vlayout.appendChild(label);
 			vlayout.appendChild(editor.getComponent());
-			m_row.appendCellChild(vlayout, 2);
+			m_row.appendCellChild(vlayout, isLabelAboveInputForSmallWidth() ? 4 : 2);
 		}
 		else
 		{
@@ -723,6 +725,7 @@ public final class WAccountDialog extends Window
 		}
 	}	//	saveSelection
 
+	@Override
 	public void onEvent(Event event) throws Exception {
 		if (event.getTarget().getId().equals("Ok"))
 		{
@@ -759,7 +762,7 @@ public final class WAccountDialog extends Window
 				needconfirm = true;
 
 			if (needconfirm) {
-				FDialog.ask(m_WindowNo, this, "CreateNewAccountCombination?", new Callback<Boolean>() {
+				Dialog.ask(m_WindowNo, "CreateNewAccountCombination?", new Callback<Boolean>() {
 					public void onCallback(Boolean result) {
 						if (result) {
 							if (action_Save()) {
@@ -777,8 +780,7 @@ public final class WAccountDialog extends Window
 		}
 		else if (event.getTarget().getId().equals("Cancel"))
 		{
-			m_changed = false;
-			dispose();
+			onCancel();
 		}
 		//
 		else if (event.getTarget() == bSave)
@@ -790,7 +792,24 @@ public final class WAccountDialog extends Window
 			action_Find (true);
 	}
 
-	boolean needConfirm(WEditor editor, MAccount combiOrg)
+	/**
+	 * onCancel event
+	 */
+	private void onCancel() {
+		// do not allow to close tab for Events.ON_CTRL_KEY event
+		if(isUseEscForTabClosing)
+			SessionManager.getAppDesktop().setCloseTabWithShortcut(false);
+
+		m_changed = false;
+		dispose();
+	}
+
+	/**
+	 * @param editor
+	 * @param combiOrg
+	 * @return true if value has change
+	 */
+	protected boolean needConfirm(WEditor editor, MAccount combiOrg)
 	{
 		if (editor != null ) {
 			String columnName = editor.getColumnName();
@@ -810,6 +829,7 @@ public final class WAccountDialog extends Window
 	 *	Status Change Listener
 	 *  @param e event
 	 */
+	@Override
 	public void dataStatusChanged (DataStatusEvent e)
 	{
 		if (log.isLoggable(Level.CONFIG)) log.config(e.toString());
@@ -820,15 +840,13 @@ public final class WAccountDialog extends Window
 
 
 	/**
-	 *	Action Find.
-	 *	- create where clause
+	 *	Action Find.<br/>
+	 *	- create where clause<br/>
 	 *	- query database
 	 *  @param includeAliasCombination include alias combination
 	 */
 	private void action_Find (boolean includeAliasCombination)
 	{
-		log.info("");
-
 		//	Create where Clause
 		MQuery query = null;
 		if (m_query != null)
@@ -836,7 +854,7 @@ public final class WAccountDialog extends Window
 		else
 			query = new MQuery();
 		//	Alias
-		if (includeAliasCombination && f_Alias != null && !isEmpty(f_Alias))
+		if (includeAliasCombination && f_Alias != null && !isEmpty(f_Alias.getValue()))
 		{
 			String value = f_Alias.getValue().toString().toUpperCase();
 			if (!value.endsWith("%"))
@@ -898,28 +916,38 @@ public final class WAccountDialog extends Window
 		m_mTab.setQuery(query);
 		m_mTab.query(false);
 		statusBar.setStatusDB(String.valueOf(m_mTab.getRowCount()));
+
+		//auto collapse parameter region
+		if (isAutoCollapseParameterPane() && northPanel.getParent() instanceof North northRegion)
+			northRegion.setOpen(false);
+
 	}	//	action_Find
 
+	private boolean isAutoCollapseParameterPane() {
+		if (ClientInfo.isMobile())
+			return MSysConfig.getBooleanValue(MSysConfig.ZK_INFO_MOBILE_AUTO_COLLAPSED_PARAMETER_PANEL, true, Env.getAD_Client_ID(Env.getCtx()));
+		else
+			return MSysConfig.getBooleanValue(MSysConfig.ZK_INFO_AUTO_COLLAPSED_PARAMETER_PANEL, false, Env.getAD_Client_ID(Env.getCtx()));
+	}
 
 	/**
 	 *	Create/Save Account
 	 */
 	private boolean action_Save()
 	{
-		log.info("");
 		/**
 		 *	Check completeness (mandatory fields) ... and for duplicates
 		 */
 		StringBuilder sb = new StringBuilder();
 		StringBuilder sql = new StringBuilder ("SELECT C_ValidCombination_ID, Alias FROM C_ValidCombination WHERE ");
 		Object value = null;
-		if (s_AcctSchema.isHasAlias())
+		if (m_AcctSchema.isHasAlias())
 		{
 			value = f_Alias.getValue().toString();
 			if (isEmpty(value) && f_Alias.isMandatory())
 				sb.append(Msg.translate(Env.getCtx(), "Alias")).append(", ");
 		}
-		MAcctSchemaElement[] elements = s_AcctSchema.getAcctSchemaElements();
+		MAcctSchemaElement[] elements = m_AcctSchema.getAcctSchemaElements();
 		for (int i = 0; i < elements.length; i++)
 		{
 			MAcctSchemaElement ase = elements[i];
@@ -1058,20 +1086,19 @@ public final class WAccountDialog extends Window
 
 		if (sb.length() != 0)
 		{
-			FDialog.error(m_WindowNo, this, "FillMandatory", sb.substring(0, sb.length()-2));
+			Dialog.error(m_WindowNo, "FillMandatory", sb.substring(0, sb.length()-2));
 			return false;
 		}
 		if (f_AD_Org_ID == null || f_AD_Org_ID.getValue() == null)
 		{
-			FDialog.error(m_WindowNo, this, "FillMandatory", Msg.getElement(Env.getCtx(), "AD_Org_ID"));
+			Dialog.error(m_WindowNo, "FillMandatory", Msg.getElement(Env.getCtx(), "AD_Org_ID"));
 			return false;
 		}
 		if (f_Account_ID == null || f_Account_ID.getValue() == null)
 		{
-			FDialog.error(m_WindowNo, this, "FillMandatory", Msg.getElement(Env.getCtx(), "Account_ID"));
+			Dialog.error(m_WindowNo, "FillMandatory", Msg.getElement(Env.getCtx(), "Account_ID"));
 			return false;
 		}
-
 
 		/**
 		 *	Check if already exists
@@ -1085,7 +1112,7 @@ public final class WAccountDialog extends Window
 		{
 			pstmt = DB.prepareStatement(sql.toString(), null);
 			pstmt.setInt(1, m_AD_Client_ID);
-			pstmt.setInt(2, s_AcctSchema.getC_AcctSchema_ID());
+			pstmt.setInt(2, m_AcctSchema.getC_AcctSchema_ID());
 			rs = pstmt.executeQuery();
 			if (rs.next())
 			{
@@ -1110,7 +1137,7 @@ public final class WAccountDialog extends Window
 			Alias = "";
 
 		//	We have an account like this already - check alias
-		if (IDvalue != 0 && s_AcctSchema.isHasAlias()
+		if (IDvalue != 0 && m_AcctSchema.isHasAlias()
 			&& !f_Alias.getValue().toString().equals(Alias))
 		{
 			sql = new StringBuilder("UPDATE C_ValidCombination SET Alias=");
@@ -1137,18 +1164,19 @@ public final class WAccountDialog extends Window
 				stmt = null;
 			}
 			if (i == 0)
-				FDialog.error(m_WindowNo, this, "AccountNotUpdated");
+				Dialog.error(m_WindowNo, "AccountNotUpdated");
 		}
 
 		//	load and display
 		if (IDvalue != 0)
 		{
-			loadInfo (IDvalue, s_AcctSchema.getC_AcctSchema_ID());
+			loadInfo (IDvalue, m_AcctSchema.getC_AcctSchema_ID());
 			action_Find (false);
 			return true;
 		}
 
-		log.config("New");
+		if (log.isLoggable(Level.CONFIG))
+			log.config("New");
 		Alias = null;
 		if (f_Alias != null)
 			Alias = f_Alias.getValue().toString();
@@ -1191,7 +1219,7 @@ public final class WAccountDialog extends Window
 
 		MAccount acct = MAccount.get (Env.getCtx(), m_AD_Client_ID,
 			((Integer)f_AD_Org_ID.getValue()).intValue(),
-			s_AcctSchema.getC_AcctSchema_ID(),
+			m_AcctSchema.getC_AcctSchema_ID(),
 			((Integer)f_Account_ID.getValue()).intValue(), C_SubAcct_ID,
 			M_Product_ID, C_BPartner_ID, AD_OrgTrx_ID,
 			C_LocFrom_ID, C_LocTo_ID, C_SRegion_ID,
@@ -1211,13 +1239,17 @@ public final class WAccountDialog extends Window
 				acct.setAlias(Alias);
 				acct.saveEx();
 			}
-			loadInfo (acct.get_ID(), s_AcctSchema.getC_AcctSchema_ID());
+			loadInfo (acct.get_ID(), m_AcctSchema.getC_AcctSchema_ID());
 		}
 		IDvalue = acct.get_ID();
 		action_Find (false);
 		return true;
 	}	//	action_Save
 
+	/**
+	 * @param value
+	 * @return true if value is null or empty string
+	 */
 	private boolean isEmpty(Object value) {
 		if (value == null)
 			return true;
@@ -1230,7 +1262,7 @@ public final class WAccountDialog extends Window
 
 
 	/**
-	 *	Ignore
+	 * Ignore changes
 	 */
 	private void action_Ignore()
 	{
@@ -1283,7 +1315,7 @@ public final class WAccountDialog extends Window
 
 	/**
 	 *	Get selected account
-	 *  @return account
+	 *  @return account (C_ValidCombination_ID)
 	 */
 	public Integer getValue()
 	{
@@ -1297,6 +1329,7 @@ public final class WAccountDialog extends Window
 	 * 	valueChange - Account Changed
 	 *	@param evt event
 	 */
+	@Override
 	public void valueChange(ValueChangeEvent evt) {
 		Object newValue = evt.getNewValue();
 		if (newValue instanceof Integer) {
@@ -1309,6 +1342,9 @@ public final class WAccountDialog extends Window
 		}
 	}
 		
+	/**
+	 * onClientInfo event
+	 */
 	protected void onClientInfo() {
 		if (parameterLayout != null && parameterLayout.getRows() != null) {
 			boolean smallWidth = ClientInfo.maxWidth(ClientInfo.SMALL_WIDTH-1);

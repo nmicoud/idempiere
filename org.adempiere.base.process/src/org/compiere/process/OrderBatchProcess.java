@@ -23,8 +23,10 @@ import java.sql.Timestamp;
 import java.util.logging.Level;
 
 import org.compiere.model.MOrder;
+import org.compiere.model.MProcessPara;
 import org.compiere.util.AdempiereUserError;
 import org.compiere.util.DB;
+import org.compiere.util.Trx;
 
 
 /**
@@ -33,6 +35,7 @@ import org.compiere.util.DB;
  *  @author Jorg Janke
  *  @version $Id: OrderBatchProcess.java,v 1.2 2006/07/30 00:51:02 jjanke Exp $
  */
+@org.adempiere.base.annotation.Process
 public class OrderBatchProcess extends SvrProcess
 {
 	private int			p_C_DocTypeTarget_ID = 0;
@@ -77,7 +80,7 @@ public class OrderBatchProcess extends SvrProcess
 				p_IsInvoiced = (String)para[i].getParameter();
 			}
 			else
-				log.log(Level.SEVERE, "Unknown Parameter: " + name);
+				MProcessPara.validateUnknownParameter(getProcessInfo().getAD_Process_ID(), para[i]);
 		}
 	}	//	prepare
 
@@ -131,21 +134,17 @@ public class OrderBatchProcess extends SvrProcess
 		ResultSet rs = null;
 		try
 		{
-			pstmt = DB.prepareStatement(sql.toString(), get_TrxName());
+			pstmt = DB.prepareStatement(sql.toString(), null);
 			pstmt.setInt(1, p_C_DocTypeTarget_ID);
 			pstmt.setString(2, p_DocStatus);
 			rs = pstmt.executeQuery();
 			while (rs.next())
 			{
-				if (process(new MOrder(getCtx(),rs, get_TrxName())))
+				if (process(rs.getInt("C_Order_ID")))
 					counter++;
 				else
 					errCounter++;
 			}
-		}
-		catch (Exception e)
-		{
-			log.log(Level.SEVERE, sql.toString(), e);
 		}
 		finally
 		{
@@ -159,28 +158,51 @@ public class OrderBatchProcess extends SvrProcess
 	
 	/**
 	 * 	Process Order
-	 *	@param order order
+	 *	@param C_Order_ID order ID
 	 *	@return true if ok
 	 */
-	private boolean process (MOrder order)
+	private boolean process (int C_Order_ID)
 	{
-		if (log.isLoggable(Level.INFO)) log.info(order.toString());
-		//
-		order.setDocAction(p_DocAction);
-		if (order.processIt(p_DocAction))
+		String trxName = Trx.createTrxName("OrderBatch_");
+		Trx trx = Trx.get(trxName, true);
+		MOrder orderToProcess = new MOrder(getCtx(), C_Order_ID, trxName);
+		boolean success = false;
+		try
 		{
-			order.saveEx();
-			addLog(0, null, null, order.getDocumentNo() + ": OK");
-			return true;
-		} else {
-			log.warning("Order Process Failed: " + order + " - " + order.getProcessMsg());
-			throw new IllegalStateException("Order Process Failed: " + order + " - " + order.getProcessMsg());
-			
+			orderToProcess.setDocAction(p_DocAction);
+			if (orderToProcess.processIt(p_DocAction))
+			{
+				orderToProcess.saveEx();
+				trx.commit();
+				addLog(0, null, null, orderToProcess.getDocumentNo() + ": OK");
+				success = true;
+			} else {
+				String errorMsg = "Error: " + orderToProcess.getDocumentNo() + ": " + orderToProcess.getProcessMsg();
+				log.warning(errorMsg);
+				addLog(orderToProcess.getC_Order_ID(), null, null, errorMsg, MOrder.Table_ID, orderToProcess.getC_Order_ID());
+			}
 		}
-		// commented by zuhri - unreachable code
-		//addLog (0, null, null, order.getDocumentNo() + ": Error " + order.getProcessMsg());
-		//return false;
-		// end commented out by zuhri
+		catch (Exception e)
+		{
+			log.log(Level.SEVERE, "Failed to process order: " + orderToProcess.getDocumentNo(), e);
+			addLog(orderToProcess.getC_Order_ID(), null, null, "Error: " + orderToProcess.getDocumentNo() + ": " + e.getMessage(), MOrder.Table_ID, orderToProcess.getC_Order_ID());
+		}
+		finally
+		{
+			if (!success)
+			{
+				try
+				{
+					trx.rollback();
+				}
+				catch (Exception e)
+				{
+					log.log(Level.SEVERE, "Failed to rollback transaction for order: " + orderToProcess.getDocumentNo(), e);
+				}
+			}
+			trx.close();
+		}
+		return success;
 	}	//	process
 	
 }	//	OrderBatchProcess

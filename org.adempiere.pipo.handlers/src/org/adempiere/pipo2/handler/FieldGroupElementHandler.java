@@ -22,16 +22,17 @@ import java.util.List;
 import java.util.logging.Level;
 
 import javax.xml.transform.sax.TransformerHandler;
+import org.adempiere.pipo2.IPackSerializer;
 
 import org.adempiere.pipo2.AbstractElementHandler;
-import org.adempiere.pipo2.PIPOContext;
-import org.adempiere.pipo2.PoExporter;
 import org.adempiere.pipo2.Element;
+import org.adempiere.pipo2.PIPOContext;
 import org.adempiere.pipo2.PackOut;
+import org.adempiere.pipo2.PoExporter;
 import org.adempiere.pipo2.PoFiller;
 import org.adempiere.pipo2.exception.POSaveFailedException;
-import org.compiere.model.I_AD_FieldGroup;
-import org.compiere.model.X_AD_FieldGroup;
+import org.compiere.model.MFieldGroup;
+import org.compiere.model.MPackageImpDetail;
 import org.compiere.model.X_AD_Package_Imp_Detail;
 import org.compiere.util.Env;
 import org.xml.sax.SAXException;
@@ -54,13 +55,13 @@ public class FieldGroupElementHandler extends AbstractElementHandler {
 
 		if (isProcessElement(ctx.ctx, entitytype)) {
 
-			X_AD_FieldGroup fieldGroup = findPO(ctx, element);
+			MFieldGroup fieldGroup = findPO(ctx, element);
 			if (fieldGroup == null)
 			{
-				fieldGroup = new X_AD_FieldGroup(ctx.ctx, 0, getTrxName(ctx));
+				fieldGroup = new MFieldGroup(ctx.ctx, 0, getTrxName(ctx));
 			}
 			PoFiller pf = new PoFiller(ctx, fieldGroup, element, this);
-			List<String> excludes = defaultExcludeList(X_AD_FieldGroup.Table_Name);
+			List<String> excludes = defaultExcludeList(MFieldGroup.Table_Name);
 			if (processedFieldGroups.contains(fieldGroup.getAD_FieldGroup_ID())) {
 				element.skip = true;
 				return;
@@ -76,13 +77,13 @@ public class FieldGroupElementHandler extends AbstractElementHandler {
 			element.recordId = fieldGroup.getAD_FieldGroup_ID();
 
 			if (fieldGroup.is_new() || fieldGroup.is_Changed()) {
-				X_AD_Package_Imp_Detail impDetail = createImportDetail(ctx, element.qName, X_AD_FieldGroup.Table_Name,
-						X_AD_FieldGroup.Table_ID);
+				X_AD_Package_Imp_Detail impDetail = createImportDetail(ctx, element.qName, MFieldGroup.Table_Name,
+						MFieldGroup.Table_ID);
 				if (!fieldGroup.is_new()) {				
-					backupRecord(ctx, impDetail.getAD_Package_Imp_Detail_ID(), X_AD_FieldGroup.Table_Name, fieldGroup);
-					action = "Update";				
+					backupRecord(ctx, impDetail.getAD_Package_Imp_Detail_ID(), MFieldGroup.Table_Name, fieldGroup);
+					action = MPackageImpDetail.ACTION_UPDATE;				
 				} else {
-					action = "New";
+					action = MPackageImpDetail.ACTION_INSERT;
 				}
 				
 				if (fieldGroup.save(getTrxName(ctx)) == true) {
@@ -105,16 +106,16 @@ public class FieldGroupElementHandler extends AbstractElementHandler {
 	public void endElement(PIPOContext ctx, Element element) throws SAXException {
 	}
 
-	protected void create(PIPOContext ctx, TransformerHandler document)
-			throws SAXException {
+	protected void create(PIPOContext ctx, IPackSerializer document)
+			throws Exception {
 
 
 		int fieldGroup_id = Env.getContextAsInt(ctx.ctx,
-				X_AD_FieldGroup.COLUMNNAME_AD_FieldGroup_ID);
-		if (ctx.packOut.isExported(X_AD_FieldGroup.COLUMNNAME_AD_FieldGroup_ID+"|"+fieldGroup_id))
+				MFieldGroup.COLUMNNAME_AD_FieldGroup_ID);
+		if (ctx.packOut.isExported(MFieldGroup.COLUMNNAME_AD_FieldGroup_ID+"|"+fieldGroup_id))
 			return;
 
-		X_AD_FieldGroup fieldGroup = new X_AD_FieldGroup(ctx.ctx, fieldGroup_id, null);
+		MFieldGroup fieldGroup = new MFieldGroup(ctx.ctx, fieldGroup_id, null);
 
 		if (!isPackOutElement(ctx, fieldGroup))
 			return;
@@ -123,36 +124,36 @@ public class FieldGroupElementHandler extends AbstractElementHandler {
 		
 		AttributesImpl atts = new AttributesImpl();
 		addTypeName(atts, "table");
-		document.startElement("", "", I_AD_FieldGroup.Table_Name, atts);
+		document.startElement(MFieldGroup.Table_Name, atts);
 		createAdElementBinding(ctx, document, fieldGroup);
 
 		PackOut packOut = ctx.packOut;
-		packOut.getCtx().ctx.put("Table_Name",X_AD_FieldGroup.Table_Name);
+		packOut.getCtx().ctx.put("Table_Name",MFieldGroup.Table_Name);
 		try {
 			new CommonTranslationHandler().packOut(packOut,document,null,fieldGroup.get_ID());
 		} catch(Exception e) {
 			if (log.isLoggable(Level.INFO)) log.info(e.toString());
 		}
-		document.endElement("", "", I_AD_FieldGroup.Table_Name);
+		document.endElement(MFieldGroup.Table_Name);
 	}
 
 
-	private void createAdElementBinding(PIPOContext ctx, TransformerHandler document,
-			X_AD_FieldGroup fieldGroup) {
+	private void createAdElementBinding(PIPOContext ctx, IPackSerializer document,
+			MFieldGroup fieldGroup) {
 
 		PoExporter filler = new PoExporter(ctx, document, fieldGroup);
-		List<String> excludes = defaultExcludeList(X_AD_FieldGroup.Table_Name);
+		List<String> excludes = defaultExcludeList(MFieldGroup.Table_Name);
 		if (fieldGroup.getAD_FieldGroup_ID() <= PackOut.MAX_OFFICIAL_ID) {
-			filler.add(X_AD_FieldGroup.COLUMNNAME_AD_FieldGroup_ID, new AttributesImpl());
+			filler.add(MFieldGroup.COLUMNNAME_AD_FieldGroup_ID, new AttributesImpl());
 		}
 
 		filler.export(excludes);
 	}
 
-	public void packOut(PackOut packout, TransformerHandler packoutHandler, TransformerHandler docHandler,int recordId) throws Exception
+	public void packOut(PackOut packout, IPackSerializer packoutSerializer, TransformerHandler docHandler,int recordId) throws Exception
 	{
-		Env.setContext(packout.getCtx().ctx, X_AD_FieldGroup.COLUMNNAME_AD_FieldGroup_ID, recordId);
-		this.create(packout.getCtx(), packoutHandler);
-		packout.getCtx().ctx.remove(X_AD_FieldGroup.COLUMNNAME_AD_FieldGroup_ID);
+		Env.setContext(packout.getCtx().ctx, MFieldGroup.COLUMNNAME_AD_FieldGroup_ID, recordId);
+		this.create(packout.getCtx(), packoutSerializer);
+		packout.getCtx().ctx.remove(MFieldGroup.COLUMNNAME_AD_FieldGroup_ID);
 	}
 }

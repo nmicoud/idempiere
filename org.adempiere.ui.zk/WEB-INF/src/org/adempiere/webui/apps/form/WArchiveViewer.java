@@ -21,21 +21,30 @@
 
 package org.adempiere.webui.apps.form;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.logging.Level;
 
+import javax.activation.FileDataSource;
+
+import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.util.Callback;
 import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.LayoutUtils;
+import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.component.Button;
 import org.adempiere.webui.component.Checkbox;
 import org.adempiere.webui.component.Column;
 import org.adempiere.webui.component.Columns;
 import org.adempiere.webui.component.ConfirmPanel;
-import org.adempiere.webui.component.Datebox;
 import org.adempiere.webui.component.DatetimeBox;
+import org.adempiere.webui.component.FlexHlayout;
 import org.adempiere.webui.component.Grid;
 import org.adempiere.webui.component.GridFactory;
 import org.adempiere.webui.component.Label;
@@ -50,24 +59,32 @@ import org.adempiere.webui.component.Tabpanels;
 import org.adempiere.webui.component.Tabs;
 import org.adempiere.webui.component.Textbox;
 import org.adempiere.webui.component.ToolBarButton;
+import org.adempiere.webui.editor.WDateEditor;
 import org.adempiere.webui.editor.WSearchEditor;
 import org.adempiere.webui.panel.ADForm;
 import org.adempiere.webui.panel.CustomForm;
 import org.adempiere.webui.panel.IFormController;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ThemeManager;
+import org.adempiere.webui.util.Icon;
 import org.adempiere.webui.util.ZKUpdateUtil;
-import org.adempiere.webui.window.FDialog;
+import org.adempiere.webui.window.DateRangeButton;
+import org.adempiere.webui.window.Dialog;
+import org.adempiere.webui.window.WEMailDialog;
 import org.compiere.apps.form.Archive;
 import org.compiere.model.MArchive;
 import org.compiere.model.MLookup;
 import org.compiere.model.MLookupFactory;
 import org.compiere.model.MSysConfig;
+import org.compiere.model.MUser;
+import org.compiere.tools.FileUtil;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
+import org.compiere.util.MimeType;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
+import org.zkoss.io.RepeatableInputStream;
 import org.zkoss.util.media.AMedia;
 import org.zkoss.util.media.Media;
 import org.zkoss.zk.ui.Page;
@@ -77,7 +94,6 @@ import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.event.OpenEvent;
 import org.zkoss.zk.ui.ext.render.DynamicMedia;
 import org.zkoss.zul.Cell;
-import org.zkoss.zul.Hbox;
 import org.zkoss.zul.Iframe;
 import org.zkoss.zul.Popup;
 import org.zkoss.zul.Space;
@@ -85,22 +101,41 @@ import org.zkoss.zul.impl.Utils;
 import org.zkoss.zul.impl.XulElement;
 
 /**
- * 	Archive Viewer
+ * 	Archive Viewer Form with query and viewer tab.
  * 
  * @author	Niraj Sohun
  * @date	September 28, 2007
 */
-
+@org.idempiere.ui.zk.annotation.Form(name = "org.compiere.apps.form.ArchiveViewer")
 public class WArchiveViewer extends Archive implements IFormController, EventListener<Event>
 {
 	private static final String ONCLOSE_TIMESTAMP_ATTR = "onclose.timestamp";
+
+	private static List<String> autoPreviewList;
+
+	// same as in WAttachment and WImageDialog
+	static {
+		autoPreviewList = new ArrayList<String>();
+        autoPreviewList.add("application/json");
+        autoPreviewList.add("application/pdf");
+        autoPreviewList.add("image/bmp");
+        autoPreviewList.add("image/gif");
+        autoPreviewList.add("image/jpeg");
+        autoPreviewList.add("image/png");
+        autoPreviewList.add("image/tiff");
+        autoPreviewList.add("image/x-icon");
+        // autoPreviewList.add("text/html"); IDEMPIERE-3980
+        autoPreviewList.add("text/plain");
+        autoPreviewList.add("text/xml");
+	}
 
 	private class WArchiveViewerForm extends CustomForm
 	{
 		/**
 		 * generated serial id
 		 */
-		private static final long serialVersionUID = 4919349386488325L;
+		private static final long serialVersionUID = 6001246387640733031L;
+
 		//-- ComponentCtrl --//
 		public Object getExtraCtrl() {
 			return new ExtraCtrl();
@@ -122,13 +157,12 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 			if (newpage != null) {
 				try {
 					dynInit();
-					jbInit();
-					if (ClientInfo.isMobile() || MSysConfig.getBooleanValue(MSysConfig.ZK_USE_PDF_JS_VIEWER, false, Env.getAD_Client_ID(Env.getCtx()))) {
-						if (media != null && iframe.getSrc() == null) {
-							String url = Utils.getDynamicMediaURI(form, mediaVersion, media.getName(), media.getFormat());
-							String pdfJsUrl = "pdf.js/web/viewer.html?file="+url;
-							iframe.setSrc(pdfJsUrl);
-						}
+					zkInit();
+					if (   media != null && iframe.getSrc() == null && media.getName().toLowerCase().endsWith(".pdf")
+						&& (ClientInfo.isMobile() || MSysConfig.getBooleanValue(MSysConfig.ZK_USE_PDF_JS_VIEWER, false, Env.getAD_Client_ID(Env.getCtx())))) {
+						String url = Utils.getDynamicMediaURI(form, mediaVersion, media.getName(), media.getFormat());
+						String pdfJsUrl = AEnv.toPdfJsUrl(url);
+						iframe.setSrc(pdfJsUrl);
 					}
 				}
 				catch(Exception e)
@@ -138,60 +172,93 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 			}
 		}
 	};
+	
+	/** UI Form */
 	private CustomForm form;
 	
-//	private Vbox queryPanel = new Vbox();
+	//Query Tab
+	/** Report (Y/N) field of query tab */
 	private Checkbox reportField = new Checkbox();
 	private Label processLabel = new Label(Msg.translate(Env.getCtx(), "AD_Process_ID"));
+	/** AD_Process list field of query tab */
 	private Listbox processField = new Listbox();
 	private Label tableLabel = new Label(Msg.translate(Env.getCtx(), "AD_Table_ID"));
+	/** AD_Table list field of query tab */
 	private Listbox tableField = new Listbox();
 	private Label bPartnerLabel = new Label(Msg.translate(Env.getCtx(), "C_BPartner_ID"));
+	/** Business partner field of query tab */
 	private WSearchEditor bPartnerField = null;
 	private Label nameQLabel = new Label(Msg.translate(Env.getCtx(), "Name"));
+	/** Name field of query tab */
 	private Textbox nameQField = new Textbox();
 	private Label descriptionQLabel = new Label(Msg.translate(Env.getCtx(), "Description"));
+	/** Description field of query tab */
 	private Textbox descriptionQField = new Textbox();
 	private Label helpQLabel = new Label(Msg.translate(Env.getCtx(), "Help"));
+	/** Help field of query tab */
 	private Textbox helpQField = new Textbox();
 	private Label createdByQLabel = new Label(Msg.translate(Env.getCtx(), "CreatedBy"));
+	/** Created by user list field of query tab */
 	private Listbox createdByQField = new Listbox();
 	private Label createdQLabel = new Label(Msg.translate(Env.getCtx(), "Created"));
-	private Datebox createdQFrom = new Datebox();
-	private Datebox createdQTo = new Datebox();
+	/** Created date from field of query tab */
+	private WDateEditor createdQFrom = new WDateEditor();
+	/** Created date to field of query tab */
+	private WDateEditor createdQTo = new WDateEditor();
 	
-//	private Vbox viewEnterPanel = new Vbox();
+	//Viewer Tab
+	/** Prior button of viewer tab */
 	private Button bBack = new Button();
+	/** Next button of viewer tab */
 	private Button bNext = new Button();
+	/** Show index of current archive record, part of viewer tab */
 	private Label positionInfo = new Label(".");
 	private Label createdByLabel = new Label(Msg.translate(Env.getCtx(), "CreatedBy"));
+	/** Created by field of viewer tab */
 	private Textbox createdByField = new Textbox();
-	private DatetimeBox createdField = new DatetimeBox();
-	
+	/** Created field of viewer tab */
+	private DatetimeBox createdField = new DatetimeBox();	
 	private Label nameLabel = new Label(Msg.translate(Env.getCtx(), "Name"));
+	/** Name field of viewer tab */
 	private Textbox nameField = new Textbox();
 	private Label descriptionLabel = new Label(Msg.translate(Env.getCtx(), "Description"));
+	/** Description field of viewer tab */
 	private Textbox descriptionField = new Textbox();
 	private Label helpLabel = new Label(Msg.translate(Env.getCtx(), "Help"));
-	private Textbox helpField = new Textbox();
-	private ConfirmPanel confirmPanel = new ConfirmPanel(true);
+	/** Help field of viewer tab */
+	private Textbox helpField = new Textbox();	
 	private Button updateArchive = new Button(); 
 	private Button deleteArchive = new Button(); 
-		
-	private Tabbox tabbox = new Tabbox();
+	/** Button to email current archive */
+	private Button bEmail = new Button();
+	/** Iframe to view archive content, part of viewer tab. */
+	private Iframe iframe = new Iframe();
+	/** Button to refresh {@link #iframe} */
+	private Button bRefresh = new Button();
+	
+	/** Content of {@link #form} */
+	private Tabbox tabbox = new Tabbox();	
+	/** Tabs of {@link #tabbox} */
 	private Tabs tabs = new Tabs();
+	/** Tabpanels of {@link #tabbox} */
 	private Tabpanels tabpanels = new Tabpanels(); 
 	
-	private Iframe iframe = new Iframe();
-	private Button bRefresh = new Button();
+	/** Bottom button panel of {@link #form} */
+	private ConfirmPanel confirmPanel = new ConfirmPanel(true);
+		
+	/** If true, query tab is visible, false otherwise */
 	private boolean showQuery = true;
 
+	/** For ZK_USE_PDF_JS_VIEWER, increment by 1 for each refresh of {@link #media}. */
 	private int mediaVersion = 0;
 	private AMedia media;
 
+	/**
+	 * Default constructor
+	 */
 	public WArchiveViewer()
 	{
-		log.info("");
+		if (log.isLoggable(Level.INFO)) log.info("");
 
 		form = new WArchiveViewerForm();
 
@@ -199,9 +266,8 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 	}
 	
 	/**
-	 *  Dynamic Init
-	 */
-	
+	 * Dynamic Init
+	 */	
 	private void dynInit()
 	{
 		processField = new Listbox();
@@ -225,41 +291,60 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 				Env.getCtx(), "C_BPartner_ID"), "", true, false, true);
 	}	//	dynInit
 
-	private void reportViewer(String name, byte[] data)
-	{	
-		media = new AMedia(name + ".pdf", "pdf", "application/pdf", data);
-		if (ClientInfo.isMobile() || MSysConfig.getBooleanValue(MSysConfig.ZK_USE_PDF_JS_VIEWER, false, Env.getAD_Client_ID(Env.getCtx())))
-		{
-			mediaVersion ++;
-			if (form.getDesktop() == null)
+	/**
+	 * Show archive content in {@link #iframe}.
+	 * @param name
+	 * @param inputStream
+	 */
+	private void reportViewer(String name, InputStream inputStream)
+	{
+		String suffix = ".pdf";
+		String mimeType = "application/pdf";
+		String extension = "pdf";
+		if (!Util.isEmpty(name) && name.contains(".")) {
+			suffix = "";
+			extension = name.substring(name.lastIndexOf(".")+1);
+			mimeType = MimeType.getMimeType(name);
+			if (Util.isEmpty(mimeType))
+				mimeType = "application/octet-stream";
+		}
+		if (autoPreviewList.contains(mimeType)) {
+			media = new AMedia(name + suffix, extension, mimeType, RepeatableInputStream.getInstance(inputStream));
+			if (extension.equalsIgnoreCase("pdf") && (ClientInfo.isMobile() || MSysConfig.getBooleanValue(MSysConfig.ZK_USE_PDF_JS_VIEWER, false, Env.getAD_Client_ID(Env.getCtx()))))
 			{
-				iframe.setContent(null);
-				iframe.setSrc(null);
+				mediaVersion ++;
+				if (form.getDesktop() == null)
+				{
+					iframe.setContent(null);
+					iframe.setSrc(null);
+				}
+				else
+				{
+					String url = Utils.getDynamicMediaURI(form, mediaVersion, media.getName(), media.getFormat());
+					String pdfJsUrl = AEnv.toPdfJsUrl(url);
+					iframe.setContent(null);
+					iframe.setSrc(pdfJsUrl);
+				}
 			}
 			else
 			{
-				String url = Utils.getDynamicMediaURI(form, mediaVersion, media.getName(), media.getFormat());
-				String pdfJsUrl = "pdf.js/web/viewer.html?file="+url;
-				iframe.setContent(null);
-				iframe.setSrc(pdfJsUrl);
+				iframe.setContent(media);
 			}
-		}
-		else
-		{			
-			iframe.setContent(media);
+		} else {
+			iframe.setContent(null);
+			iframe.setSrc(null);
 		}
 		iframe.invalidate();
 	}
 	
 	/**
-	 *  Static Init
+	 *  Layout {@link #form}.
 	 *  @throws Exception
-	 */
-	
-	private void jbInit() throws Exception
+	 */	
+	private void zkInit() throws Exception
 	{
 		ZKUpdateUtil.setWidth(tabbox, "100%");
-		ZKUpdateUtil.setHeight(tabbox, "90%");
+		ZKUpdateUtil.setVflex(tabbox, "1");		
 		tabbox.appendChild(tabs);
 		tabbox.appendChild(tabpanels);
 		tabbox.addEventListener(Events.ON_SELECT, this);
@@ -274,28 +359,35 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 		createdByQField.setRows(1);
 		
 		if (ThemeManager.isUseFontIconForImage())
-			updateArchive.setIconSclass("z-icon-Ok");
+			updateArchive.setIconSclass(Icon.getIconSclass(Icon.OK));
 		else
 			updateArchive.setImage(ThemeManager.getThemeResource("images/Ok24.png"));
 		updateArchive.setTooltiptext(Msg.getMsg(Env.getCtx(), "Update"));
 		updateArchive.addEventListener(Events.ON_CLICK, this);
 		
 		if (ThemeManager.isUseFontIconForImage())
-			deleteArchive.setIconSclass("z-icon-Delete");
+			deleteArchive.setIconSclass(Icon.getIconSclass(Icon.DELETE));
 		else
 			deleteArchive.setImage(ThemeManager.getThemeResource("images/Delete24.png"));
 		deleteArchive.setTooltiptext(Msg.getMsg(Env.getCtx(), "Delete"));
 		deleteArchive.addEventListener(Events.ON_CLICK, this);
 		
 		if (ThemeManager.isUseFontIconForImage())
-			bRefresh.setIconSclass("z-icon-Refresh");
+			bRefresh.setIconSclass(Icon.getIconSclass(Icon.REFRESH));
 		else
 			bRefresh.setImage(ThemeManager.getThemeResource("images/Refresh24.png"));
 		bRefresh.setTooltiptext(Msg.getMsg(Env.getCtx(), "Refresh"));
 		bRefresh.addEventListener(Events.ON_CLICK, this);
 		
 		if (ThemeManager.isUseFontIconForImage())
-			bBack.setIconSclass("z-icon-Previous");
+			bEmail.setIconSclass(Icon.getIconSclass(Icon.SEND_MAIL));
+		else
+			bEmail.setImage(ThemeManager.getThemeResource("images/SendMail24.png"));
+		bEmail.setTooltiptext(Msg.getMsg(Env.getCtx(), "EMail"));
+		bEmail.addEventListener(Events.ON_CLICK, this);
+
+		if (ThemeManager.isUseFontIconForImage())
+			bBack.setIconSclass(Icon.getIconSclass(Icon.PREVIOUS));
 		else
 			bBack.setImage(ThemeManager.getThemeResource("images/wfBack24.png"));
 		bBack.setTooltiptext(Msg.getMsg(Env.getCtx(), "Previous"));
@@ -303,7 +395,7 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 		LayoutUtils.addSclass("btn-medium", bBack);
 		
 		if (ThemeManager.isUseFontIconForImage())
-			bNext.setIconSclass("z-icon-Next");
+			bNext.setIconSclass(Icon.getIconSclass(Icon.NEXT));
 		else
 			bNext.setImage(ThemeManager.getThemeResource("images/wfNext24.png"));
 		bNext.setTooltiptext(Msg.getMsg(Env.getCtx(), "Next"));
@@ -403,9 +495,11 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 			row = new Row();
 			rows.appendChild(row);
 			row.appendChild(createdQLabel);
-			Hbox hbox = new Hbox();
-			hbox.appendChild(createdQFrom);
-			hbox.appendChild(createdQTo);
+			FlexHlayout hbox = new FlexHlayout();
+			hbox.appendChild(createdQFrom.getComponent());
+			hbox.appendChild(createdQTo.getComponent());
+			DateRangeButton drb = (new DateRangeButton(createdQFrom, createdQTo));
+			hbox.appendChild(drb);
 			row.appendChild(hbox);
 			row.appendChild(new Space());
 			
@@ -503,9 +597,10 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 		
 		row = new Row();
 		rows.appendChild(row);		
-		Hbox hbox = new Hbox();
+		FlexHlayout hbox = new FlexHlayout();
 		hbox.appendChild(deleteArchive);
 		hbox.appendChild(bRefresh);
+		hbox.appendChild(bEmail);
 		hbox.appendChild(updateArchive);
 		cell = new Cell();
 		cell.setColspan(3);
@@ -522,7 +617,8 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 		Tab tabView = new Tab(Msg.getMsg(Env.getCtx(), "ViewerResult"));
 		
 		Tabpanel tabViewPanel = new Tabpanel();
-		Hbox boxViewSeparator = new Hbox();
+		@SuppressWarnings("deprecation")
+		org.zkoss.zul.Hbox boxViewSeparator = new org.zkoss.zul.Hbox();
 		ZKUpdateUtil.setWidth(boxViewSeparator, "100%");
 		ZKUpdateUtil.setHeight(boxViewSeparator, "100%");			
 		cell = new Cell();
@@ -535,7 +631,7 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 			ZKUpdateUtil.setHflex(cell, "min");
 			ToolBarButton more = new ToolBarButton();
 			if (ThemeManager.isUseFontIconForImage())
-				more.setIconSclass("z-icon-Expand");
+				more.setIconSclass(Icon.getIconSclass(Icon.EXPAND));
 			else
 				more.setImage(ThemeManager.getThemeResource("images/expand-header.png"));
 			cell.appendChild(more);
@@ -573,6 +669,8 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 		tabpanels.appendChild(tabViewPanel);
 		
 		confirmPanel.addActionListener(this);
+		ZKUpdateUtil.setVflex(confirmPanel, "min");
+		confirmPanel.setStyle("padding-top: 2px;padding-bottom: 2px;");
 		updateQDisplay();
 
 		iframe.setId("reportFrame");
@@ -588,10 +686,9 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 		form.appendChild(confirmPanel);
 	}
 	
+	@Override
 	public void onEvent(Event e) throws Exception 
 	{
-		log.info(e.getName());
-		
 		if (e.getTarget() == updateArchive)
 			cmd_updateArchive();
 		else if(e.getTarget() == deleteArchive)
@@ -611,6 +708,8 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 			updateVDisplay(false);
 		else if (e.getTarget() == bNext)
 			updateVDisplay(true);
+		else if (e.getTarget() == bEmail)
+			sendMail();
 		else if (e.getTarget() == bRefresh)
 			iframe.invalidate();
 		else if (e.getTarget() instanceof Tab)
@@ -627,7 +726,7 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 	}
 	
 	/**
-	 * 	Update Query Display
+	 * 	Update Query Tab
 	 */
 	private void updateQDisplay()
 	{
@@ -648,8 +747,11 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 		bPartnerLabel.getParent().setVisible(!reports);
 	}	//	updateQDisplay
 
+	/**
+	 * Delete current archive record.
+	 */
 	public void cmd_deleteArchive(){
-	  FDialog.ask(m_WindowNo, this.form, "DeleteRecord?", new Callback<Boolean>() {
+	  Dialog.ask(m_WindowNo, "DeleteRecord?", new Callback<Boolean>() {
 			
 			@Override
 			public void onCallback(Boolean result) 
@@ -657,7 +759,7 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 				if (result)
 				{
 					MArchive ar = m_archives[m_index];
-					ar.delete(true);
+					ar.deleteEx(true);
 					tabbox.setSelectedIndex(0);
 					cmd_query();
 					dynInit();
@@ -667,10 +769,33 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 	}
 
 	/**
-	 * 	Update View Display
-	 * 	@param next show next Archive
+	 * Send EMail with the current displayed file as attachment
 	 */
-	
+	private void sendMail() {
+		MArchive ar = m_archives[m_index];
+
+		MUser from = MUser.get(Env.getCtx(), Env.getAD_User_ID(Env.getCtx()));
+		String suffix = ".pdf";
+		if (!Util.isEmpty(ar.getName()) && ar.getName().contains("."))
+			suffix = "";
+		File attachment = new File(FileUtil.getTempMailName(ar.getName(), suffix));
+		try {
+			Files.copy(ar.getInputStream(), attachment.toPath());
+		} catch (IOException e) {
+			throw new AdempiereException(e);
+		}
+
+		WEMailDialog dialog = new WEMailDialog (Msg.getMsg(Env.getCtx(), "SendMail"),
+				from, "", "", "", new FileDataSource(attachment),
+				m_WindowNo, ar.getAD_Table_ID(), ar.getRecord_ID(), ar.getRecord_UU(), null);
+
+		AEnv.showWindow(dialog);
+	}
+
+	/**
+	 * 	Update Viewer Tab
+	 * 	@param next true to show next archive, false to show previous archive
+	 */	
 	private void updateVDisplay (boolean next)
 	{
 		if (m_archives == null)
@@ -692,7 +817,8 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 		deleteArchive.setEnabled(m_archives.length > 0);
 		updateArchive.setEnabled(false);
 		
-		log.info("Index=" + m_index + ", Length=" + m_archives.length);
+		if (log.isLoggable(Level.INFO))
+			log.info("Index=" + m_index + ", Length=" + m_archives.length);
 		
 		if (m_archives.length == 0)
 		{
@@ -703,6 +829,7 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 			descriptionField.setText("");
 			helpField.setText("");
 			iframe.getChildren().clear();
+			iframe.setSrc(null);
 			return;
 		}
 		
@@ -717,23 +844,24 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 		try
 		{
 			InputStream in = ar.getInputStream();
-			//pdfViewer.setScale(reportField.isSelected() ? 50 : 75);
 			if (in != null)
-				reportViewer(ar.getName(), ar.getBinaryData());//pdfViewer.loadPDF(in);
-			else
-				iframe.getChildren().clear();//pdfViewer.clearDocument();
+				reportViewer(ar.getName(), in);
+			else {
+				iframe.getChildren().clear();
+				iframe.setSrc(null);
+			}
 		}
 		catch (Exception e)
 		{
-			log.log(Level.SEVERE, "pdf", e);
-			iframe.getChildren().clear();//pdfViewer.clearDocument();
+			log.log(Level.SEVERE, e.getMessage(), e);
+			iframe.getChildren().clear();
+			iframe.setSrc(null);
 		}
 	}	//	updateVDisplay
 
 	/**
-	 * 	Update Archive Info
-	 */
-	
+	 * 	Update {@link MArchive} and viewer tab.
+	 */	
 	private void cmd_updateArchive()
 	{
 		MArchive ar = m_archives[m_index];
@@ -761,7 +889,8 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 			update = true;
 		}
 		
-		log.info("Update=" + update);
+		if (log.isLoggable(Level.INFO))
+			log.info("Update=" + update);
 		
 		if (update)
 			ar.saveEx();
@@ -772,25 +901,36 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 	}	//	cmd_updateArchive
 	
 	/**
-	 * 	Query Directly
+	 * 	Execute query.
 	 *	@param isReport report
 	 *	@param AD_Table_ID table
-	 *	@param Record_ID tecord
+	 *	@param Record_ID record
 	 */
-	
-	public void query (boolean isReport, int AD_Table_ID, int Record_ID)
+	public void query(boolean isReport, int AD_Table_ID, int Record_ID)
 	{
-		if (log.isLoggable(Level.CONFIG)) log.config("Report=" + isReport + ", AD_Table_ID=" + AD_Table_ID + ",Record_ID=" + Record_ID);
+		query(isReport, AD_Table_ID, Record_ID, null);
+	}
+
+	/**
+	 * 	Execute query.
+	 *	@param isReport report
+	 *	@param AD_Table_ID table
+	 *	@param Record_ID record ID
+	 *	@param Record_UU record UUID
+	 */	
+	public void query(boolean isReport, int AD_Table_ID, int Record_ID, String Record_UU)
+	{
+		if (log.isLoggable(Level.CONFIG)) log.config("Report=" + isReport + ", AD_Table_ID=" + AD_Table_ID + ", Record_ID=" + Record_ID + ", Record_UU=" + Record_UU);
 		reportField.setChecked(isReport);
 		m_AD_Table_ID = AD_Table_ID;
 		m_Record_ID = Record_ID;
+		m_Record_UU = Record_UU;
 		cmd_query();
 	}	//	query	
 	
-	/**************************************************************************
-	 * 	Create Query
-	 */
-	
+	/**
+	 * Execute Query
+	 */	
 	private void cmd_query()
 	{
 		boolean reports = reportField.isChecked();
@@ -853,10 +993,14 @@ public class WArchiveViewer extends Archive implements IFormController, EventLis
 		updateVDisplay(false);
 	}	//	cmd_query
 	
+	/**
+	 * @param showQuery true to show query tab, false otherwise
+	 */
 	public void setShowQuery(boolean showQuery) {
 		this.showQuery = showQuery;
 	}
 	
+	@Override
 	public ADForm getForm() {
 		return form;
 	}

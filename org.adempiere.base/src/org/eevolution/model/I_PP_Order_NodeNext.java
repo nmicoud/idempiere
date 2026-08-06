@@ -23,7 +23,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for PP_Order_NodeNext
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 @SuppressWarnings("all")
 public interface I_PP_Order_NodeNext 
@@ -46,8 +46,8 @@ public interface I_PP_Order_NodeNext
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -55,12 +55,12 @@ public interface I_PP_Order_NodeNext
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -77,6 +77,7 @@ public interface I_PP_Order_NodeNext
 	  */
 	public int getAD_WF_Next_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_WF_Node getAD_WF_Next() throws RuntimeException;
 
     /** Column name AD_WF_Node_ID */
@@ -92,6 +93,7 @@ public interface I_PP_Order_NodeNext
 	  */
 	public int getAD_WF_Node_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_WF_Node getAD_WF_Node() throws RuntimeException;
 
     /** Column name Created */
@@ -177,6 +179,7 @@ public interface I_PP_Order_NodeNext
 	  */
 	public int getPP_Order_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.eevolution.model.I_PP_Order getPP_Order() throws RuntimeException;
 
     /** Column name PP_Order_Next_ID */
@@ -188,22 +191,8 @@ public interface I_PP_Order_NodeNext
 	/** Get Manufacturing Order Activity Next	  */
 	public int getPP_Order_Next_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.eevolution.model.I_PP_Order_Node getPP_Order_Next() throws RuntimeException;
-
-    /** Column name PP_Order_Node_ID */
-    public static final String COLUMNNAME_PP_Order_Node_ID = "PP_Order_Node_ID";
-
-	/** Set Manufacturing Order Activity.
-	  * Workflow Node (activity), step or process
-	  */
-	public void setPP_Order_Node_ID (int PP_Order_Node_ID);
-
-	/** Get Manufacturing Order Activity.
-	  * Workflow Node (activity), step or process
-	  */
-	public int getPP_Order_Node_ID();
-
-	public org.eevolution.model.I_PP_Order_Node getPP_Order_Node() throws RuntimeException;
 
     /** Column name PP_Order_NodeNext_ID */
     public static final String COLUMNNAME_PP_Order_NodeNext_ID = "PP_Order_NodeNext_ID";
@@ -222,6 +211,22 @@ public interface I_PP_Order_NodeNext
 
 	/** Get PP_Order_NodeNext_UU	  */
 	public String getPP_Order_NodeNext_UU();
+
+    /** Column name PP_Order_Node_ID */
+    public static final String COLUMNNAME_PP_Order_Node_ID = "PP_Order_Node_ID";
+
+	/** Set Manufacturing Order Activity.
+	  * Workflow Node (activity), step or process
+	  */
+	public void setPP_Order_Node_ID (int PP_Order_Node_ID);
+
+	/** Get Manufacturing Order Activity.
+	  * Workflow Node (activity), step or process
+	  */
+	public int getPP_Order_Node_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.eevolution.model.I_PP_Order_Node getPP_Order_Node() throws RuntimeException;
 
     /** Column name SeqNo */
     public static final String COLUMNNAME_SeqNo = "SeqNo";

@@ -37,19 +37,26 @@ import org.compiere.model.MLookupFactory;
 
 import static org.compiere.model.SystemIDs.*;
 
-import org.compiere.util.CLogger;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
+/**
+ * Form to create RMA lines from shipment lines.
+ * @author hengsin
+ */
 public class WCreateFromRMAUI extends CreateFromRMA implements ValueChangeListener
 {
+	/** Create from window instance */
 	private WCreateFromWindow window;
 	
+	/**
+	 * @param tab
+	 */
 	public WCreateFromRMAUI(GridTab tab) 
 	{
 		super(tab);
-		log.info(getGridTab().toString());
+		if (log.isLoggable(Level.INFO)) log.info(getGridTab().toString());
 		
 		window = new WCreateFromWindow(this, getGridTab().getWindowNo());
 		
@@ -70,23 +77,17 @@ public class WCreateFromRMAUI extends CreateFromRMA implements ValueChangeListen
 		AEnv.showWindow(window);
 	}
 	
-	/** Window No               */
+	/** Window No */
 	private int p_WindowNo;
-
-	/**	Logger			*/
-	private static final CLogger log = CLogger.getCLogger(WCreateFromRMAUI.class);
 		
 	protected Label bPartnerLabel = new Label();
+	/** Business partner parameter field */
 	protected WEditor bPartnerField;
 	
-	/**
-	 *  Dynamic Init
-	 *  @throws Exception if Lookups cannot be initialized
-	 *  @return true if initialized
-	 */
-	public boolean dynInit() throws Exception
+	@Override
+	protected boolean dynInit() throws Exception
 	{
-		log.config("");
+		if (log.isLoggable(Level.CONFIG)) log.config("");
 		
 		super.dynInit();
 		
@@ -100,6 +101,10 @@ public class WCreateFromRMAUI extends CreateFromRMA implements ValueChangeListen
 		return true;
 	}   //  dynInit
 	
+	/**
+	 * Layout {@link #window}
+	 * @throws Exception
+	 */
 	protected void zkInit() throws Exception
 	{
 		bPartnerLabel.setText(Msg.getElement(Env.getCtx(), "C_BPartner_ID"));
@@ -124,10 +129,7 @@ public class WCreateFromRMAUI extends CreateFromRMA implements ValueChangeListen
 		}
 	}
 	
-	/**
-	 *  Change Listener
-	 *  @param e event
-	 */
+	@Override
 	public void valueChange (ValueChangeEvent e)
 	{
 		if (log.isLoggable(Level.CONFIG)) log.config(e.getPropertyName() + "=" + e.getNewValue());
@@ -140,7 +142,7 @@ public class WCreateFromRMAUI extends CreateFromRMA implements ValueChangeListen
 		window.tableChanged(null);
 	}   //  vetoableChange
 	
-	/**************************************************************************
+	/**
 	 *  Load BPartner Field
 	 *  @param forInvoice true if Invoices are to be created, false receipts
 	 *  @throws Exception if Lookups cannot be initialized
@@ -156,13 +158,16 @@ public class WCreateFromRMAUI extends CreateFromRMA implements ValueChangeListen
 		bPartnerField.setValue(Integer.valueOf(C_BPartner_ID));
 	}   //  initBPartner
 	
+	/**
+	 * load RMA lines
+	 */
 	protected void loadRMA()
 	{
 		loadTableOIS(getRMAData());
 	}
 	
 	/**
-	 *  Load Order/Invoice/Shipment data into Table
+	 *  Load data into list box
 	 *  @param data data
 	 */
 	protected void loadTableOIS (Vector<?> data)
@@ -175,16 +180,17 @@ public class WCreateFromRMAUI extends CreateFromRMA implements ValueChangeListen
 		ListModelTable model = new ListModelTable(data);
 		model.addTableModelListener(window);
 		window.getWListbox().setData(model, getOISColumnNames());
-		//
-		
+		//		
 		configureMiniTable(window.getWListbox());
-	}   //  loadOrder
+	}
 	
+	@Override
 	public void showWindow()
 	{
 		window.setVisible(true);
 	}
 	
+	@Override
 	public void closeWindow()
 	{
 		window.dispose();
@@ -195,6 +201,9 @@ public class WCreateFromRMAUI extends CreateFromRMA implements ValueChangeListen
 		return window;
 	}
 	
+	/**
+	 * handle onClientInfo event
+	 */
 	protected void onClientInfo() {
 		ZKUpdateUtil.setCSSHeight(window);
 		ZKUpdateUtil.setCSSWidth(window);

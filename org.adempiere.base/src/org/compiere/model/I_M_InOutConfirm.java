@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for M_InOutConfirm
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_M_InOutConfirm 
 {
@@ -44,8 +44,8 @@ public interface I_M_InOutConfirm
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -53,12 +53,12 @@ public interface I_M_InOutConfirm
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -88,7 +88,21 @@ public interface I_M_InOutConfirm
 	  */
 	public int getC_Invoice_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_Invoice getC_Invoice() throws RuntimeException;
+
+    /** Column name ConfirmType */
+    public static final String COLUMNNAME_ConfirmType = "ConfirmType";
+
+	/** Set Confirmation Type.
+	  * Type of confirmation
+	  */
+	public void setConfirmType (String ConfirmType);
+
+	/** Get Confirmation Type.
+	  * Type of confirmation
+	  */
+	public String getConfirmType();
 
     /** Column name ConfirmationNo */
     public static final String COLUMNNAME_ConfirmationNo = "ConfirmationNo";
@@ -103,18 +117,14 @@ public interface I_M_InOutConfirm
 	  */
 	public String getConfirmationNo();
 
-    /** Column name ConfirmType */
-    public static final String COLUMNNAME_ConfirmType = "ConfirmType";
+    /** Column name CreatePackage */
+    public static final String COLUMNNAME_CreatePackage = "CreatePackage";
 
-	/** Set Confirmation Type.
-	  * Type of confirmation
-	  */
-	public void setConfirmType (String ConfirmType);
+	/** Set Create Package	  */
+	public void setCreatePackage (String CreatePackage);
 
-	/** Get Confirmation Type.
-	  * Type of confirmation
-	  */
-	public String getConfirmType();
+	/** Get Create Package	  */
+	public String getCreatePackage();
 
     /** Column name Created */
     public static final String COLUMNNAME_Created = "Created";
@@ -131,15 +141,6 @@ public interface I_M_InOutConfirm
 	  * User who created this records
 	  */
 	public int getCreatedBy();
-
-    /** Column name CreatePackage */
-    public static final String COLUMNNAME_CreatePackage = "CreatePackage";
-
-	/** Set Create Package	  */
-	public void setCreatePackage (String CreatePackage);
-
-	/** Get Create Package	  */
-	public String getCreatePackage();
 
     /** Column name Description */
     public static final String COLUMNNAME_Description = "Description";
@@ -280,6 +281,7 @@ public interface I_M_InOutConfirm
 	  */
 	public int getM_InOut_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_M_InOut getM_InOut() throws RuntimeException;
 
     /** Column name M_Inventory_ID */
@@ -295,6 +297,7 @@ public interface I_M_InOutConfirm
 	  */
 	public int getM_Inventory_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_M_Inventory getM_Inventory() throws RuntimeException;
 
     /** Column name Processed */

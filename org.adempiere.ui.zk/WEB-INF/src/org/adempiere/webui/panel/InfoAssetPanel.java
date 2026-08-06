@@ -37,20 +37,22 @@ import org.adempiere.webui.event.WTableModelEvent;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.minigrid.ColumnInfo;
 import org.compiere.minigrid.IDColumn;
+import org.compiere.model.MAsset;
 import org.compiere.model.MLookupFactory;
 import org.compiere.model.MQuery;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.idempiere.db.util.SQLFragment;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.Borderlayout;
 import org.zkoss.zul.Center;
-import org.zkoss.zul.North;
-import org.zkoss.zul.South;
 import org.zkoss.zul.Div;
+import org.zkoss.zul.North;
 import org.zkoss.zul.Separator;
+import org.zkoss.zul.South;
 import org.zkoss.zul.Vbox;
 
 /**
@@ -64,7 +66,7 @@ import org.zkoss.zul.Vbox;
 * @version	InfoAsset.java Adempiere Swing UI 3.4.1 
 */
 
-@Deprecated // replaced with InfoAssetWindow IDEMPIERE-325
+@Deprecated (since="13", forRemoval=true) // replaced with InfoAssetWindow IDEMPIERE-325
 public class InfoAssetPanel extends InfoPanel implements ValueChangeListener, EventListener<Event>
 {
 	/**
@@ -125,18 +127,35 @@ public class InfoAssetPanel extends InfoPanel implements ValueChangeListener, Ev
 	 * @param value    Query Value or Name if enclosed in @
 	 * @param multiSelection multiple selections
 	 * @param whereClause where clause
+	 * @param lookup true if lookup
 	 */
 	
 	public InfoAssetPanel(	int WindowNo, int A_Asset_ID, String value,
 							boolean multiSelection, String whereClause, boolean lookup)
 	{
-		super (WindowNo, "a", "A_Asset_ID", multiSelection, whereClause, lookup);
+		this (WindowNo, A_Asset_ID, value, multiSelection, lookup, new SQLFragment(whereClause));
+	}
+	
+	/**
+	 *	Standard Constructor
+	 * @param WindowNo window no
+	 * @param A_Asset_ID asset
+	 * @param value    Query Value or Name if enclosed in @
+	 * @param multiSelection multiple selections
+	 * @param lookup true if lookup
+	 * @param sqlFilter SQL Filter
+	 */
+	
+	public InfoAssetPanel(	int WindowNo, int A_Asset_ID, String value,
+							boolean multiSelection, boolean lookup, SQLFragment sqlFilter)
+	{
+		super (WindowNo, "a", "A_Asset_ID", multiSelection, lookup, sqlFilter);
 		
-		log.info(value + ", ID=" + A_Asset_ID + ", WHERE=" + whereClause);
+		log.info(value + ", ID=" + A_Asset_ID + ", WHERE=" + sqlFilter);
 		setTitle(Msg.getMsg(Env.getCtx(), "InfoAsset"));
 
 		statInit();
-		initInfo(value, A_Asset_ID, whereClause);
+		initInfo(value, A_Asset_ID, sqlFilter);
 
 		int no = contentPanel.getRowCount();
 		setStatusLine(Integer.toString(no) + " " + Msg.getMsg(Env.getCtx(), "SearchRows_EnterQuery"), false);
@@ -233,19 +252,19 @@ public class InfoAssetPanel extends InfoPanel implements ValueChangeListener, Ev
 	/**
 	 *	Dynamic Init
 	 *  @param value value
-	 *  @param whereClause where clause
+	 *  @param sqlFilter where clause
 	 */
 	
-	private void initInfo (String value, int A_Asset_ID, String whereClause)
+	private void initInfo (String value, int A_Asset_ID, SQLFragment sqlFilter)
 	{
 		//	Create Grid
 		StringBuilder where = new StringBuilder();
 		where.append("a.IsActive='Y'");
 		
-		if (whereClause != null && whereClause.length() > 0)
-			where.append(" AND ").append(whereClause);
+		if (sqlFilter != null && sqlFilter.sqlClause().length() > 0)
+			where.append(" AND ").append(sqlFilter.sqlClause());
 		
-		prepareTable(s_assetLayout, s_assetFROM, where.toString(), "a.Value");
+		prepareTable(s_assetLayout, s_assetFROM, "a.Value", new SQLFragment(where.toString(), sqlFilter.parameters()));
 
 		//  Set Value
 		if (value == null)
@@ -358,7 +377,7 @@ public class InfoAssetPanel extends InfoPanel implements ValueChangeListener, Ev
 
 		//  publish for Callout to read
 		
-		Integer ID = getSelectedRowKey();
+		Integer ID = getIntSelectedRowKey(MAsset.Table_ID);
 		Env.setContext(Env.getCtx(), p_WindowNo, Env.TAB_INFO, "A_Asset_ID", ID == null ? "0" : ID.toString());
 	} // saveSelectionDetail
 
@@ -389,7 +408,7 @@ public class InfoAssetPanel extends InfoPanel implements ValueChangeListener, Ev
 	public void zoom()
 	{
 		log.info( "InfoAsset.zoom");
-		Integer A_Asset_ID = getSelectedRowKey();
+		Integer A_Asset_ID = getIntSelectedRowKey(MAsset.Table_ID);
 		
 		if (A_Asset_ID == null)
 			return;

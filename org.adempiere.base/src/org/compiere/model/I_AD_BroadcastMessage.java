@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_BroadcastMessage
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_AD_BroadcastMessage 
 {
@@ -66,8 +66,8 @@ public interface I_AD_BroadcastMessage
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -75,12 +75,12 @@ public interface I_AD_BroadcastMessage
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -97,6 +97,7 @@ public interface I_AD_BroadcastMessage
 	  */
 	public int getAD_Role_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Role getAD_Role() throws RuntimeException;
 
     /** Column name AD_User_ID */
@@ -112,6 +113,7 @@ public interface I_AD_BroadcastMessage
 	  */
 	public int getAD_User_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_User getAD_User() throws RuntimeException;
 
     /** Column name BroadcastFrequency */
@@ -182,15 +184,6 @@ public interface I_AD_BroadcastMessage
 	  */
 	public Timestamp getExpiration();
 
-    /** Column name Expired */
-    public static final String COLUMNNAME_Expired = "Expired";
-
-	/** Set Expired	  */
-	public void setExpired (boolean Expired);
-
-	/** Get Expired	  */
-	public boolean isExpired();
-
     /** Column name ExpireNow */
     public static final String COLUMNNAME_ExpireNow = "ExpireNow";
 
@@ -203,6 +196,15 @@ public interface I_AD_BroadcastMessage
 	  * Expire the broadcast message
 	  */
 	public String getExpireNow();
+
+    /** Column name Expired */
+    public static final String COLUMNNAME_Expired = "Expired";
+
+	/** Set Expired	  */
+	public void setExpired (boolean Expired);
+
+	/** Get Expired	  */
+	public boolean isExpired();
 
     /** Column name IsActive */
     public static final String COLUMNNAME_IsActive = "IsActive";
@@ -234,25 +236,25 @@ public interface I_AD_BroadcastMessage
     public static final String COLUMNNAME_LogAcknowledge = "LogAcknowledge";
 
 	/** Set Log Acknowledge.
-	  * Want to Log the Acknowledgement of Message?
+	  * Want to Log the Acknowledgment of Message?
 	  */
 	public void setLogAcknowledge (boolean LogAcknowledge);
 
 	/** Get Log Acknowledge.
-	  * Want to Log the Acknowledgement of Message?
+	  * Want to Log the Acknowledgment of Message?
 	  */
 	public boolean isLogAcknowledge();
 
     /** Column name Notification_Client_ID */
     public static final String COLUMNNAME_Notification_Client_ID = "Notification_Client_ID";
 
-	/** Set Notification Client.
-	  * Notification Client
+	/** Set Notification Tenant.
+	  * Notification Tenant
 	  */
 	public void setNotification_Client_ID (int Notification_Client_ID);
 
-	/** Get Notification Client.
-	  * Notification Client
+	/** Get Notification Tenant.
+	  * Notification Tenant
 	  */
 	public int getNotification_Client_ID();
 
@@ -286,12 +288,12 @@ public interface I_AD_BroadcastMessage
     public static final String COLUMNNAME_Target = "Target";
 
 	/** Set Target.
-	  * Target client
+	  * Target tenant
 	  */
 	public void setTarget (String Target);
 
 	/** Get Target.
-	  * Target client
+	  * Target tenant
 	  */
 	public String getTarget();
 
@@ -307,6 +309,19 @@ public interface I_AD_BroadcastMessage
 	  * Test broadcast message
 	  */
 	public String getTestMessage();
+
+    /** Column name Title */
+    public static final String COLUMNNAME_Title = "Title";
+
+	/** Set Title.
+	  * Name this entity is referred to as
+	  */
+	public void setTitle (String Title);
+
+	/** Get Title.
+	  * Name this entity is referred to as
+	  */
+	public String getTitle();
 
     /** Column name Updated */
     public static final String COLUMNNAME_Updated = "Updated";

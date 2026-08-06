@@ -23,7 +23,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for HR_ListLine
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 @SuppressWarnings("all")
 public interface I_HR_ListLine 
@@ -46,8 +46,8 @@ public interface I_HR_ListLine
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -55,12 +55,12 @@ public interface I_HR_ListLine
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -179,6 +179,7 @@ public interface I_HR_ListLine
 	/** Get Payroll List Version	  */
 	public int getHR_ListVersion_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.eevolution.model.I_HR_ListVersion getHR_ListVersion() throws RuntimeException;
 
     /** Column name IsActive */

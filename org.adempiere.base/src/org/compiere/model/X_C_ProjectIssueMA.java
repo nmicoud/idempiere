@@ -21,24 +21,61 @@ import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.util.Properties;
 import org.compiere.util.Env;
-import org.compiere.util.KeyNamePair;
+import org.compiere.util.ValueNamePair;
 
 /** Generated Model for C_ProjectIssueMA
- *  @author iDempiere (generated) 
- *  @version Release 8.2 - $Id$ */
-public class X_C_ProjectIssueMA extends PO implements I_C_ProjectIssueMA, I_Persistent 
+ *  @author iDempiere (generated)
+ *  @version Release 13 - $Id$ */
+@org.adempiere.base.Model(table="C_ProjectIssueMA")
+public class X_C_ProjectIssueMA extends PO implements I_C_ProjectIssueMA, I_Persistent
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20201220L;
+	private static final long serialVersionUID = 20260309L;
 
     /** Standard Constructor */
     public X_C_ProjectIssueMA (Properties ctx, int C_ProjectIssueMA_ID, String trxName)
     {
       super (ctx, C_ProjectIssueMA_ID, trxName);
       /** if (C_ProjectIssueMA_ID == 0)
+        {
+			setC_ProjectIssue_ID (0);
+			setM_AttributeSetInstance_ID (0);
+			setMovementQty (Env.ZERO);
+        } */
+    }
+
+    /** Standard Constructor */
+    public X_C_ProjectIssueMA (Properties ctx, int C_ProjectIssueMA_ID, String trxName, String ... virtualColumns)
+    {
+      super (ctx, C_ProjectIssueMA_ID, trxName, virtualColumns);
+      /** if (C_ProjectIssueMA_ID == 0)
+        {
+			setC_ProjectIssue_ID (0);
+			setM_AttributeSetInstance_ID (0);
+			setMovementQty (Env.ZERO);
+        } */
+    }
+
+    /** Standard Constructor */
+    public X_C_ProjectIssueMA (Properties ctx, String C_ProjectIssueMA_UU, String trxName)
+    {
+      super (ctx, C_ProjectIssueMA_UU, trxName);
+      /** if (C_ProjectIssueMA_UU == null)
+        {
+			setC_ProjectIssue_ID (0);
+			setM_AttributeSetInstance_ID (0);
+			setMovementQty (Env.ZERO);
+        } */
+    }
+
+    /** Standard Constructor */
+    public X_C_ProjectIssueMA (Properties ctx, String C_ProjectIssueMA_UU, String trxName, String ... virtualColumns)
+    {
+      super (ctx, C_ProjectIssueMA_UU, trxName, virtualColumns);
+      /** if (C_ProjectIssueMA_UU == null)
         {
 			setC_ProjectIssue_ID (0);
 			setM_AttributeSetInstance_ID (0);
@@ -53,7 +90,7 @@ public class X_C_ProjectIssueMA extends PO implements I_C_ProjectIssueMA, I_Pers
     }
 
     /** AccessLevel
-      * @return 1 - Org 
+      * @return 1 - Org
       */
     protected int get_AccessLevel()
     {
@@ -70,48 +107,13 @@ public class X_C_ProjectIssueMA extends PO implements I_C_ProjectIssueMA, I_Pers
     public String toString()
     {
       StringBuilder sb = new StringBuilder ("X_C_ProjectIssueMA[")
-        .append(get_ID()).append("]");
+        .append(get_UUID()).append("]");
       return sb.toString();
     }
 
-	public org.compiere.model.I_C_ProjectIssue getC_ProjectIssue() throws RuntimeException
-    {
-		return (org.compiere.model.I_C_ProjectIssue)MTable.get(getCtx(), org.compiere.model.I_C_ProjectIssue.Table_Name)
-			.getPO(getC_ProjectIssue_ID(), get_TrxName());	}
-
-	/** Set Project Issue.
-		@param C_ProjectIssue_ID 
-		Project Issues (Material, Labor)
-	  */
-	public void setC_ProjectIssue_ID (int C_ProjectIssue_ID)
-	{
-		if (C_ProjectIssue_ID < 1) 
-			set_ValueNoCheck (COLUMNNAME_C_ProjectIssue_ID, null);
-		else 
-			set_ValueNoCheck (COLUMNNAME_C_ProjectIssue_ID, Integer.valueOf(C_ProjectIssue_ID));
-	}
-
-	/** Get Project Issue.
-		@return Project Issues (Material, Labor)
-	  */
-	public int getC_ProjectIssue_ID () 
-	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_C_ProjectIssue_ID);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
-	}
-
-    /** Get Record ID/ColumnName
-        @return ID/ColumnName pair
-      */
-    public KeyNamePair getKeyNamePair() 
-    {
-        return new KeyNamePair(get_ID(), String.valueOf(getC_ProjectIssue_ID()));
-    }
-
 	/** Set C_ProjectIssueMA_UU.
-		@param C_ProjectIssueMA_UU C_ProjectIssueMA_UU	  */
+		@param C_ProjectIssueMA_UU C_ProjectIssueMA_UU
+	*/
 	public void setC_ProjectIssueMA_UU (String C_ProjectIssueMA_UU)
 	{
 		set_Value (COLUMNNAME_C_ProjectIssueMA_UU, C_ProjectIssueMA_UU);
@@ -119,32 +121,70 @@ public class X_C_ProjectIssueMA extends PO implements I_C_ProjectIssueMA, I_Pers
 
 	/** Get C_ProjectIssueMA_UU.
 		@return C_ProjectIssueMA_UU	  */
-	public String getC_ProjectIssueMA_UU () 
+	public String getC_ProjectIssueMA_UU()
 	{
 		return (String)get_Value(COLUMNNAME_C_ProjectIssueMA_UU);
 	}
 
-	public I_M_AttributeSetInstance getM_AttributeSetInstance() throws RuntimeException
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_C_ProjectIssue getC_ProjectIssue() throws RuntimeException
+	{
+		return (org.compiere.model.I_C_ProjectIssue)MTable.get(getCtx(), org.compiere.model.I_C_ProjectIssue.Table_ID)
+			.getPO(getC_ProjectIssue_ID(), get_TrxName());
+	}
+
+	/** Set Project Issue.
+		@param C_ProjectIssue_ID Project Issues (Material, Labor)
+	*/
+	public void setC_ProjectIssue_ID (int C_ProjectIssue_ID)
+	{
+		if (C_ProjectIssue_ID < 1)
+			set_ValueNoCheck (COLUMNNAME_C_ProjectIssue_ID, null);
+		else
+			set_ValueNoCheck (COLUMNNAME_C_ProjectIssue_ID, Integer.valueOf(C_ProjectIssue_ID));
+	}
+
+	/** Get Project Issue.
+		@return Project Issues (Material, Labor)
+	  */
+	public int getC_ProjectIssue_ID()
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_C_ProjectIssue_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+    /** Get Record UU/ColumnName
+        @return UU/ColumnName pair
+      */
+    public ValueNamePair getValueNamePair()
     {
-		return (I_M_AttributeSetInstance)MTable.get(getCtx(), I_M_AttributeSetInstance.Table_Name)
-			.getPO(getM_AttributeSetInstance_ID(), get_TrxName());	}
+        return new ValueNamePair(get_UUID(), String.valueOf(getC_ProjectIssue_ID()));
+    }
+
+	@Deprecated(since="13") // use better methods with cache
+	public I_M_AttributeSetInstance getM_AttributeSetInstance() throws RuntimeException
+	{
+		return (I_M_AttributeSetInstance)MTable.get(getCtx(), I_M_AttributeSetInstance.Table_ID)
+			.getPO(getM_AttributeSetInstance_ID(), get_TrxName());
+	}
 
 	/** Set Attribute Set Instance.
-		@param M_AttributeSetInstance_ID 
-		Product Attribute Set Instance
-	  */
+		@param M_AttributeSetInstance_ID Product Attribute Set Instance
+	*/
 	public void setM_AttributeSetInstance_ID (int M_AttributeSetInstance_ID)
 	{
-		if (M_AttributeSetInstance_ID < 0) 
+		if (M_AttributeSetInstance_ID < 0)
 			set_ValueNoCheck (COLUMNNAME_M_AttributeSetInstance_ID, null);
-		else 
+		else
 			set_ValueNoCheck (COLUMNNAME_M_AttributeSetInstance_ID, Integer.valueOf(M_AttributeSetInstance_ID));
 	}
 
 	/** Get Attribute Set Instance.
 		@return Product Attribute Set Instance
 	  */
-	public int getM_AttributeSetInstance_ID () 
+	public int getM_AttributeSetInstance_ID()
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_M_AttributeSetInstance_ID);
 		if (ii == null)
@@ -153,9 +193,8 @@ public class X_C_ProjectIssueMA extends PO implements I_C_ProjectIssueMA, I_Pers
 	}
 
 	/** Set Movement Quantity.
-		@param MovementQty 
-		Quantity of a product moved.
-	  */
+		@param MovementQty Quantity of a product moved.
+	*/
 	public void setMovementQty (BigDecimal MovementQty)
 	{
 		set_Value (COLUMNNAME_MovementQty, MovementQty);
@@ -164,7 +203,7 @@ public class X_C_ProjectIssueMA extends PO implements I_C_ProjectIssueMA, I_Pers
 	/** Get Movement Quantity.
 		@return Quantity of a product moved.
 	  */
-	public BigDecimal getMovementQty () 
+	public BigDecimal getMovementQty()
 	{
 		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_MovementQty);
 		if (bd == null)

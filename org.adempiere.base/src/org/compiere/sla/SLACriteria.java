@@ -19,6 +19,7 @@ package org.compiere.sla;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 
+import org.adempiere.base.GeneratedCodeCoverageExclusion;
 import org.compiere.model.MSLACriteria;
 import org.compiere.model.MSLAGoal;
 
@@ -27,7 +28,11 @@ import org.compiere.model.MSLAGoal;
  *	
  *  @author Jorg Janke
  *  @version $Id: SLACriteria.java,v 1.3 2006/07/30 00:51:06 jjanke Exp $
+ *  @deprecated not fully implement, marked as inactive in application dictionary
  */
+@Deprecated (since="13", forRemoval=true)
+@SuppressWarnings("removal")
+@GeneratedCodeCoverageExclusion
 public abstract class SLACriteria
 {
 	/**

@@ -30,6 +30,7 @@ import java.util.logging.Level;
 
 import javax.swing.Icon;
 
+import org.adempiere.base.GeneratedCodeCoverageExclusion;
 import org.apache.ecs.xhtml.a;
 import org.apache.ecs.xhtml.h2;
 import org.apache.ecs.xhtml.h3;
@@ -58,7 +59,7 @@ public class GridWindow implements Serializable
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 3342733142743698614L;
+	private static final long serialVersionUID = 4533195514781938417L;
 
 	/**
 	 * 	Get Grid Window
@@ -83,13 +84,13 @@ public class GridWindow implements Serializable
 	public static GridWindow get (Properties ctx, int WindowNo, int AD_Window_ID, boolean virtual)
 	{
 		if (log.isLoggable(Level.CONFIG)) log.config("Window=" + WindowNo + ", AD_Window_ID=" + AD_Window_ID);
-		GridWindowVO mWindowVO = GridWindowVO.create (Env.getCtx(), WindowNo, AD_Window_ID);
+		GridWindowVO mWindowVO = GridWindowVO.get (AD_Window_ID, WindowNo);
 		if (mWindowVO == null)
 			return null;
 		return new GridWindow(mWindowVO, virtual);
 	}	//	get
 
-	/**************************************************************************
+	/**
 	 *	Constructor
 	 *  @param vo value object
 	 */
@@ -98,10 +99,10 @@ public class GridWindow implements Serializable
 		this(vo, false);
 	}
 	
-	/**************************************************************************
+	/**
 	 *	Constructor
 	 *  @param vo value object
-	 *  @param virtual
+	 *  @param virtual true to use virtual buffer
 	 */
 	public GridWindow (GridWindowVO vo, boolean virtual)
 	{
@@ -125,7 +126,7 @@ public class GridWindow implements Serializable
 	/**	Logger			*/
 	private static CLogger log = CLogger.getCLogger(GridWindow.class);
 	
-	/**************************************************************************
+	/**
 	 *	Dispose
 	 */
 	public void dispose()
@@ -138,9 +139,7 @@ public class GridWindow implements Serializable
 	}	//	dispose
 
 	/**
-	 *  Load is complete.
-	 *  Return when async load is complete
-	 *  Used for performance tests (Base.test())
+	 * Wait until asynchronous loading of all tab is complete.
 	 */
 	public void loadCompete ()
 	{
@@ -150,13 +149,11 @@ public class GridWindow implements Serializable
 	}   //  loadComplete
 
 	/**
-	 *	Get Tab data and create MTab(s)
+	 *	Get Tab data and create GridTab(s)
 	 *  @return true if tab loaded
 	 */
 	private boolean loadTabData()
 	{
-		log.config("");
-
 		if (m_vo.Tabs == null)
 			return false;
 
@@ -175,8 +172,8 @@ public class GridWindow implements Serializable
 
 	/**
 	 * Is tab initialize
-	 * @param index
-	 * @return boolean
+	 * @param index tab index
+	 * @return true if tab at index have been initialized
 	 */
 	public boolean isTabInitialized(int index)
 	{
@@ -185,8 +182,8 @@ public class GridWindow implements Serializable
 	}
 	
 	/**
-	 * Initialise tab
-	 * @param index
+	 * Initialize tab
+	 * @param index tab index
 	 */
 	public void initTab(int index)
 	{
@@ -250,7 +247,10 @@ public class GridWindow implements Serializable
 	/**
 	 *  Get Window Icon
 	 *  @return Icon for Window
+	 *  @deprecated legacy method for the now deprecated Swing UI
 	 */
+	@Deprecated(forRemoval = true, since = "13")
+	@GeneratedCodeCoverageExclusion
 	public Image getImage()
 	{
 		if (m_vo.AD_Image_ID == 0)
@@ -275,7 +275,10 @@ public class GridWindow implements Serializable
 	/**
 	 *  Get Window Icon
 	 *  @return Icon for Window
+	 *  @deprecated legacy method for the now deprecated Swing UI
 	 */
+	@Deprecated(forRemoval = true, since = "13")
+	@GeneratedCodeCoverageExclusion
 	public Icon getIcon()
 	{
 		if (m_vo.AD_Image_ID == 0)
@@ -288,7 +291,10 @@ public class GridWindow implements Serializable
 	/**
 	 *  Get Color
 	 *  @return MColor or null
+	 *  @deprecated Colors are not used in the new web UI
 	 */
+	@Deprecated(forRemoval = true, since = "13")
+	@GeneratedCodeCoverageExclusion
 	public MColor getColor()
 	{
 		if (m_vo.AD_Color_ID == 0)
@@ -298,21 +304,20 @@ public class GridWindow implements Serializable
 	}   //  getColor
 
 	/**
-	 * 	SO Trx Window
-	 *	@return true if SO Trx
+	 *	@return true if window is for SO Trx
 	 */
 	public boolean isSOTrx()
 	{
 		return m_vo.IsSOTrx;
 	}	//	isSOTrx
-	
-	
+		
 	/**
-	 *  Open and query first Tab (events should be enabled) and get first row.
+	 *  Open and query first Tab (events should be enabled) and navigate to first row.
 	 */
 	public void query()
 	{
-		log.info("");
+		if (log.isLoggable(Level.INFO))
+			log.info("");
 		GridTab tab = getTab(0);
 		tab.query(false, 0, 0);
 		if (tab.getRowCount() > 0)
@@ -320,7 +325,7 @@ public class GridWindow implements Serializable
 	}   //  open
 
 	/**
-	 *  Enable Events - enable data events of tabs (add listeners)
+	 *  Enable events for all tabs (listen for GridTable events)
 	 */
 	private void enableEvents()
 	{
@@ -334,13 +339,12 @@ public class GridWindow implements Serializable
 	 */
 	public int getTabCount()
 	{
-		return m_tabs.size();
+		return m_tabs != null ? m_tabs.size() : 0;
 	}	//	getTabCount
 
 	/**
-	 *	Get i-th MTab - null if not valid
-	 *  @param i index
-	 *  @return MTab
+	 *  @param i tab index
+	 *  @return GridTab at tab index or null if tab index is invalid
 	 */
 	public GridTab getTab (int i)
 	{
@@ -349,6 +353,10 @@ public class GridWindow implements Serializable
 		return (GridTab)m_tabs.get(i);
 	}	//	getTab
 	
+	/**
+	 * @param tab
+	 * @return tab index
+	 */
 	public int getTabIndex(GridTab tab)
 	{
 		return m_tabs.indexOf(tab);
@@ -409,8 +417,17 @@ public class GridWindow implements Serializable
 	}	//	getWindowType
 
 	/**
+	 * Get EntityType
+	 * @return Window Entity Type
+	 */
+	public String getEntityType()
+	{
+		return m_vo.EntityType;
+	}
+
+	/**
 	 *	Is Transaction Window
-	 *  @return true if transaction
+	 *  @return true if this is transaction window
 	 */
 	public boolean isTransaction()
 	{
@@ -420,7 +437,10 @@ public class GridWindow implements Serializable
 	/**
 	 * 	Get Window Size
 	 *	@return window size or null if not set
+	 *  @deprecated legacy method for the now deprecated Swing UI
 	 */
+	@Deprecated(forRemoval = true, since = "13")
+	@GeneratedCodeCoverageExclusion
 	public Dimension getWindowSize()
 	{
 		if (m_vo.WinWidth != 0 && m_vo.WinHeight != 0)
@@ -440,17 +460,16 @@ public class GridWindow implements Serializable
 
 	/**
 	 * 	Get Help HTML Document
-	 * 	@param javaClient true if java client false for browser
-	 *	@return help 
+	 * 	@param javaClient true if java client, false for browser
+	 *	@return help document
 	 */
+	@GeneratedCodeCoverageExclusion
 	public WebDoc getHelpDoc (boolean javaClient)
 	{
 		StringBuilder title = new StringBuilder(Msg.getMsg(Env.getCtx(), "Window")).append(": ").append(getName());
 		WebDoc doc = null;
 		doc = WebDoc.create (false, title.toString(), javaClient);
 		
-	//	body.addElement("&copy;&nbsp;Adempiere &nbsp; ");
-	//	body.addElement(new a("http://www.adempiere.org/help/", "Online Help"));
 		td center  = doc.addPopupCenter(false);
 		//	Window
 		if (getDescription().length() != 0)
@@ -564,9 +583,10 @@ public class GridWindow implements Serializable
 
 	/**
 	 * 	Get Model last Updated
-	 * 	@param recalc recalculate again
-	 *	@return date
+	 * 	@param recalc true to always re-query from DB
+	 *	@return last updated timestamp
 	 */
+	@GeneratedCodeCoverageExclusion
 	public Timestamp getModelUpdated (boolean recalc)
 	{
 		if (recalc || m_modelUpdated == null)
@@ -615,9 +635,46 @@ public class GridWindow implements Serializable
 		return m_modelUpdated;
 	}	//	getModelUpdated
 
+	/**
+	 * @return AD_Window_UU
+	 */
 	public String getAD_Window_UU() {
 		return m_vo.AD_Window_UU;
 	}
 
-	
+	/**
+	 * Get {@link GridTab} by Tab ID
+	 * @param ad_tab_id
+	 * @return {@link GridTab}
+	 */
+	public GridTab getGridTab (int ad_tab_id)
+	{
+		for (int i = 0; i < m_tabs.size(); i++)
+		{
+			GridTab tab = getTab(i);
+			if (tab.getAD_Tab_ID()==ad_tab_id)
+				return tab;
+		}
+
+		return null;
+
+	}	//	getTab
+
+	/**
+	 * Get {@link GridTab} by Tab UUID
+	 * @param ad_tab_uu
+	 * @return {@link GridTab}
+	 */
+	public GridTab getGridTab (String ad_tab_uu)
+	{
+		for (int i = 0; i < m_tabs.size(); i++)
+		{
+			GridTab tab = getTab(i);
+			if (tab.getAD_Tab_UU() != null && tab.getAD_Tab_UU().equals(ad_tab_uu))
+				return tab;
+		}
+
+		return null;
+
+	}	//	getTab
 }	//	MWindow

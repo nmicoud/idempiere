@@ -24,6 +24,7 @@ import java.util.logging.Level;
 
 import org.compiere.model.MBankAccount;
 import org.compiere.model.MPayment;
+import org.compiere.model.MProcessPara;
 import org.compiere.model.X_I_Payment;
 import org.compiere.util.AdempiereUserError;
 import org.compiere.util.DB;
@@ -38,6 +39,7 @@ import org.compiere.util.Env;
  *  Contributor(s):
  *    Carlos Ruiz - globalqss - FR [ 1992542 ] Import Payment doesn't have DocAction parameter
  */
+@org.adempiere.base.annotation.Process
 public class ImportPayment extends SvrProcess
 {
 	/**	Organization to be imported to	*/
@@ -70,7 +72,7 @@ public class ImportPayment extends SvrProcess
 			else if (name.equals("DocAction"))
 				m_docAction = (String)para[i].getParameter();
 			else
-				log.log(Level.SEVERE, "Unknown Parameter: " + name);
+				MProcessPara.validateUnknownParameter(getProcessInfo().getAD_Process_ID(), para[i]);
 		}
 		m_ctx = Env.getCtx();
 	}	//	prepare
@@ -404,6 +406,44 @@ public class ImportPayment extends SvrProcess
 		if (no != 0)
 			log.warning ("No DocType=" + no);
 
+		//	Activity
+		sql = new StringBuilder ("UPDATE I_Payment i ")
+			  .append("SET C_Activity_ID=(SELECT MAX(C_Activity_ID) FROM C_Activity ac")
+			  .append(" WHERE i.ActivityValue=ac.Value AND ac.AD_Client_ID in (0,i.AD_Client_ID)) ")
+			  .append("WHERE C_Activity_ID IS NULL AND ActivityValue IS NOT NULL")
+			  .append(" AND I_IsImported<>'Y'").append (clientCheck);
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		if (no != 0)
+			if (log.isLoggable(Level.FINE)) log.fine("Set Activity from Value=" + no);
+		
+		sql = new StringBuilder ("UPDATE I_Payment ")
+			.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=No Activity,' ")
+			.append("WHERE C_Activity_ID IS NULL AND ActivityValue IS NOT NULL")
+			.append(" AND I_IsImported<>'E' ")
+			.append(" AND I_IsImported<>'Y'").append(clientCheck);
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		if (no != 0)
+			log.warning("No Activity=" + no);
+		
+		// Charge
+		sql = new StringBuilder("UPDATE I_Payment i ")
+				.append("SET C_Charge_ID=(SELECT MAX(C_Charge_ID) FROM C_Charge cc")
+				.append(" WHERE i.ChargeName=cc.Name AND i.AD_Client_ID=cc.AD_Client_ID) ")
+				.append("WHERE C_Charge_ID IS NULL AND ChargeName IS NOT NULL").append(" AND I_IsImported<>'Y'")
+				.append(clientCheck);
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		if (no != 0)
+			if (log.isLoggable(Level.FINE))
+				log.fine("Set Charge from Name=" + no);
+
+		sql = new StringBuilder("UPDATE I_Payment ")
+				.append("SET I_IsImported='E', I_ErrorMsg=I_ErrorMsg||'ERR=No Charge,' ")
+				.append("WHERE C_Charge_ID IS NULL AND ChargeName IS NOT NULL").append(" AND I_IsImported<>'E' ")
+				.append(" AND I_IsImported<>'Y'").append(clientCheck);
+		no = DB.executeUpdate(sql.toString(), get_TrxName());
+		if (no != 0)
+			log.warning("No Charge=" + no);
+		
 		commitEx();
 		
 		//Import Bank Statement
@@ -412,13 +452,11 @@ public class ImportPayment extends SvrProcess
 			.append(" ORDER BY C_BankAccount_ID, CheckNo, DateTrx, R_AuthCode");
 			
 		MBankAccount account = null;
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
+		
 		int noInsert = 0;
-		try
+		try (PreparedStatement pstmt = DB.prepareStatement(sql.toString(), get_TrxName());)
 		{
-			pstmt = DB.prepareStatement(sql.toString(), get_TrxName());
-			rs = pstmt.executeQuery();
+			ResultSet rs = pstmt.executeQuery();
 				
 			while (rs.next())
 			{ 
@@ -459,13 +497,10 @@ public class ImportPayment extends SvrProcess
 				
 				payment.setDateAcct(imp.getDateTrx());
 				payment.setDateTrx(imp.getDateTrx());
-			//	payment.setDescription(imp.getDescription());
-				//
 				payment.setC_BPartner_ID(imp.getC_BPartner_ID());
 				payment.setC_Invoice_ID(imp.getC_Invoice_ID());
 				payment.setC_DocType_ID(imp.getC_DocType_ID());
 				payment.setC_Currency_ID(imp.getC_Currency_ID());
-			//	payment.setC_ConversionType_ID(imp.getC_ConversionType_ID());
 				payment.setC_Charge_ID(imp.getC_Charge_ID());
 				payment.setChargeAmt(imp.getChargeAmt());
 				payment.setTaxAmt(imp.getTaxAmt());
@@ -492,7 +527,9 @@ public class ImportPayment extends SvrProcess
 				payment.setR_Result(imp.getR_Result());
 				payment.setOrig_TrxID(imp.getOrig_TrxID());
 				payment.setVoiceAuthCode(imp.getVoiceAuthCode());
-				
+				payment.setDescription(imp.getDescription());
+				payment.setC_Activity_ID(imp.getC_Activity_ID());
+
 				//	Save payment
 				if (payment.save())
 				{
@@ -519,12 +556,6 @@ public class ImportPayment extends SvrProcess
 		catch(Exception e)
 		{
 			log.log(Level.SEVERE, sql.toString(), e);
-		}
-		finally
-		{
-			DB.close(rs, pstmt);
-			rs = null;
-			pstmt = null;
 		}
 		
 		//	Set Error to indicator to not imported

@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for M_DemandLine
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_M_DemandLine 
 {
@@ -44,8 +44,8 @@ public interface I_M_DemandLine
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -53,12 +53,12 @@ public interface I_M_DemandLine
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -75,6 +75,7 @@ public interface I_M_DemandLine
 	  */
 	public int getC_Period_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_Period getC_Period() throws RuntimeException;
 
     /** Column name Created */
@@ -106,21 +107,6 @@ public interface I_M_DemandLine
 	  */
 	public boolean isActive();
 
-    /** Column name M_Demand_ID */
-    public static final String COLUMNNAME_M_Demand_ID = "M_Demand_ID";
-
-	/** Set Demand.
-	  * Material Demand
-	  */
-	public void setM_Demand_ID (int M_Demand_ID);
-
-	/** Get Demand.
-	  * Material Demand
-	  */
-	public int getM_Demand_ID();
-
-	public org.compiere.model.I_M_Demand getM_Demand() throws RuntimeException;
-
     /** Column name M_DemandLine_ID */
     public static final String COLUMNNAME_M_DemandLine_ID = "M_DemandLine_ID";
 
@@ -143,6 +129,22 @@ public interface I_M_DemandLine
 	/** Get M_DemandLine_UU	  */
 	public String getM_DemandLine_UU();
 
+    /** Column name M_Demand_ID */
+    public static final String COLUMNNAME_M_Demand_ID = "M_Demand_ID";
+
+	/** Set Demand.
+	  * Material Demand
+	  */
+	public void setM_Demand_ID (int M_Demand_ID);
+
+	/** Get Demand.
+	  * Material Demand
+	  */
+	public int getM_Demand_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_M_Demand getM_Demand() throws RuntimeException;
+
     /** Column name M_Product_ID */
     public static final String COLUMNNAME_M_Product_ID = "M_Product_ID";
 
@@ -156,6 +158,7 @@ public interface I_M_DemandLine
 	  */
 	public int getM_Product_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_M_Product getM_Product() throws RuntimeException;
 
     /** Column name Qty */

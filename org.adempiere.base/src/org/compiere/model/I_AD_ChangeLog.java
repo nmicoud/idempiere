@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_ChangeLog
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 14
  */
 public interface I_AD_ChangeLog 
 {
@@ -66,8 +66,8 @@ public interface I_AD_ChangeLog
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -84,18 +84,19 @@ public interface I_AD_ChangeLog
 	  */
 	public int getAD_Column_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Column getAD_Column() throws RuntimeException;
 
     /** Column name AD_Org_ID */
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -112,6 +113,7 @@ public interface I_AD_ChangeLog
 	  */
 	public int getAD_Session_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Session getAD_Session() throws RuntimeException;
 
     /** Column name AD_Table_ID */
@@ -127,6 +129,7 @@ public interface I_AD_ChangeLog
 	  */
 	public int getAD_Table_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Table getAD_Table() throws RuntimeException;
 
     /** Column name Created */
@@ -170,6 +173,19 @@ public interface I_AD_ChangeLog
 	  * Type of Event in Change Log
 	  */
 	public String getEventChangeLog();
+
+    /** Column name ExternalTraceId */
+    public static final String COLUMNNAME_ExternalTraceId = "ExternalTraceId";
+
+	/** Set External Trace ID.
+	  * External identifier used for audit tracing
+	  */
+	public void setExternalTraceId (String ExternalTraceId);
+
+	/** Get External Trace ID.
+	  * External identifier used for audit tracing
+	  */
+	public String getExternalTraceId();
 
     /** Column name IsActive */
     public static final String COLUMNNAME_IsActive = "IsActive";
@@ -235,6 +251,15 @@ public interface I_AD_ChangeLog
 	  * Direct internal record ID
 	  */
 	public int getRecord_ID();
+
+    /** Column name Record_UU */
+    public static final String COLUMNNAME_Record_UU = "Record_UU";
+
+	/** Set Record UUID	  */
+	public void setRecord_UU (String Record_UU);
+
+	/** Get Record UUID	  */
+	public String getRecord_UU();
 
     /** Column name Redo */
     public static final String COLUMNNAME_Redo = "Redo";

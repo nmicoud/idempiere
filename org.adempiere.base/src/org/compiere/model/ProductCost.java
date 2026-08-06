@@ -20,16 +20,18 @@ import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.compiere.util.CCache;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 
 /**
  * 	Product Cost Model.
- *	Summarizes Info in MCost
+ *	Summarizes Info in MCost.
  *	
  *  @author Jorg Janke
  *  @version $Id: ProductCost.java,v 1.3 2006/07/30 00:51:03 jjanke Exp $
@@ -52,6 +54,12 @@ public class ProductCost
 		m_M_AttributeSetInstance_ID = M_AttributeSetInstance_ID;
 		m_trxName = trxName;
 	}	//	ProductCost
+	
+	/** Valid Combination Cache			*/
+	private static CCache<String, Integer> s_valid_comb_cache = new CCache<String, Integer>("ProductCost_ValidCombination", 40);
+	
+	/** Default Valid Compbination Cache			*/
+	private static CCache<String, Integer> s_default_valid_comb_cache = new CCache<String, Integer>("ProductCost_DefaultValidCombination", 40);
 	
 	/** The ID					*/
 	private int				m_M_Product_ID = 0;
@@ -114,9 +122,15 @@ public class ProductCost
 			m_C_UOM_ID = C_UOM_ID;
 	}   //  setQty
 
-	
-	
-	
+	/**
+	 * Get quantity in storage UOM	
+	 * @return qty
+	 */
+	public BigDecimal getQty() 
+	{
+		return m_qty;
+	}
+		
 	/** Product Revenue Acct    */
 	public static final int ACCTTYPE_P_Revenue      = 1;
 	/** Product Expense Acct    */
@@ -167,9 +181,9 @@ public class ProductCost
 	public static final int ACCTTYPE_P_LandedCostClearing = 24;
 
 	/**
-	 *  Line Account from Product
+	 *  Get Account from Product
 	 *
-	 *  @param  AcctType see ACCTTYPE_* (1..8)
+	 *  @param AcctType see ACCTTYPE_* (1..8)
 	 *  @param as Accounting Schema
 	 *  @return Requested Product Account
 	 */
@@ -181,38 +195,45 @@ public class ProductCost
 		//  No Product - get Default from Product Category
 		if (m_M_Product_ID == 0)
 			return getAccountDefault(AcctType, as);
-
-		String sql = "SELECT P_Revenue_Acct, P_Expense_Acct, P_Asset_Acct, P_Cogs_Acct, "	//	1..4
-			+ "P_PurchasePriceVariance_Acct, P_InvoicePriceVariance_Acct, "	//	5..6
-			+ "P_TradeDiscountRec_Acct, P_TradeDiscountGrant_Acct,"			//	7..8
-			+ "P_CostAdjustment_Acct, P_InventoryClearing_Acct,"			//	9..10
-			+ "P_WIP_Acct,P_MethodChangeVariance_Acct,P_UsageVariance_Acct,"	//  11.12.13
-			+ "P_RateVariance_Acct,P_MixVariance_Acct,P_FloorStock_Acct," 	//  14.15.16
-			+ "P_CostOfProduction_Acct,P_Labor_Acct,P_Burden_Acct,P_OutsideProcessing_Acct,"	//  17.18,19,20
-			+ "P_Overhead_Acct,P_Scrap_Acct,P_AverageCostVariance_Acct,"	//  21,23
-			+ "P_LandedCostClearing_Acct "									//  24
-			+ "FROM M_Product_Acct "
-			+ "WHERE M_Product_ID=? AND C_AcctSchema_ID=?";
-		//
-		int validCombination_ID = 0;
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		try
-		{
-			pstmt = DB.prepareStatement(sql, null);
-			pstmt.setInt(1, m_M_Product_ID);
-			pstmt.setInt(2, as.getC_AcctSchema_ID());
-			rs = pstmt.executeQuery();
-			if (rs.next())
-				validCombination_ID = rs.getInt(AcctType);
-		}
-		catch (SQLException e)
-		{
-			log.log(Level.SEVERE, sql, e);
-		}
-		finally {
-			DB.close(rs, pstmt);
-			rs = null; pstmt = null;
+		
+		String key = m_M_Product_ID + "_" + as.getC_AcctSchema_ID() + "_" + AcctType;
+		Integer validCombination_ID = s_valid_comb_cache.get(key);
+		
+		if(validCombination_ID == null || validCombination_ID == 0) {
+			String sql = "SELECT P_Revenue_Acct, P_Expense_Acct, P_Asset_Acct, P_Cogs_Acct, "	//	1..4
+				+ "P_PurchasePriceVariance_Acct, P_InvoicePriceVariance_Acct, "	//	5..6
+				+ "P_TradeDiscountRec_Acct, P_TradeDiscountGrant_Acct,"			//	7..8
+				+ "P_CostAdjustment_Acct, P_InventoryClearing_Acct,"			//	9..10
+				+ "P_WIP_Acct,P_MethodChangeVariance_Acct,P_UsageVariance_Acct,"	//  11.12.13
+				+ "P_RateVariance_Acct,P_MixVariance_Acct,P_FloorStock_Acct," 	//  14.15.16
+				+ "P_CostOfProduction_Acct,P_Labor_Acct,P_Burden_Acct,P_OutsideProcessing_Acct,"	//  17.18,19,20
+				+ "P_Overhead_Acct,P_Scrap_Acct,P_AverageCostVariance_Acct,"	//  21,23
+				+ "P_LandedCostClearing_Acct "									//  24
+				+ "FROM M_Product_Acct "
+				+ "WHERE M_Product_ID=? AND C_AcctSchema_ID=?";
+			//
+			validCombination_ID = 0;
+			PreparedStatement pstmt = null;
+			ResultSet rs = null;
+			try
+			{
+				pstmt = DB.prepareStatement(sql, m_trxName);
+				pstmt.setInt(1, m_M_Product_ID);
+				pstmt.setInt(2, as.getC_AcctSchema_ID());
+				rs = pstmt.executeQuery();
+				if (rs.next())
+					validCombination_ID = rs.getInt(AcctType);
+			}
+			catch (SQLException e)
+			{
+				log.log(Level.SEVERE, sql, e);
+			}
+			finally {
+				DB.close(rs, pstmt);
+				rs = null; pstmt = null;
+			}
+			if (validCombination_ID != 0)
+				s_valid_comb_cache.put(key, validCombination_ID);
 		}
 		if (validCombination_ID == 0)
 			return null;
@@ -220,9 +241,9 @@ public class ProductCost
 	}   //  getAccount
 
 	/**
-	 *  Account from Default Product Category
+	 *  Get Account from Default Product Category
 	 *
-	 *  @param  AcctType see ACCTTYPE_* (1..8)
+	 *  @param AcctType see ACCTTYPE_* (1..8)
 	 *  @param as accounting schema
 	 *  @return Requested Product Account
 	 */
@@ -230,47 +251,53 @@ public class ProductCost
 	{
 		if (AcctType < ACCTTYPE_P_Revenue || AcctType > ACCTTYPE_P_LandedCostClearing)
 			return null;
-
-		String sql = "SELECT P_Revenue_Acct, P_Expense_Acct, P_Asset_Acct, P_Cogs_Acct, "
-			+ "P_PurchasePriceVariance_Acct, P_InvoicePriceVariance_Acct, "
-			+ "P_TradeDiscountRec_Acct, P_TradeDiscountGrant_Acct, "
-			+ "P_CostAdjustment_Acct, P_InventoryClearing_Acct, "
-			+ "P_WIP_Acct,P_MethodChangeVariance_Acct,P_UsageVariance_Acct,"		//  11.12.13
-			+ "P_RateVariance_Acct,P_MixVariance_Acct,P_FloorStock_Acct," 			//  14.15.16
-			+ "P_CostOfProduction_Acct,P_Labor_Acct,P_Burden_Acct,P_OutsideProcessing_Acct,"		//  17.18,19,20
-			+ "P_Overhead_Acct,P_Scrap_Acct,P_AverageCostVariance_Acct,"			//  21,23
-			+ "P_LandedCostClearing_Acct "											//  24
-			+ "FROM M_Product_Category pc, M_Product_Category_Acct pca "
-			+ "WHERE pc.M_Product_Category_ID=pca.M_Product_Category_ID"
-			+ " AND pca.C_AcctSchema_ID=? "
-			+ "ORDER BY pc.IsDefault DESC, pc.Created";
-		//
-		int validCombination_ID = 0;
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		try
-		{
-			pstmt = DB.prepareStatement(sql, null);
-			pstmt.setInt(1, as.getC_AcctSchema_ID());
-			rs = pstmt.executeQuery();
-			if (rs.next())
-				validCombination_ID = rs.getInt(AcctType);
-		}
-		catch (SQLException e)
-		{
-			log.log(Level.SEVERE, sql, e);
-		}
-		finally {
-			DB.close(rs, pstmt);
-			rs = null; pstmt = null;
+		
+		String key = as.getC_AcctSchema_ID()+ "_" + AcctType;
+		Integer validCombination_ID = s_default_valid_comb_cache.get(key);
+		
+		if(validCombination_ID == null || validCombination_ID == 0) {
+			String sql = "SELECT P_Revenue_Acct, P_Expense_Acct, P_Asset_Acct, P_Cogs_Acct, "
+				+ "P_PurchasePriceVariance_Acct, P_InvoicePriceVariance_Acct, "
+				+ "P_TradeDiscountRec_Acct, P_TradeDiscountGrant_Acct, "
+				+ "P_CostAdjustment_Acct, P_InventoryClearing_Acct, "
+				+ "P_WIP_Acct,P_MethodChangeVariance_Acct,P_UsageVariance_Acct,"		//  11.12.13
+				+ "P_RateVariance_Acct,P_MixVariance_Acct,P_FloorStock_Acct," 			//  14.15.16
+				+ "P_CostOfProduction_Acct,P_Labor_Acct,P_Burden_Acct,P_OutsideProcessing_Acct,"		//  17.18,19,20
+				+ "P_Overhead_Acct,P_Scrap_Acct,P_AverageCostVariance_Acct,"			//  21,23
+				+ "P_LandedCostClearing_Acct "											//  24
+				+ "FROM M_Product_Category pc, M_Product_Category_Acct pca "
+				+ "WHERE pc.M_Product_Category_ID=pca.M_Product_Category_ID"
+				+ " AND pca.C_AcctSchema_ID=? "
+				+ "ORDER BY pc.IsDefault DESC, pc.Created";
+			//
+			validCombination_ID = 0;
+			PreparedStatement pstmt = null;
+			ResultSet rs = null;
+			try
+			{
+				pstmt = DB.prepareStatement(sql, m_trxName);
+				pstmt.setInt(1, as.getC_AcctSchema_ID());
+				rs = pstmt.executeQuery();
+				if (rs.next())
+					validCombination_ID = rs.getInt(AcctType);
+			}
+			catch (SQLException e)
+			{
+				log.log(Level.SEVERE, sql, e);
+			}
+			finally {
+				DB.close(rs, pstmt);
+				rs = null; pstmt = null;
+			}
+			if (validCombination_ID != 0)
+				s_default_valid_comb_cache.put(key, validCombination_ID);
 		}
 		if (validCombination_ID == 0)
 			return null;
 		return MAccount.get(as.getCtx(), validCombination_ID);
 	}   //  getAccountDefault
-	
-	
-	/**************************************************************************
+		
+	/**
 	 *  Get Total Costs (amt*qty) in Accounting Schema Currency
 	 *  @param as accounting schema
 	 *  @param AD_Org_ID trx org
@@ -281,6 +308,25 @@ public class ProductCost
 	 */
 	public BigDecimal getProductCosts (MAcctSchema as, int AD_Org_ID, 
 		String costingMethod, int C_OrderLine_ID, boolean zeroCostsOK)
+	{
+		return getProductCosts(as, AD_Org_ID, costingMethod, C_OrderLine_ID, zeroCostsOK, null, null, false);
+	}
+	
+	/**
+	 * Get Total Costs (amt*qty) in Accounting Schema Currency
+	 * @param as accounting schema
+	 * @param AD_Org_ID trx org
+	 * @param costingMethod if null uses Accounting Schema - AcctSchema.COSTINGMETHOD_*
+	 * @param C_OrderLine_ID optional order line
+	 * @param zeroCostsOK zero/no costs are OK
+	 * @param dateAcct account date
+	 * @param costDetail optional cost detail - use to retrieve the cost history
+	 * @param isInBackDatePostingProcess in a back-date posting process
+	 * @return cost or null, if qty or costs cannot be determined
+	 */
+	public BigDecimal getProductCosts (MAcctSchema as, int AD_Org_ID, 
+		String costingMethod, int C_OrderLine_ID, boolean zeroCostsOK, 
+		Timestamp dateAcct, MCostDetail costDetail, boolean isInBackDatePostingProcess)
 	{
 		if (m_qty == null)
 		{
@@ -295,8 +341,8 @@ public class ProductCost
 			return null;
 		}
 		//
-		BigDecimal cost = MCost.getCurrentCost (m_product, m_M_AttributeSetInstance_ID, 
-			as, AD_Org_ID, costingMethod, m_qty, C_OrderLine_ID, zeroCostsOK, m_trxName);
+		BigDecimal cost = MCost.getCost (m_product, m_M_AttributeSetInstance_ID, 
+			as, AD_Org_ID, costingMethod, m_qty, C_OrderLine_ID, zeroCostsOK, dateAcct, costDetail, isInBackDatePostingProcess, m_trxName);
 		if (cost == null)
 		{
 			log.fine("No Costs");
@@ -306,124 +352,10 @@ public class ProductCost
 	}   //  getProductCosts
 
 	/**
-	 *  Get PO Price from PriceList - and convert it to AcctSchema Currency
-	 *  @param as accounting schema
-	 *  @param onlyPOPriceList use only PO price list
-	 *  @return po price
-	 */
-	/*private BigDecimal getPriceList (MAcctSchema as, boolean onlyPOPriceList)
-	{
-		StringBuilder sql = new StringBuilder (
-			"SELECT pl.C_Currency_ID, pp.PriceList, pp.PriceStd, pp.PriceLimit "
-			+ "FROM M_PriceList pl, M_PriceList_Version plv, M_ProductPrice pp "
-			+ "WHERE pl.M_PriceList_ID = plv.M_PriceList_ID"
-			+ " AND plv.M_PriceList_Version_ID = pp.M_PriceList_Version_ID"
-			+ " AND pp.M_Product_ID=?");
-		if (onlyPOPriceList)
-			sql.append(" AND pl.IsSOPriceList='N'");
-		sql.append(" ORDER BY pl.IsSOPriceList ASC, plv.ValidFrom DESC");
-		int C_Currency_ID = 0;
-		BigDecimal PriceList = null;
-		BigDecimal PriceStd = null;
-		BigDecimal PriceLimit = null;
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		try
-		{
-			pstmt = DB.prepareStatement(sql.toString(), null);
-			pstmt.setInt(1, m_M_Product_ID);
-			rs = pstmt.executeQuery();
-			if (rs.next())
-			{
-				C_Currency_ID = rs.getInt(1);
-				PriceList = rs.getBigDecimal(2);
-				PriceStd = rs.getBigDecimal(3);
-				PriceLimit = rs.getBigDecimal(4);
-			}
-		}
-		catch (SQLException e)
-		{
-			log.log(Level.SEVERE, sql.toString(), e);
-		}
-		finally {
-			DB.close(rs, pstmt);
-			rs = null; pstmt = null;
-		}
-		//  nothing found
-		if (C_Currency_ID == 0)
-			return null;
-
-		BigDecimal price = PriceLimit;  //  best bet
-		if (price == null || price.compareTo(Env.ZERO)==0)
-			price = PriceStd;
-		if (price == null || price.compareTo(Env.ZERO)==0)
-			price = PriceList;
-		//  Convert
-		if (price != null && price.compareTo(Env.ZERO)!=0)
-			price = MConversionRate.convert (as.getCtx(),
-				price, C_Currency_ID, as.getC_Currency_ID(), 
-				as.getAD_Client_ID(), 0);
-		return price;
-	}   //  getPOPrice*/
-
-	/**
-	 *  Get PO Cost from Purchase Info - and convert it to AcctSchema Currency
-	 *  @param as accounting schema
-	 *  @return po cost
-	 */
-	/*private BigDecimal getPOCost (MAcctSchema as)
-	{
-		String sql = "SELECT C_Currency_ID, PriceList,PricePO,PriceLastPO "
-			+ "FROM M_Product_PO WHERE M_Product_ID=? "
-			+ "ORDER BY IsCurrentVendor DESC";
-
-		int C_Currency_ID = 0;
-		BigDecimal PriceList = null;
-		BigDecimal PricePO = null;
-		BigDecimal PriceLastPO = null;
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		try
-		{
-			pstmt = DB.prepareStatement(sql, null);
-			pstmt.setInt(1, m_M_Product_ID);
-			rs = pstmt.executeQuery();
-			if (rs.next())
-			{
-				C_Currency_ID = rs.getInt(1);
-				PriceList = rs.getBigDecimal(2);
-				PricePO = rs.getBigDecimal(3);
-				PriceLastPO = rs.getBigDecimal(4);
-			}
-		}
-		catch (SQLException e)
-		{
-			log.log(Level.SEVERE, sql, e);
-		}
-		finally {
-			DB.close(rs, pstmt);
-			rs = null; pstmt = null;
-		}
-		//  nothing found
-		if (C_Currency_ID == 0)
-			return null;
-
-		BigDecimal cost = PriceLastPO;  //  best bet
-		if (cost == null || cost.compareTo(Env.ZERO)==0)
-			cost = PricePO;
-		if (cost == null || cost.compareTo(Env.ZERO)==0)
-			cost = PriceList;
-		//  Convert - standard precision!! - should be costing precision
-		if (cost != null && cost.compareTo(Env.ZERO)!=0)
-			cost = MConversionRate.convert (as.getCtx(),
-				cost, C_Currency_ID, as.getC_Currency_ID(), as.getAD_Client_ID(), as.getAD_Org_ID());
-		return cost;
-	}   //  getPOCost*/
-
-	/**
 	 * 	String Representation
 	 *	@return info
 	 */
+	@Override
 	public String toString()
 	{
 		StringBuilder sb = new StringBuilder ("ProductCost[");
@@ -435,6 +367,7 @@ public class ProductCost
 	}	//	toString
 	
 	/**
+	 * Set M_AttributeSetInstance_ID
 	 * @param M_AttributeSetInstance_ID the m_M_AttributeSetInstance_ID to set
 	 */
 	public void setM_M_AttributeSetInstance_ID(int M_AttributeSetInstance_ID) {

@@ -23,16 +23,15 @@ import java.util.logging.Level;
 
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
-import org.compiere.util.Env;
 
 /**
- *	Print Format Utilities.
- *	- Add Missing Columns for all Print Format
+ *	Print Format Utilities.<br/>
+ *	- Add Missing Columns for all Print Format.
  *	
  *  @author Jorg Janke
  *  @version $Id: PrintFormatUtil.java,v 1.2 2006/07/30 00:53:02 jjanke Exp $
  * 
- * @author Teo Sarca, SC ARHIPAC SERVICE SRL
+ *  @author Teo Sarca, SC ARHIPAC SERVICE SRL
  * 			<li>FR [ 1841834 ] PrintFormatUtil: work in transaction
  */
 public class PrintFormatUtil
@@ -52,10 +51,10 @@ public class PrintFormatUtil
 	/** Context					*/
 	private Properties		m_ctx;
 	
-
 	/**
 	 * @deprecated use {@link #addMissingColumns(String)}
 	 */
+	@Deprecated (since="13", forRemoval=true)
 	public void addMissingColumns ()
 	{
 		addMissingColumns((String)null);
@@ -140,30 +139,11 @@ public class PrintFormatUtil
 			rs = null; pstmt = null;
 		}
 		if (counter == 0) {
-			if (log.isLoggable(Level.FINE)) log.fine("None"
-				/**
-				+ " - " + sql 
-				+ " - AD_PrintFormat_ID=" + pf.getAD_PrintFormat_ID()
-				+ " - AD_Table_ID=" + pf.getAD_Table_ID()
-				*/
-				);
+			if (log.isLoggable(Level.FINE)) log.fine("None");
 		} else {
 			if (log.isLoggable(Level.FINE)) log.fine("Added=" + counter);
 		}
 		return counter;
 	}	//	addMissingColumns
 
-
-	/**************************************************************************
-	 * 	Main
-	 *	@param args arguments
-	 */
-	public static void main(String[] args)
-	{
-		org.compiere.Adempiere.startupEnvironment(true);
-		//
-		PrintFormatUtil pfu = new PrintFormatUtil (Env.getCtx());
-		pfu.addMissingColumns((String)null);
-	}	//	main
-	
 }	//	PrintFormatUtils

@@ -27,11 +27,13 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 
+import org.adempiere.base.GeneratedCodeCoverageExclusion;
 import org.compiere.Adempiere;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Secure;
+import org.compiere.util.Util;
 
 /**
  * 	Issue Report Model
@@ -44,7 +46,15 @@ public class MIssue extends X_AD_Issue
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = -3680542992654002121L;
+	private static final long serialVersionUID = -417575919393424660L;
+
+	/** Flag to prevent infinite loop when saving issues - inheritable across thread hierarchy */
+	private static final InheritableThreadLocal<Boolean> s_creatingIssue = new InheritableThreadLocal<Boolean>() {
+	    @Override
+	    protected Boolean initialValue() {
+	        return false;
+	    }
+	};
 
 	/**
 	 * 	Create and report issue
@@ -55,27 +65,42 @@ public class MIssue extends X_AD_Issue
 	{
 		if (s_log.isLoggable(Level.CONFIG))
 			s_log.config(record.getMessage());
-		MSystem system = MSystem.get(Env.getCtx()); 
-		if (!DB.isConnected(false)
-			|| system == null
-			|| !system.isAutoErrorReport())
+		if (!DB.isConnected())
 			return null;
-		//
-		MIssue issue = new MIssue(record);
-		String error = issue.report();
-		issue.saveEx();
-		if (error != null)
+
+		// Prevent infinite loop - don't create issues while already creating an issue
+	    if (s_creatingIssue.get()) {
+	        s_log.log(Level.WARNING, "Skipping issue creation to prevent infinite loop: " + record.getMessage());
+	        return null;
+	    }
+
+	    s_creatingIssue.set(true);
+		MIssue issue = null;
+		try {
+			MSystem system = MSystem.get(Env.getCtx());
+			if (system == null || !system.isAutoErrorReport())
+				return null;
+			issue = new MIssue(record);
+			issue.saveEx();
+		} catch (Exception e) {
+			// Prevent infinite loop - don't log this error as it would trigger another MIssue.create call
+			s_log.log(Level.WARNING, "Failed to save issue: " + e.getMessage());
 			return null;
+		} finally {
+	        s_creatingIssue.set(false);
+		}
 		return issue;
 	}	//	create
-	
+
 	/**
 	 * 	Create from decoded hash map string
 	 *	@param ctx context
 	 *	@param hexInput hex string
 	 *	@return issue
+	 *  @deprecated
 	 */
 	@SuppressWarnings("unchecked")
+	@Deprecated (since="13", forRemoval=true)
 	public static MIssue create (Properties ctx, String hexInput)
 	{
 		HashMap<String,String> hmIn = null;
@@ -103,7 +128,19 @@ public class MIssue extends X_AD_Issue
 	/** Answer Delimiter		*/
 	public static String	DELIMITER = "|";
 	
-	/**************************************************************************
+    /**
+     * UUID based Constructor
+     * @param ctx  Context
+     * @param AD_Issue_UU  UUID key
+     * @param trxName Transaction
+     */
+    public MIssue(Properties ctx, String AD_Issue_UU, String trxName) {
+        super(ctx, AD_Issue_UU, trxName);
+		if (Util.isEmpty(AD_Issue_UU))
+			setInitialDefaults(ctx);
+    }
+
+	/**
 	 * 	Standard Constructor
 	 *	@param ctx context
 	 *	@param AD_Issue_ID issue
@@ -113,19 +150,24 @@ public class MIssue extends X_AD_Issue
 	{
 		super (ctx, AD_Issue_ID, trxName);
 		if (AD_Issue_ID == 0)
-		{
-			setProcessed (false);	// N
-			setSystemStatus(SYSTEMSTATUS_Evaluation);
-			try
-			{
-				init(ctx);
-			}
-			catch (Exception e)
-			{
-				e.getStackTrace();
-			}
-		}
+			setInitialDefaults(ctx);
 	}	//	MIssue
+
+	/**
+	 * Set the initial defaults for a new record
+	 */
+	private void setInitialDefaults(Properties ctx) {
+		setProcessed (false);	// N
+		setSystemStatus(SYSTEMSTATUS_Evaluation);
+		try
+		{
+			init(ctx);
+		}
+		catch (Exception e)
+		{
+			e.getStackTrace();
+		}
+	}
 
 	/**
 	 * 	Load Constructor
@@ -196,7 +238,9 @@ public class MIssue extends X_AD_Issue
 	 * 	HashMap Constructor
 	 *	@param ctx context
 	 *	@param hmIn hash map
+	 *  @deprecated
 	 */
+	@Deprecated (since="13", forRemoval=true)
 	public MIssue (Properties ctx, HashMap<String,String> hmIn)
 	{
 		super (ctx, 0, null);
@@ -235,7 +279,7 @@ public class MIssue extends X_AD_Issue
 	
 	/**
 	 * 	Set Issue Summary.
-	 * 	Truncate it to 2000 char
+	 * 	Truncate to 2000 char.
 	 *	@param IssueSummary summary
 	 */
 	public void setIssueSummary (String IssueSummary)
@@ -251,7 +295,7 @@ public class MIssue extends X_AD_Issue
 	
 	/**
 	 * 	Set Stack Trace.
-	 * 	Truncate it to 2000 char
+	 * 	Truncate to 2000 char.
 	 *	@param StackTrace trace
 	 */
 	public void setStackTrace (String StackTrace)
@@ -264,11 +308,10 @@ public class MIssue extends X_AD_Issue
 			StackTrace = StackTrace.substring(0,INFOLENGTH-1);
 		super.setStackTrace (StackTrace);
 	}	//	setStackTrace
-	
-	
+		
 	/**
 	 * 	Set Error Trace.
-	 * 	Truncate it to 2000 char
+	 * 	Truncate to 2000 char.
 	 *	@param ErrorTrace trace
 	 */
 	public void setErrorTrace (String ErrorTrace)
@@ -302,7 +345,7 @@ public class MIssue extends X_AD_Issue
 	
 	/**
 	 * 	Set Comments.
-	 * 	Truncate it to 2000 char
+	 * 	Truncate to 2000 char.
 	 *	@param Comments
 	 */
 	public void setComments (String Comments)
@@ -316,7 +359,7 @@ public class MIssue extends X_AD_Issue
 	
 	/**
 	 * 	Set ResponseText.
-	 * 	Truncate it to 2000 char
+	 * 	Truncate to 2000 char.
 	 *	@param ResponseText
 	 */
 	public void setResponseText (String ResponseText)
@@ -331,22 +374,25 @@ public class MIssue extends X_AD_Issue
 	/**
 	 * 	Process Request.
 	 * 	@return answer
+	 *  @deprecated
 	 */
+	@Deprecated (since="13", forRemoval=true)
+	@SuppressWarnings("removal")
+	@GeneratedCodeCoverageExclusion
 	public String process()
 	{
 		MIssueProject.get(this);	//	sets also Asset
 		MIssueSystem.get(this);
 		MIssueUser.get(this);
-		//
-	//	setR_IssueKnown_ID(0);
-	//	setR_Request_ID(0);
 		return createAnswer();
 	}	//	process
 	
 	/**
 	 * 	Create Answer to send to User
 	 *	@return answer
+	 *  @deprecated
 	 */
+	@Deprecated (since="13", forRemoval=true)
 	public String createAnswer()
 	{
 		StringBuilder sb = new StringBuilder();
@@ -373,7 +419,7 @@ public class MIssue extends X_AD_Issue
 		if (getR_Request_ID() == 0)
 			return null;
 		return new X_R_Request(getCtx(), getR_Request_ID(), null);
-	}	//	getRequestDocumentNo
+	}	//	getRequest
 
 	/**
 	 * 	Get Request Document No
@@ -389,8 +435,9 @@ public class MIssue extends X_AD_Issue
 	
 	/**
 	 * 	Get System Status
-	 *	@return system status
+	 *	@return system status or SYSTEMSTATUS_Evaluation if not set by user
 	 */
+	@Override
 	public String getSystemStatus ()
 	{
 		String s = super.getSystemStatus ();
@@ -398,143 +445,23 @@ public class MIssue extends X_AD_Issue
 			s = SYSTEMSTATUS_Evaluation;
 		return s;
 	}	//	getSystemStatus
-	
-	
-	/**************************************************************************
+		
+	/**
 	 * 	Report/Update Issue.
 	 *	@return error message
+	 *  @deprecated not implemented
 	 */
+	@Deprecated (since="13", forRemoval=true)
 	public String report()
 	{
-		//if (true)
 		return null;
-		/*StringBuilder parameter = new StringBuilder("?");
-		if (getRecord_ID() == 0)	//	don't report
-			return "ID=0";
-		if (getRecord_ID() == 1)	//	new
-		{
-			parameter.append("ISSUE=");
-			HashMap<String,String> htOut = get_HashMap();
-			try		//	deserializing in create
-			{
-				ByteArrayOutputStream bOut = new ByteArrayOutputStream();
-				ObjectOutput oOut = new ObjectOutputStream(bOut);
-				oOut.writeObject(htOut);
-				oOut.flush();
-				String hexString = Secure.convertToHexString(bOut.toByteArray());
-				parameter.append(hexString);
-			}
-			catch (Exception e) 
-			{
-				log.severe(e.getLocalizedMessage());
-				StringBuilder msgreturn = new StringBuilder("New-").append(e.getLocalizedMessage());
-				return msgreturn.toString();
-			}
-		}
-		else	//	existing
-		{
-			try
-			{
-				parameter.append("RECORDID=").append(getRecord_ID());
-				parameter.append("&DBADDRESS=").append(URLEncoder.encode(getDBAddress(), "UTF-8"));
-				parameter.append("&COMMENTS=").append(URLEncoder.encode(getComments(), "UTF-8"));
-			}
-			catch (Exception e) 
-			{
-				log.severe(e.getLocalizedMessage());
-				StringBuilder msgreturn = new StringBuilder("Update-").append(e.getLocalizedMessage());
-				return msgreturn.toString();
-			}
-		}
-		
-		InputStreamReader in = null;
-		String target = "http://dev1/wstore/issueReportServlet";
-		try		//	Send GET Request
-		{
-			StringBuilder urlString = new StringBuilder(target)
-				.append(parameter);
-			URL url = new URL (urlString.toString());
-			URLConnection uc = url.openConnection();
-			in = new InputStreamReader(uc.getInputStream());
-		}
-		catch (Exception e)
-		{
-			StringBuilder msg = new StringBuilder("Cannot connect to http://").append(target); 
-			if (e instanceof FileNotFoundException || e instanceof ConnectException)
-				msg.append("\nServer temporarily down - Please try again later");
-			else
-			{
-				msg.append("\nCheck connection - ").append(e.getLocalizedMessage());
-				log.log(Level.FINE, msg.toString());
-			}
-			return msg.toString();
-		}
-		return readResponse(in);*/
 	}	//	report
-	
-	/**
-	 * 	Read Response
-	 *	@param in input stream
-	 *	@return error message
-	 */
-	/*private String readResponse(InputStreamReader in)
-	{
-		StringBuilder sb = new StringBuilder();
-		int Record_ID = 0;
-		String ResponseText = null;
-		String RequestDocumentNo = null;
-		try		//	Get Answer
-		{
-			int c;
-			while ((c = in.read()) != -1)
-				sb.append((char)c);
-			in.close();
-			log.fine(sb.toString());
-			String clear = URLDecoder.decode(sb.toString(), "UTF-8");
-			log.fine(clear);
-			//	Interpret Data
-			StringTokenizer st = new StringTokenizer(clear, DELIMITER);
-			while (st.hasMoreElements())
-			{
-				String pair = st.nextToken();
-				try
-				{
-					int index = pair.indexOf('=');
-					if (pair.startsWith("RECORDID="))
-					{
-						String info = pair.substring(index+1);
-						Record_ID = Integer.parseInt(info);
-					}
-					else if (pair.startsWith("RESPONSE="))
-						ResponseText = pair.substring(index+1);
-					else if (pair.startsWith("DOCUMENTNO="))
-						RequestDocumentNo = pair.substring(index+1);
-				}
-				catch (Exception e)
-				{
-					log.warning(pair + " - " + e.getMessage());
-				}
-			}
-		}
-		catch (Exception ex)
-		{
-			log.log(Level.FINE, "", ex);
-			return "Reading-" + ex.getLocalizedMessage();
-		}
-
-		if (Record_ID != 0)
-			setRecord_ID(Record_ID);
-		if (ResponseText != null)
-			setResponseText(ResponseText);
-		if (RequestDocumentNo != null)
-			setRequestDocumentNo(RequestDocumentNo);
-		return null;
-	}	//	readResponse*/
 	
 	/**
 	 * 	String Representation
 	 *	@return info
 	 */
+	@Override
 	public String toString ()
 	{
 		StringBuilder sb = new StringBuilder ("MIssue[");

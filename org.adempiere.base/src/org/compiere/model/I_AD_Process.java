@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_Process
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_AD_Process 
 {
@@ -41,24 +41,11 @@ public interface I_AD_Process
 
     /** Load Meta Data */
 
-    /** Column name AccessLevel */
-    public static final String COLUMNNAME_AccessLevel = "AccessLevel";
-
-	/** Set Data Access Level.
-	  * Access Level required
-	  */
-	public void setAccessLevel (String AccessLevel);
-
-	/** Get Data Access Level.
-	  * Access Level required
-	  */
-	public String getAccessLevel();
-
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -71,6 +58,7 @@ public interface I_AD_Process
 	/** Get Context Help	  */
 	public int getAD_CtxHelp_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_CtxHelp getAD_CtxHelp() throws RuntimeException;
 
     /** Column name AD_Form_ID */
@@ -86,18 +74,19 @@ public interface I_AD_Process
 	  */
 	public int getAD_Form_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Form getAD_Form() throws RuntimeException;
 
     /** Column name AD_Org_ID */
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -114,6 +103,7 @@ public interface I_AD_Process
 	  */
 	public int getAD_PrintFormat_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_PrintFormat getAD_PrintFormat() throws RuntimeException;
 
     /** Column name AD_Process_ID */
@@ -151,6 +141,7 @@ public interface I_AD_Process
 	  */
 	public int getAD_ReportView_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_ReportView getAD_ReportView() throws RuntimeException;
 
     /** Column name AD_Workflow_ID */
@@ -166,18 +157,32 @@ public interface I_AD_Process
 	  */
 	public int getAD_Workflow_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Workflow getAD_Workflow() throws RuntimeException;
+
+    /** Column name AccessLevel */
+    public static final String COLUMNNAME_AccessLevel = "AccessLevel";
+
+	/** Set Data Access Level.
+	  * Access Level required
+	  */
+	public void setAccessLevel (String AccessLevel);
+
+	/** Get Data Access Level.
+	  * Access Level required
+	  */
+	public String getAccessLevel();
 
     /** Column name AllowMultipleExecution */
     public static final String COLUMNNAME_AllowMultipleExecution = "AllowMultipleExecution";
 
-	/** Set Multiple Execution.
-	  * Allow or disallow executing a process/report multiple times.
+	/** Set Allow Concurrent Execution.
+	  * Allow or disallow executing a process/report multiple times concurrently
 	  */
 	public void setAllowMultipleExecution (String AllowMultipleExecution);
 
-	/** Get Multiple Execution.
-	  * Allow or disallow executing a process/report multiple times.
+	/** Get Allow Concurrent Execution.
+	  * Allow or disallow executing a process/report multiple times concurrently
 	  */
 	public String getAllowMultipleExecution();
 
@@ -263,6 +268,15 @@ public interface I_AD_Process
 	  * Execution Type defines whether the report/process will always run in background or foreground. 
 	  */
 	public String getExecutionType();
+
+    /** Column name FileNamePattern */
+    public static final String COLUMNNAME_FileNamePattern = "FileNamePattern";
+
+	/** Set File Name Pattern	  */
+	public void setFileNamePattern (String FileNamePattern);
+
+	/** Get File Name Pattern	  */
+	public String getFileNamePattern();
 
     /** Column name Help */
     public static final String COLUMNNAME_Help = "Help";

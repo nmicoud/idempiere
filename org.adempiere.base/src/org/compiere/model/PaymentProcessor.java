@@ -37,7 +37,7 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 
 /**
- *  Payment Processor Abstract Class
+ *  Abstract Payment Processor base class 
  *
  *  @author Jorg Janke
  *  @version $Id: PaymentProcessor.java,v 1.3 2006/07/30 00:51:02 jjanke Exp $
@@ -66,8 +66,7 @@ public abstract class PaymentProcessor
 	public static final char	EQ = '=';
 
 	/**
-	 *
-	 * @param mpp
+	 * @param mbap
 	 * @param mp
 	 */
 	public void initialize(MBankAccountProcessor mbap, PaymentInterface mp)
@@ -77,24 +76,20 @@ public abstract class PaymentProcessor
 	}
 
 	/**
-	 *  Factory
-	 * 	@param mpp payment processor model
-	 * 	@param mp payment model
-	 *  @return initialized PaymentProcessor or null
+	 *  Static Factory method
+	 *  @param mbap
+	 *  @param mp
+	 *  @return PaymentProcessor instance or null
 	 */
 	public static PaymentProcessor create (MBankAccountProcessor mbap, PaymentInterface mp)
 	{
 		return Core.getPaymentProcessor(mbap, mp);
 	}   //  create
 
-	/*************************************************************************/
-
 	protected MBankAccountProcessor p_mbap = null;
 	protected PaymentInterface		p_mp = null;
 	//
 	private int     m_timeout = 30;
-
-	/*************************************************************************/
 
 	/**
 	 *  Process CreditCard (no date check)
@@ -104,12 +99,11 @@ public abstract class PaymentProcessor
 	public abstract boolean processCC () throws IllegalArgumentException;
 
 	/**
-	 *  Payment is processed successfully
+	 *  Is payment processed successfully
 	 *  @return true if OK
 	 */
 	public abstract boolean isProcessedOK();
 
-	/**************************************************************************/
 	// Validation methods. Override if you have specific needs.
 
 	/**
@@ -131,16 +125,25 @@ public abstract class PaymentProcessor
 
 	/**
 	 * Standard account validation.
-	 * @return
+	 * @return "" or Error AD_Message.
 	 */
 	public String validateAccountNo() {
 		return MPaymentValidate.validateAccountNo(p_mp.getAccountNo());
 	}
 
+	/**
+	 * Validate check no
+	 * @return "" or Error AD_Message.
+	 */
 	public String validateCheckNo() {
 		return MPaymentValidate.validateCheckNo(p_mp.getCheckNo());
 	}
 
+	/**
+	 * Validate credit card
+	 * @return "" or Error AD_Message.
+	 * @throws IllegalArgumentException
+	 */
 	public String validateCreditCard() throws IllegalArgumentException {
 		String msg = null;
 		if (p_mp.getC_BP_BankAccount_ID() != 0 || (p_mp.getCustomerPaymentProfileID() != null && p_mp.getCustomerPaymentProfileID().length() > 0))
@@ -160,7 +163,7 @@ public abstract class PaymentProcessor
 		return(msg);
 	}
 
-	/**************************************************************************
+	/**
 	 * 	Set Timeout
 	 * 	@param newTimeout timeout
 	 */
@@ -177,9 +180,8 @@ public abstract class PaymentProcessor
 		return m_timeout;
 	}
 
-
-	/**************************************************************************
-	 *  Check for delimiter fields &= and add length of not encoded
+	/**
+	 *  Check for delimiter fields &amp;= and add length of not encoded
 	 *  @param name name
 	 *  @param value value
 	 *  @param maxLength maximum length
@@ -198,7 +200,7 @@ public abstract class PaymentProcessor
 	}	//	createPair
 
 	/**
-	 *  Check for delimiter fields &= and add length of not encoded
+	 *  Check for delimiter fields &amp;= and add length of not encoded
 	 *  @param name name
 	 *  @param value value
 	 *  @param maxLength maximum length
@@ -213,7 +215,7 @@ public abstract class PaymentProcessor
 	}	//	createPair
 
 	/**
-	 *  Check for delimiter fields &= and add length of not encoded
+	 *  Check for delimiter fields &amp;= and add length of not encoded
 	 *  @param name name
 	 *  @param value value
 	 *  @param maxLength maximum length
@@ -255,6 +257,7 @@ public abstract class PaymentProcessor
 	{
 		m_encoded = doEncode;
 	}	//	setEncode
+	
 	/**
 	 * 	Is Encoded
 	 *	@return true if encoded
@@ -265,7 +268,7 @@ public abstract class PaymentProcessor
 	}	//	setEncode
 
 	/**
-	 * 	Get Connect Post Properties
+	 * 	Get Properties from URL
 	 *	@param urlString POST url string
 	 *	@param parameter parameter
 	 *	@return result as properties
@@ -302,7 +305,7 @@ public abstract class PaymentProcessor
 		long ms = System.currentTimeMillis() - start;
 		if (log.isLoggable(Level.FINE)) log.fine(ms + "ms - " + prop.toString());
 		return prop;
-	}	//	connectPost
+	}	//	getConnectPostProperties
 
 	/**
 	 * 	Connect via Post

@@ -67,7 +67,6 @@ public class CalloutPayment extends CalloutEngine
 		//
 		mTab.setValue ("DiscountAmt", Env.ZERO);
 		mTab.setValue ("WriteOffAmt", Env.ZERO);
-		// mTab.setValue ("IsOverUnderPayment", Boolean.FALSE);
 		mTab.setValue ("OverUnderAmt", Env.ZERO);
 		int C_InvoicePaySchedule_ID = 0;
 		if (Env.getContextAsInt (ctx, WindowNo, Env.TAB_INFO, "C_Invoice_ID") == C_Invoice_ID.intValue ()
@@ -218,8 +217,6 @@ public class CalloutPayment extends CalloutEngine
 			return "";
 		mTab.setValue ("C_Invoice_ID", null);
 		mTab.setValue ("C_Order_ID", null);
-		// 2008/07/18 Globalqss [ 2021745 ]
-		// mTab.setValue ("C_Project_ID", null);
 		mTab.setValue ("IsPrepayment", Boolean.FALSE);
 		//
 		mTab.setValue ("DiscountAmt", Env.ZERO);
@@ -251,9 +248,8 @@ public class CalloutPayment extends CalloutEngine
 		if (C_DocType_ID != 0)
 		{
 			dt = MDocType.get (ctx, C_DocType_ID);
-			Env
-				.setContext (ctx, WindowNo, "IsSOTrx", dt.isSOTrx () ? "Y"
-					: "N");
+			Env.setContext (ctx, WindowNo, "IsSOTrx", dt.isSOTrx () ? "Y" : "N");
+			mTab.setValue(MPayment.COLUMNNAME_IsReceipt, dt.isSOTrx () ? "Y" : "N");
 		}
 		// Invoice
 		if (C_Invoice_ID != 0)
@@ -267,8 +263,6 @@ public class CalloutPayment extends CalloutEngine
 		}
 		// globalqss - Allow prepayment to Purchase Orders
 		// Order Waiting Payment (can only be SO)
-		// if (C_Order_ID != 0 && dt != null && !dt.isSOTrx())
-		// return "PaymentDocTypeInvoiceInconsistent";
 		// Order
 		if (C_Order_ID != 0)
 		{
@@ -283,9 +277,9 @@ public class CalloutPayment extends CalloutEngine
 	} // docType
 
 	/**
-	 * Payment_Amounts. Change of: - IsOverUnderPayment -> set OverUnderAmt to 0 -
-	 * C_Currency_ID, C_ConvesionRate_ID -> convert all - PayAmt, DiscountAmt,
-	 * WriteOffAmt, OverUnderAmt -> PayAmt make sure that add up to
+	 * Payment_Amounts. Change of: - IsOverUnderPayment -&gt; set OverUnderAmt to 0 -
+	 * C_Currency_ID, C_ConvesionRate_ID -&gt; convert all - PayAmt, DiscountAmt,
+	 * WriteOffAmt, OverUnderAmt -&gt; PayAmt make sure that add up to
 	 * InvoiceOpenAmt
 	 * @param ctx context
 	 * @param WindowNo current Window No
@@ -301,11 +295,6 @@ public class CalloutPayment extends CalloutEngine
 		if (isCalloutActive ()) // assuming it is resetting value
 			return "";
 		int C_Invoice_ID = Env.getContextAsInt (ctx, WindowNo, "C_Invoice_ID");
-		// New Payment
-		if (Env.getContextAsInt (ctx, WindowNo, "C_Payment_ID") == 0
-			&& Env.getContextAsInt (ctx, WindowNo, "C_BPartner_ID") == 0
-			&& C_Invoice_ID == 0)
-			return "";
 		// Changed Column
 		String colName = mField.getColumnName ();
 		if (colName.equals ("IsOverUnderPayment") // Set Over/Under Amt to
@@ -333,6 +322,10 @@ public class CalloutPayment extends CalloutEngine
 		int AD_Client_ID = Env.getContextAsInt (ctx, WindowNo, "AD_Client_ID");
 		int AD_Org_ID = Env.getContextAsInt (ctx, WindowNo, "AD_Org_ID");
 
+		Boolean overrideCR = (Boolean)(colName.equals(I_C_Payment.COLUMNNAME_IsOverrideCurrencyRate) ? value : mTab.getValue(I_C_Payment.COLUMNNAME_IsOverrideCurrencyRate));
+		if (overrideCR == null)
+			overrideCR = Boolean.FALSE;
+
 		if (colName.equals(I_C_Payment.COLUMNNAME_CurrencyRate))
 		{
 			if (value != null)
@@ -346,7 +339,7 @@ public class CalloutPayment extends CalloutEngine
 				}
 				else if (baseCurrencyRate.signum() == 0)
 				{
-					int baseCurrencyId = Env.getContextAsInt(ctx, "$C_Currency_ID");
+					int baseCurrencyId = Env.getContextAsInt(ctx, Env.C_CURRENCY_ID);
 					Timestamp dateAcct = (Timestamp) mTab.getValue(I_C_Payment.COLUMNNAME_DateAcct);
 					baseCurrencyRate = MConversionRate.getRate(C_Currency_ID, baseCurrencyId, dateAcct, C_ConversionType_ID, AD_Client_ID, AD_Org_ID);
 					if (baseCurrencyRate == null) 
@@ -364,7 +357,6 @@ public class CalloutPayment extends CalloutEngine
 			else
 			{
 				mTab.setValue(colName, oldValue);
-				mTab.fireDataStatusEEvent("Invalid", Msg.getElement(ctx, colName), true);
 				return "";
 			}			
 		}
@@ -380,17 +372,21 @@ public class CalloutPayment extends CalloutEngine
 					return "";
 				}
 				BigDecimal payAmt = (BigDecimal) mTab.getValue(I_C_Payment.COLUMNNAME_PayAmt);
-				if (payAmt != null)
+				if (payAmt != null && payAmt.signum() != 0)
 				{
-					BigDecimal baseCurrencyRate = convertedAmt.divide(payAmt, 6, RoundingMode.HALF_UP);
+					BigDecimal baseCurrencyRate = convertedAmt.divide(payAmt, 12, RoundingMode.HALF_UP);
 					mTab.setValue(I_C_Payment.COLUMNNAME_CurrencyRate, baseCurrencyRate);
+				}
+				else
+				{
+					// divide by zero
+					mTab.setValue(I_C_Payment.COLUMNNAME_CurrencyRate, null);
 				}
 				return "";
 			}
 			else
 			{
 				mTab.setValue(colName, oldValue);
-				mTab.fireDataStatusEEvent("Invalid", Msg.getElement(ctx, colName), true);
 				return "";
 			}
 		}
@@ -470,8 +466,6 @@ public class CalloutPayment extends CalloutEngine
 				AD_Org_ID);
 			if (CurrencyRate == null || CurrencyRate.compareTo (Env.ZERO) == 0)
 			{
-				// mTab.setValue("C_Currency_ID", new
-				// Integer(C_Currency_Invoice_ID)); // does not work
 				if (C_Currency_Invoice_ID == 0)
 					return ""; // no error message when no invoice is selected
 				return "NoCurrencyConversion";
@@ -589,34 +583,34 @@ public class CalloutPayment extends CalloutEngine
 
 		if (colName.equals(I_C_Payment.COLUMNNAME_C_Currency_ID) || colName.equals(I_C_Payment.COLUMNNAME_PayAmt) 
 				|| colName.equals(I_C_Payment.COLUMNNAME_IsOverrideCurrencyRate) ) {
-			Boolean override = (Boolean)(colName.equals(I_C_Payment.COLUMNNAME_IsOverrideCurrencyRate) ? value : mTab.getValue(I_C_Payment.COLUMNNAME_IsOverrideCurrencyRate));
-			if (override == null)
-				override = Boolean.FALSE;
-			int baseCurrencyId = Env.getContextAsInt(ctx, "$C_Currency_ID");
+			int baseCurrencyId = Env.getContextAsInt(ctx, Env.C_CURRENCY_ID);
 			if (baseCurrencyId == C_Currency_ID) {
 				mTab.setValue(I_C_Payment.COLUMNNAME_IsOverrideCurrencyRate, false);
 				mTab.setValue(I_C_Payment.COLUMNNAME_CurrencyRate, null);
 				mTab.setValue(I_C_Payment.COLUMNNAME_ConvertedAmt, null);
 			}
-			else if (!override) {
+			else if (!overrideCR) {
 				mTab.setValue(I_C_Payment.COLUMNNAME_CurrencyRate, null);
 				mTab.setValue(I_C_Payment.COLUMNNAME_ConvertedAmt, null);
 			} else {
 				BigDecimal payAmt = colName.equals(I_C_Payment.COLUMNNAME_PayAmt) ? (BigDecimal) value : (BigDecimal)mTab.getValue ("PayAmt");
 				if (payAmt == null)
 					return "";
-				if (colName.equals(I_C_Payment.COLUMNNAME_PayAmt) && oldValue != null) {
-					BigDecimal oldPayAmt = (BigDecimal) oldValue;
+				if (colName.equals(I_C_Payment.COLUMNNAME_PayAmt)) {
 					BigDecimal baseConversionRate = (BigDecimal) mTab.getValue(I_C_Payment.COLUMNNAME_CurrencyRate);
 					BigDecimal converted = (BigDecimal) mTab.getValue(I_C_Payment.COLUMNNAME_ConvertedAmt);
-					if (baseConversionRate != null && converted != null && oldPayAmt.multiply(baseConversionRate).compareTo(converted)==0) {
-						converted = payAmt.multiply(baseConversionRate);
-						int stdPrecision = MCurrency.getStdPrecision(ctx, baseCurrencyId);
-						if (converted.scale() > stdPrecision)
-							converted = converted.setScale(stdPrecision, RoundingMode.HALF_UP);
-						mTab.setValue(I_C_Payment.COLUMNNAME_ConvertedAmt, converted);
+					if (baseConversionRate == null) {
+						if (converted != null) {
+							baseConversionRate = converted.divide(payAmt, 12, RoundingMode.HALF_UP);
+							mTab.setValue(I_C_Payment.COLUMNNAME_CurrencyRate, baseConversionRate);
+						}
 						return "";
 					}
+					converted = payAmt.multiply(baseConversionRate);
+					int stdPrecision = MCurrency.getStdPrecision(ctx, baseCurrencyId);
+					if (converted.scale() > stdPrecision)
+						converted = converted.setScale(stdPrecision, RoundingMode.HALF_UP);
+					mTab.setValue(I_C_Payment.COLUMNNAME_ConvertedAmt, converted);
 				}
 			}
 		}

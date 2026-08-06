@@ -24,19 +24,22 @@ import java.util.List;
 import java.util.logging.Level;
 
 import javax.xml.transform.sax.TransformerHandler;
+import org.adempiere.pipo2.IPackSerializer;
 
 import org.adempiere.pipo2.AbstractElementHandler;
+import org.adempiere.pipo2.Element;
 import org.adempiere.pipo2.ElementHandler;
 import org.adempiere.pipo2.PIPOContext;
-import org.adempiere.pipo2.PoExporter;
-import org.adempiere.pipo2.Element;
 import org.adempiere.pipo2.PackOut;
+import org.adempiere.pipo2.PoExporter;
 import org.adempiere.pipo2.PoFiller;
 import org.adempiere.pipo2.exception.DatabaseAccessException;
 import org.adempiere.pipo2.exception.POSaveFailedException;
 import org.compiere.model.I_AD_Color;
 import org.compiere.model.I_AD_Image;
+import org.compiere.model.I_AD_TableAttribute;
 import org.compiere.model.I_AD_Window;
+import org.compiere.model.MPackageImpDetail;
 import org.compiere.model.MWindow;
 import org.compiere.model.X_AD_Package_Exp_Detail;
 import org.compiere.model.X_AD_Package_Imp_Detail;
@@ -85,9 +88,9 @@ public class WindowElementHandler extends AbstractElementHandler {
 				String action = null;
 				if (!mWindow.is_new()) {
 					backupRecord(ctx, impDetail.getAD_Package_Imp_Detail_ID(), X_AD_Window.Table_Name, mWindow);
-					action = "Update";
+					action = MPackageImpDetail.ACTION_UPDATE;
 				} else {
-					action = "New";
+					action = MPackageImpDetail.ACTION_INSERT;
 				}
 				if (mWindow.save(getTrxName(ctx)) == true) {
 					logImportDetail(ctx, impDetail, 1, mWindow.getName(), mWindow
@@ -109,8 +112,8 @@ public class WindowElementHandler extends AbstractElementHandler {
 	public void endElement(PIPOContext ctx, Element element) throws SAXException {
 	}
 
-	public void create(PIPOContext ctx, TransformerHandler document)
-			throws SAXException {
+	public void create(PIPOContext ctx, IPackSerializer document)
+			throws Exception {
 		int AD_Window_ID = Env.getContextAsInt(ctx.ctx, "AD_Window_ID");
 		if (ctx.packOut.isExported("AD_Window_ID"+"|"+AD_Window_ID))
 			return;
@@ -149,7 +152,7 @@ public class WindowElementHandler extends AbstractElementHandler {
 			verifyPackOutRequirement(m_Window);
 			AttributesImpl atts = new AttributesImpl();
 			addTypeName(atts, "table");
-			document.startElement("", "", I_AD_Window.Table_Name, atts);
+			document.startElement(I_AD_Window.Table_Name, atts);
 			createWindowBinding(ctx, document, m_Window);
 			packOut.getCtx().ctx.put("Table_Name",X_AD_Window.Table_Name);
 			try {
@@ -158,6 +161,19 @@ public class WindowElementHandler extends AbstractElementHandler {
 				if (log.isLoggable(Level.INFO)) log.info(e.toString());
 			}
 		}
+		
+		packOut.getCtx().ctx.put("Table_Name", X_AD_Window.Table_Name);
+		try
+		{
+			ElementHandler handler = packOut.getHandler(I_AD_TableAttribute.Table_Name);
+			handler.packOut(packOut, document, null, m_Window.get_ID());
+		}
+		catch (Exception e)
+		{
+			if (log.isLoggable(Level.INFO))
+				log.info(e.toString());
+		}
+		
 		// Tab Tag
 		String sql = "SELECT AD_Tab_ID, AD_Table_ID FROM AD_TAB WHERE AD_WINDOW_ID = "
 				+ AD_Window_ID;
@@ -187,7 +203,7 @@ public class WindowElementHandler extends AbstractElementHandler {
 		}
 
 		if (createElement) {
-			document.endElement("", "", X_AD_Window.Table_Name);
+			document.endElement(X_AD_Window.Table_Name);
 		}
 
 		// Preference Tag
@@ -217,22 +233,22 @@ public class WindowElementHandler extends AbstractElementHandler {
 		}
 	}
 
-	private void createPreference(PIPOContext ctx, TransformerHandler document,
-			int AD_Preference_ID) throws SAXException {
+	private void createPreference(PIPOContext ctx, IPackSerializer document,
+			int AD_Preference_ID) throws Exception {
 		Env.setContext(ctx.ctx, X_AD_Preference.COLUMNNAME_AD_Preference_ID,
 				AD_Preference_ID);
 		preferenceHandler.create(ctx, document);
 		ctx.ctx.remove(X_AD_Preference.COLUMNNAME_AD_Preference_ID);
 	}
 
-	private void createTab(PIPOContext ctx, TransformerHandler document,
-			int AD_Tab_ID) throws SAXException {
+	private void createTab(PIPOContext ctx, IPackSerializer document,
+			int AD_Tab_ID) throws Exception {
 		Env.setContext(ctx.ctx, X_AD_Tab.COLUMNNAME_AD_Tab_ID, AD_Tab_ID);
 		tabHandler.create(ctx, document);
 		ctx.ctx.remove(X_AD_Tab.COLUMNNAME_AD_Tab_ID);
 	}
 
-	private void createWindowBinding(PIPOContext ctx, TransformerHandler document,
+	private void createWindowBinding(PIPOContext ctx, IPackSerializer document,
 			X_AD_Window m_Window) {
 		PoExporter filler = new PoExporter(ctx, document, m_Window);
 		List<String> excludes = defaultExcludeList(X_AD_Window.Table_Name);
@@ -243,10 +259,10 @@ public class WindowElementHandler extends AbstractElementHandler {
 		filler.export(excludes);
 	}
 
-	public void packOut(PackOut packout, TransformerHandler packoutHandler, TransformerHandler docHandler,int recordId) throws Exception
+	public void packOut(PackOut packout, IPackSerializer packoutSerializer, TransformerHandler docHandler,int recordId) throws Exception
 	{
 		Env.setContext(packout.getCtx().ctx, X_AD_Package_Exp_Detail.COLUMNNAME_AD_Window_ID, recordId);
-		this.create(packout.getCtx(), packoutHandler);
+		this.create(packout.getCtx(), packoutSerializer);
 		packout.getCtx().ctx.remove(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Window_ID);
 	}
 }

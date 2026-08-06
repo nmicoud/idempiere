@@ -17,7 +17,8 @@
 
 package org.adempiere.webui.editor;
 
-import java.beans.PropertyChangeEvent;
+import static org.compiere.model.SystemIDs.WINDOW_WAREHOUSE_LOCATOR;
+
 import java.beans.PropertyChangeListener;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -35,6 +36,7 @@ import org.adempiere.webui.event.ContextMenuListener;
 import org.adempiere.webui.event.DialogEvents;
 import org.adempiere.webui.event.ValueChangeEvent;
 import org.adempiere.webui.theme.ThemeManager;
+import org.adempiere.webui.util.Icon;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.adempiere.webui.window.WFieldRecordInfo;
 import org.adempiere.webui.window.WLocatorDialog;
@@ -45,9 +47,10 @@ import org.compiere.model.MQuery;
 import org.compiere.model.MRole;
 import org.compiere.model.MTable;
 import org.compiere.model.MWarehouse;
-import static org.compiere.model.SystemIDs.*;
+import org.compiere.model.X_M_MovementLine;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
+import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.zkoss.zk.ui.event.Event;
@@ -55,25 +58,26 @@ import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 
 /**
- * Locator Editor : Based on VLocator
+ * Default editor for {@link DisplayType#Locator}.<br/>
+ * Implemented with {@link EditorBox} component and {@link WLocatorDialog}.
  * 
  * @author  Niraj Sohun
  * @date    Jul 23, 2007
  */
-
 public class WLocatorEditor extends WEditor implements EventListener<Event>, PropertyChangeListener, ContextMenuListener, IZoomableEditor
 {
 	private static final String[] LISTENER_EVENTS = {Events.ON_CLICK};
     
 	private MLocatorLookup m_mLocator;
+	/** M_Locator_ID */
 	private Object m_value;
 	private int m_WindowNo;
 	
 	private static final CLogger log = CLogger.getCLogger(WLocatorEditor.class);
-	/**
-	 *  IDE Constructor
-	 */
 	
+	/**
+	 * Default Constructor
+	 */
 	public WLocatorEditor()
 	{
 		this("M_Locator_ID", false, false, true, null, 0);
@@ -87,9 +91,8 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
 	 *	@param isReadOnly read only
 	 *	@param isUpdateable updateable
 	 *	@param mLocator locator (lookup) model
-	 * 	@param WindowNo window no
-	 */
-	
+	 * 	@param windowNo window no
+	 */	
 	public WLocatorEditor(	String columnName, boolean mandatory, boolean isReadOnly, 
 							boolean isUpdateable, MLocatorLookup mLocator, int windowNo)
 	{
@@ -98,13 +101,13 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
 		setColumnName(columnName);
 		m_mLocator = mLocator;
 		if (ThemeManager.isUseFontIconForImage())
-			getComponent().getButton().setIconSclass("z-icon-Locator");
+			getComponent().getButton().setIconSclass(Icon.getIconSclass(Icon.LOCATOR));
 		else
 			getComponent().setButtonImage(ThemeManager.getThemeResource("images/Locator16.png"));
 		getComponent().getTextbox().setReadonly(true);
 
-		m_WindowNo = windowNo;	//Yvonne: move it b4 setDefault_Locator_ID()
-		setDefault_Locator_ID(); // set default locator, teo_sarca [ 1661546 ]
+		m_WindowNo = windowNo;	
+		setDefault_Locator_ID();
 	}
 	
 	/**
@@ -126,12 +129,12 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
 		m_mLocator = (MLocatorLookup)gridField.getLookup();
 		
 		if (ThemeManager.isUseFontIconForImage())
-			getComponent().getButton().setIconSclass("z-icon-Locator");
+			getComponent().getButton().setIconSclass(Icon.getIconSclass(Icon.LOCATOR));
 		else
 			getComponent().setButtonImage(ThemeManager.getThemeResource("images/Locator16.png"));
 		getComponent().getTextbox().setReadonly(true);
 		
-		setDefault_Locator_ID(); // set default locator, teo_sarca [ 1661546 ]
+		setDefault_Locator_ID();
 		
 		m_WindowNo = gridField.getWindowNo();
 		
@@ -143,6 +146,10 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
         }					
 	}
 
+	/**
+	 * @param value
+	 */
+	@Override
 	public void setValue(Object value)
 	{
 		setValue (value, false);
@@ -150,10 +157,9 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
 
 	/**
 	 * 	Set Value
-	 *	@param value value
-	 *	@param fire data binding
-	 */
-	
+	 *	@param value new value
+	 *	@param fire true to fire value change event
+	 */	
 	private void setValue (Object value, boolean fire)
 	{
 		if(m_mLocator==null)
@@ -184,8 +190,7 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
 	/**
 	 *	Return Editor value
 	 *  @return value
-	 */
-	
+	 */	
 	public Object getValue()
 	{
 		if (getM_Locator_ID() == 0)
@@ -212,9 +217,8 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
 
 	/**
 	 * 	Get M_Locator_ID
-	 *	@return id
-	 */
-	
+	 *	@return M_Locator_ID
+	 */	
 	public int getM_Locator_ID()
 	{
 		if (m_value != null 
@@ -225,15 +229,16 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
 	} // getM_Locator_ID
 
 	/**
-	 *  Return Display Value
-	 *  @return display value
+	 *  Return Display text
+	 *  @return display text
 	 */
-	
+	@Override
 	public String getDisplay()
 	{
 		return getComponent().getText();
 	} // getDisplay
 
+	@Override
 	public void onEvent(Event event) throws Exception
 	{
 		if (Events.ON_CLICK.equalsIgnoreCase(event.getName()))
@@ -242,15 +247,13 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
 			int only_Warehouse_ID = getOnly_Warehouse_ID();
 			int only_Product_ID = getOnly_Product_ID();
 			
-			if (log.isLoggable(Level.CONFIG)) log.config("Only Warehouse_ID=" + only_Warehouse_ID	+ ", Product_ID=" + only_Product_ID);
+			if (log.isLoggable(Level.CONFIG)) log.config("Only Warehouse_ID=" + only_Warehouse_ID	+ ", Only Product_ID=" + only_Product_ID);
 	
-			//	Text Entry ok
-			
+			//	Text Entry ok			
 			if (event.getTarget() == getComponent() && actionText(only_Warehouse_ID, only_Product_ID))
 				return;
 	
-			//	 Button - Start Dialog
-			
+			//	 Button - Start Dialog			
 			int M_Locator_ID = 0;
 			
 			if (m_value instanceof Integer)
@@ -266,8 +269,7 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
 				@Override
 				public void onEvent(Event event) throws Exception {
 					m_mLocator.setOnly_Warehouse_ID(0);
-					// redisplay
-					
+					// redisplay					
 					if (!ld.isChanged())
 						return;
 					setValue (ld.getValue(), true);
@@ -298,6 +300,9 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
 		}
 	}
 	
+	/**
+	 * Refresh MLocator lookup
+	 */
 	public void actionRefresh()
     {    	
 		if (m_mLocator != null)
@@ -313,13 +318,12 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
         }
     }
 	
+	@Override
 	public void actionZoom()
 	{
 		int AD_Window_ID = MTable.get(Env.getCtx(), MLocator.Table_ID).getAD_Window_ID();
 		if (AD_Window_ID <= 0)
 			AD_Window_ID = WINDOW_WAREHOUSE_LOCATOR;	//	hardcoded window Warehouse & Locators
-		log.info("");
-		//
 		
 		MQuery zoomQuery = new MQuery();
 		zoomQuery.addRestriction(MLocator.COLUMNNAME_M_Locator_ID, MQuery.EQUAL, getValue());
@@ -328,6 +332,7 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
     	AEnv.zoom(AD_Window_ID, zoomQuery);
 	}
 	
+	@Override
 	public void onMenu(ContextMenuEvent evt) 
 	{
 		if (WEditorPopupMenu.REQUERY_EVENT.equals(evt.getContextEvent()))
@@ -350,19 +355,18 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
 	}
 	
 	/**
-	 * 	Hit Enter in Text Field
+	 * 	Process input text from user
 	 * 	@param only_Warehouse_ID if not 0 restrict warehouse
 	 * 	@param only_Product_ID of not 0 restricted product
 	 * 	@return true if found
-	 */
-	
+	 */	
 	private boolean actionText(int only_Warehouse_ID, int only_Product_ID)
 	{
 		String text = getComponent().getText();
-		log.fine(text);
+		if (log.isLoggable(Level.FINE))
+			log.fine(text);
 		
-		//	Null
-		
+		//	Null		
 		if (text == null || text.length() == 0)
 		{
 			if (isMandatory())
@@ -379,8 +383,7 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
 		else
 			text = text.toUpperCase() + "%";
 		
-		//	Look up - see MLocatorLookup.run
-		
+		//	Look up - see MLocatorLookup.run		
 		StringBuffer sql = new StringBuffer("SELECT M_Locator_ID FROM M_Locator ")
 			.append(" WHERE IsActive='Y' AND UPPER(Value) LIKE ")
 			.append(DB.TO_STRING(text));
@@ -391,7 +394,7 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
 		if (getOnly_Product_ID() != 0)
 			sql.append(" AND (IsDefault='Y' ")						//	Default Locator
 				.append("OR EXISTS (SELECT * FROM M_Product p ")	//	Product Locator
-				.append("WHERE p.M_Locator_ID=M_Locator.M_Locator_ID AND p.M_Product_ID=?)")
+				.append("WHERE p.M_Locator_ID=M_Locator.M_Locator_ID AND p.M_Product_ID=?) ")
 				.append("OR EXISTS (SELECT * FROM M_StorageOnHand s ")	//	Storage Locator
 				.append("WHERE s.M_Locator_ID=M_Locator.M_Locator_ID AND s.M_Product_ID=?))");
 		
@@ -452,26 +455,28 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
 	} // actionText
 	
 	/**
-	 *  Set Field/WindowNo for ValuePreference (NOP)
-	 *  @param mField Model Field
-	 */
-	
-	public void setField (org.compiere.model.GridField mField)
-	{
-	} // setField
-	
-	/**
 	 * 	Get Warehouse restriction if any.
 	 *	@return	M_Warehouse_ID or 0
-	 */
-	
-	private int getOnly_Warehouse_ID()
+	 */	
+	protected int getOnly_Warehouse_ID()
 	{
-		String only_Warehouse = null;
-		if (gridField != null && gridField.getVO().TabNo > 0)
-			only_Warehouse = Env.getContext(Env.getCtx(), m_WindowNo, gridField.getVO().TabNo, "M_Warehouse_ID", false, true);
+		//IDEMPIERE-4882 : Load Locator To field value as per Warehouse TO field value
+		String only_Warehouse=null;
+		if (gridField!=null && X_M_MovementLine.COLUMNNAME_M_LocatorTo_ID.equals(gridField.getColumnName()))
+		{
+			if(gridField.getVO().TabNo>0) 
+				only_Warehouse = Env.getContext(Env.getCtx(), m_WindowNo, gridField.getVO().TabNo, "M_WarehouseTo_ID", false, true);
+			else
+				only_Warehouse = Env.getContext(Env.getCtx(), m_WindowNo, "M_WarehouseTo_ID", true);
+		}
 		else
-			only_Warehouse = Env.getContext(Env.getCtx(), m_WindowNo, "M_Warehouse_ID", true);
+		{
+			if(gridField!=null && gridField.getVO().TabNo>0) 
+				only_Warehouse = Env.getContext(Env.getCtx(), m_WindowNo, gridField.getVO().TabNo, "M_Warehouse_ID", false, true);
+			else
+				only_Warehouse = Env.getContext(Env.getCtx(), m_WindowNo, "M_Warehouse_ID", true);
+		}
+		
 		int only_Warehouse_ID = 0;
 	
 		try
@@ -481,6 +486,7 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
 		}
 		catch (Exception ex)
 		{
+			log.log(Level.WARNING, ex.getMessage(), ex);
 		}
 		
 		return only_Warehouse_ID;
@@ -489,12 +495,15 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
 	/**
 	 * 	Get Product restriction if any.
 	 *	@return	M_Product_ID or 0
-	 */
-	
-	private int getOnly_Product_ID()
+	 */	
+	protected int getOnly_Product_ID()
 	{
 		if (!Env.isSOTrx(Env.getCtx(), m_WindowNo))
 			return 0; // No product restrictions for PO
+
+		String ignoreProduct = Env.getContext(Env.getCtx(), m_WindowNo, Env.PREFIX_PREDEFINED_VARIABLE+"IgnoreProductInLocatorEditor");
+		if ("Y".equalsIgnoreCase(ignoreProduct))
+			return 0;
 
 		String only_Product = null;
 		if (gridField != null && gridField.getVO().TabNo > 0)
@@ -510,6 +519,7 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
 		}
 		catch (Exception ex)
 		{
+			log.log(Level.WARNING, ex.getMessage(), ex);
 		}
 		return only_Product_ID;
 	} // getOnly_Product_ID
@@ -519,12 +529,10 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
 	 * and we have a warehouse restriction.
 	 * 
 	 * @since 3.1.4
-	 */
-	
+	 */	
 	private void setDefault_Locator_ID()
 	{
-		// teo_sarca, FR [ 1661546 ] Mandatory locator fields should use defaults
-		
+		// teo_sarca, FR [ 1661546 ] Mandatory locator fields should use defaults		
 		if (!isMandatory() || m_mLocator == null) 
 		{
 			return;
@@ -554,20 +562,10 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
 		setValue(Integer.valueOf(loc.get_ID()));
 	}
 	
-	 /**
-     *  Property Change Listener
-     *  @param evt PropertyChangeEvent
-     */
-	
-    public void propertyChange (PropertyChangeEvent evt)
-    {
-        if (evt.getPropertyName().equals(org.compiere.model.GridField.PROPERTY))
-            setValue(evt.getNewValue());
-    }
-
     /**
      * return listener events to be associated with editor component
      */
+	@Override
     public String[] getEvents()
     {
         return LISTENER_EVENTS;
@@ -583,5 +581,12 @@ public class WLocatorEditor extends WEditor implements EventListener<Event>, Pro
 	public void dynamicDisplay(Properties ctx) {
 		super.dynamicDisplay(ctx);
 		m_mLocator.dynamicDisplay(ctx);
+	}
+
+	/**
+	 * @return {@link MLocatorLookup}
+	 */
+	public MLocatorLookup getMLocatorLookup() {
+		return m_mLocator;
 	}
 }

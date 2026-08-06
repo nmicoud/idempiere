@@ -23,7 +23,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for PP_Order_Node
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 @SuppressWarnings("all")
 public interface I_PP_Order_Node 
@@ -43,24 +43,11 @@ public interface I_PP_Order_Node
 
     /** Load Meta Data */
 
-    /** Column name Action */
-    public static final String COLUMNNAME_Action = "Action";
-
-	/** Set Action.
-	  * Indicates the Action to be performed
-	  */
-	public void setAction (String Action);
-
-	/** Get Action.
-	  * Indicates the Action to be performed
-	  */
-	public String getAction();
-
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -77,6 +64,7 @@ public interface I_PP_Order_Node
 	  */
 	public int getAD_Column_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Column getAD_Column() throws RuntimeException;
 
     /** Column name AD_Form_ID */
@@ -92,6 +80,7 @@ public interface I_PP_Order_Node
 	  */
 	public int getAD_Form_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Form getAD_Form() throws RuntimeException;
 
     /** Column name AD_Image_ID */
@@ -107,18 +96,19 @@ public interface I_PP_Order_Node
 	  */
 	public int getAD_Image_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Image getAD_Image() throws RuntimeException;
 
     /** Column name AD_Org_ID */
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -135,6 +125,7 @@ public interface I_PP_Order_Node
 	  */
 	public int getAD_Process_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Process getAD_Process() throws RuntimeException;
 
     /** Column name AD_Task_ID */
@@ -150,6 +141,7 @@ public interface I_PP_Order_Node
 	  */
 	public int getAD_Task_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Task getAD_Task() throws RuntimeException;
 
     /** Column name AD_WF_Block_ID */
@@ -165,6 +157,7 @@ public interface I_PP_Order_Node
 	  */
 	public int getAD_WF_Block_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_WF_Block getAD_WF_Block() throws RuntimeException;
 
     /** Column name AD_WF_Node_ID */
@@ -180,6 +173,7 @@ public interface I_PP_Order_Node
 	  */
 	public int getAD_WF_Node_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_WF_Node getAD_WF_Node() throws RuntimeException;
 
     /** Column name AD_WF_Responsible_ID */
@@ -195,6 +189,7 @@ public interface I_PP_Order_Node
 	  */
 	public int getAD_WF_Responsible_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_WF_Responsible getAD_WF_Responsible() throws RuntimeException;
 
     /** Column name AD_Window_ID */
@@ -210,6 +205,7 @@ public interface I_PP_Order_Node
 	  */
 	public int getAD_Window_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Window getAD_Window() throws RuntimeException;
 
     /** Column name AD_Workflow_ID */
@@ -225,7 +221,21 @@ public interface I_PP_Order_Node
 	  */
 	public int getAD_Workflow_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Workflow getAD_Workflow() throws RuntimeException;
+
+    /** Column name Action */
+    public static final String COLUMNNAME_Action = "Action";
+
+	/** Set Action.
+	  * Indicates the Action to be performed
+	  */
+	public void setAction (String Action);
+
+	/** Get Action.
+	  * Indicates the Action to be performed
+	  */
+	public String getAction();
 
     /** Column name AttributeName */
     public static final String COLUMNNAME_AttributeName = "AttributeName";
@@ -256,16 +266,17 @@ public interface I_PP_Order_Node
     /** Column name C_BPartner_ID */
     public static final String COLUMNNAME_C_BPartner_ID = "C_BPartner_ID";
 
-	/** Set Business Partner .
+	/** Set Business Partner.
 	  * Identifies a Business Partner
 	  */
 	public void setC_BPartner_ID (int C_BPartner_ID);
 
-	/** Get Business Partner .
+	/** Get Business Partner.
 	  * Identifies a Business Partner
 	  */
 	public int getC_BPartner_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_BPartner getC_BPartner() throws RuntimeException;
 
     /** Column name Cost */
@@ -413,10 +424,10 @@ public interface I_PP_Order_Node
     /** Column name DurationRequiered */
     public static final String COLUMNNAME_DurationRequiered = "DurationRequiered";
 
-	/** Set Duration Requiered	  */
+	/** Set Duration Required	  */
 	public void setDurationRequiered (int DurationRequiered);
 
-	/** Get Duration Requiered	  */
+	/** Get Duration Required	  */
 	public int getDurationRequiered();
 
     /** Column name EntityType */
@@ -578,6 +589,7 @@ public interface I_PP_Order_Node
 	  */
 	public int getPP_Order_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.eevolution.model.I_PP_Order getPP_Order() throws RuntimeException;
 
     /** Column name PP_Order_Node_ID */
@@ -611,6 +623,7 @@ public interface I_PP_Order_Node
 	/** Get Manufacturing Order Workflow	  */
 	public int getPP_Order_Workflow_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.eevolution.model.I_PP_Order_Workflow getPP_Order_Workflow() throws RuntimeException;
 
     /** Column name Priority */
@@ -651,22 +664,22 @@ public interface I_PP_Order_Node
     /** Column name QtyRequiered */
     public static final String COLUMNNAME_QtyRequiered = "QtyRequiered";
 
-	/** Set Qty Requiered	  */
+	/** Set Qty Required	  */
 	public void setQtyRequiered (BigDecimal QtyRequiered);
 
-	/** Get Qty Requiered	  */
+	/** Get Qty Required	  */
 	public BigDecimal getQtyRequiered();
 
     /** Column name QtyScrap */
     public static final String COLUMNNAME_QtyScrap = "QtyScrap";
 
 	/** Set Scrap %.
-	  * Scrap % Quantity for this componet
+	  * Scrap % Quantity for this component
 	  */
 	public void setQtyScrap (BigDecimal QtyScrap);
 
 	/** Get Scrap %.
-	  * Scrap % Quantity for this componet
+	  * Scrap % Quantity for this component
 	  */
 	public BigDecimal getQtyScrap();
 
@@ -682,6 +695,22 @@ public interface I_PP_Order_Node
 	  * Queue time is the time a job waits at a work center before begin handled.
 	  */
 	public int getQueuingTime();
+
+    /** Column name S_Resource_ID */
+    public static final String COLUMNNAME_S_Resource_ID = "S_Resource_ID";
+
+	/** Set Resource.
+	  * Resource
+	  */
+	public void setS_Resource_ID (int S_Resource_ID);
+
+	/** Get Resource.
+	  * Resource
+	  */
+	public int getS_Resource_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_S_Resource getS_Resource() throws RuntimeException;
 
     /** Column name SetupTime */
     public static final String COLUMNNAME_SetupTime = "SetupTime";
@@ -708,10 +737,10 @@ public interface I_PP_Order_Node
     /** Column name SetupTimeRequiered */
     public static final String COLUMNNAME_SetupTimeRequiered = "SetupTimeRequiered";
 
-	/** Set Setup Time Requiered	  */
+	/** Set Setup Time Required	  */
 	public void setSetupTimeRequiered (int SetupTimeRequiered);
 
-	/** Get Setup Time Requiered	  */
+	/** Get Setup Time Required	  */
 	public int getSetupTimeRequiered();
 
     /** Column name SplitElement */
@@ -726,21 +755,6 @@ public interface I_PP_Order_Node
 	  * Semantics for multiple outgoing Transitions
 	  */
 	public String getSplitElement();
-
-    /** Column name S_Resource_ID */
-    public static final String COLUMNNAME_S_Resource_ID = "S_Resource_ID";
-
-	/** Set Resource.
-	  * Resource
-	  */
-	public void setS_Resource_ID (int S_Resource_ID);
-
-	/** Get Resource.
-	  * Resource
-	  */
-	public int getS_Resource_ID();
-
-	public org.compiere.model.I_S_Resource getS_Resource() throws RuntimeException;
 
     /** Column name StartMode */
     public static final String COLUMNNAME_StartMode = "StartMode";
@@ -862,6 +876,7 @@ public interface I_PP_Order_Node
 	  */
 	public int getWorkflow_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Workflow getWorkflow() throws RuntimeException;
 
     /** Column name WorkingTime */
@@ -890,19 +905,6 @@ public interface I_PP_Order_Node
 	  */
 	public int getXPosition();
 
-    /** Column name Yield */
-    public static final String COLUMNNAME_Yield = "Yield";
-
-	/** Set Yield %.
-	  * The Yield is the percentage of a lot that is expected to be of acceptable wuality may fall below 100 percent
-	  */
-	public void setYield (int Yield);
-
-	/** Get Yield %.
-	  * The Yield is the percentage of a lot that is expected to be of acceptable wuality may fall below 100 percent
-	  */
-	public int getYield();
-
     /** Column name YPosition */
     public static final String COLUMNNAME_YPosition = "YPosition";
 
@@ -915,4 +917,17 @@ public interface I_PP_Order_Node
 	  * Absolute Y (vertical) position in 1/72 of an inch
 	  */
 	public int getYPosition();
+
+    /** Column name Yield */
+    public static final String COLUMNNAME_Yield = "Yield";
+
+	/** Set Yield %.
+	  * The Yield is the percentage of a lot that is expected to be of acceptable wuality may fall below 100 percent
+	  */
+	public void setYield (int Yield);
+
+	/** Get Yield %.
+	  * The Yield is the percentage of a lot that is expected to be of acceptable wuality may fall below 100 percent
+	  */
+	public int getYield();
 }

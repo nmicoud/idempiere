@@ -90,7 +90,37 @@ public interface DocAction
 
 	/** DocAction Ref_List values **/
 	public static final int AD_REFERENCE_ID = SystemIDs.REFERENCE_DOCUMENTACTION;
-	
+
+	/* Common Document columns */
+	/** Column name DocAction */
+	public static final String DOC_COLUMNNAME_DocAction = "DocAction";
+	/** Column name DocStatus */
+	public static final String DOC_COLUMNNAME_DocStatus = "DocStatus";
+	/** Column name Processing */
+	public static final String DOC_COLUMNNAME_Processing = "Processing";
+	/** Column name C_DocTypeTarget_ID */
+	public static final String DOC_COLUMNNAME_C_DocTypeTarget_ID = "C_DocTypeTarget_ID";
+	/** Column name C_DocType_ID */
+	public static final String DOC_COLUMNNAME_C_DocType_ID = "C_DocType_ID";
+	/** Column name DateAcct */
+	public static final String DOC_COLUMNNAME_DateAcct = "DateAcct";
+	/** Column name DateTrx */
+	public static final String DOC_COLUMNNAME_DateTrx = "DateTrx";
+	/** Column name IsApproved */
+	public static final String DOC_COLUMNNAME_IsApproved = "IsApproved";
+	/** Column name Processed */
+	public static final String DOC_COLUMNNAME_Processed = "Processed";
+	/** Column name DocumentNo */
+	public static final String DOC_COLUMNNAME_DocumentNo = "DocumentNo";
+	/** Column name Description */
+	public static final String DOC_COLUMNNAME_Description = "Description";
+	/** Column name SalesRep_ID */
+	public static final String DOC_COLUMNNAME_SalesRep_ID = "SalesRep_ID";
+	/** Column name AD_User_ID */
+	public static final String DOC_COLUMNNAME_AD_User_ID = "AD_User_ID";
+	/** Column name C_Currency_ID */
+	public static final String DOC_COLUMNNAME_C_Currency_ID = "C_Currency_ID";
+
 	/**
 	 * 	Set Doc Status
 	 *	@param newStatus new Status
@@ -102,10 +132,9 @@ public interface DocAction
 	 *	@return Document Status
 	 */
 	public String getDocStatus();
-	
-	
-	/*************************************************************************
-	 * 	Process document
+		
+	/**
+	 * 	Process document with document action
 	 *	@param action document action
 	 *	@return true if performed
 	 *	@throws Exception
@@ -117,58 +146,68 @@ public interface DocAction
 	 * 	@return true if success 
 	 */
 	public boolean unlockIt();
+	
 	/**
 	 * 	Invalidate Document
 	 * 	@return true if success 
 	 */
 	public boolean invalidateIt();
+	
 	/**
-	 *	Prepare Document
+	 *	Prepare Document for a document action
 	 * 	@return new status (In Progress or Invalid) 
 	 */
 	public String prepareIt();
+	
 	/**
 	 * 	Approve Document
 	 * 	@return true if success 
 	 */
 	public boolean  approveIt();
+	
 	/**
 	 * 	Reject Approval
 	 * 	@return true if success 
 	 */
 	public boolean rejectIt();
+	
 	/**
 	 * 	Complete Document
 	 * 	@return new status (Complete, In Progress, Invalid, Waiting ..)
 	 */
 	public String completeIt();
+	
 	/**
 	 * 	Void Document
 	 * 	@return true if success 
 	 */
 	public boolean voidIt();
+	
 	/**
 	 * 	Close Document
 	 * 	@return true if success 
 	 */
 	public boolean closeIt();
+	
 	/**
 	 * 	Reverse Correction
 	 * 	@return true if success 
 	 */
 	public boolean reverseCorrectIt();
+	
 	/**
 	 * 	Reverse Accrual
 	 * 	@return true if success 
 	 */
 	public boolean reverseAccrualIt();
+	
 	/** 
-	 * 	Re-activate
+	 * 	Re-activate (typically from Complete to In Progress)
 	 * 	@return true if success 
 	 */
 	public boolean reActivateIt();
 
-	/**************************************************************************
+	/**
 	 * 	Get Summary
 	 *	@return Summary of Document
 	 */
@@ -193,7 +232,7 @@ public interface DocAction
 	public File createPDF ();
 	
 	/**
-	 * 	Get Process Message
+	 * 	Get Process Message from last execution of a document action
 	 *	@return clear text message
 	 */
 	public String getProcessMsg ();
@@ -241,8 +280,8 @@ public interface DocAction
 	public boolean save();
 	
 	/**
-	 * 	Save throwing exception
-	 * @throws AdempiereException
+	 * Save throwing exception
+	 * @throws AdempiereException if save fail
 	 * @see #save()
 	 */
 	public void saveEx() throws AdempiereException;

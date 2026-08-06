@@ -24,7 +24,15 @@ import java.util.Properties;
 import java.util.logging.Level;
 
 import org.adempiere.exceptions.AdempiereException;
+import org.compiere.model.MAccount;
+import org.compiere.model.MAttributeSetInstance;
+import org.compiere.model.MChart;
+import org.compiere.model.MColumn;
+import org.compiere.model.MImage;
+import org.compiere.model.MLocation;
+import org.compiere.model.MLocator;
 import org.compiere.model.MQuery;
+import org.compiere.model.MResourceAssignment;
 import org.compiere.model.MRole;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MTab;
@@ -32,12 +40,14 @@ import org.compiere.model.MTable;
 import org.compiere.model.PO;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
+import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Util;
+import org.idempiere.db.util.SQLFragment;
 
 /**
- * Generic provider of zoom targets. Contains pieces of {@link org.compiere.apps.AZoomAcross}
- * methods <code>getZoomTargets</code> and <code>addTarget</code>
+ * Generic provider of zoom targets. Contains pieces of {@link org.adempiere.webui.WZoomAcross}
+ * methods <code>getZoomTargets</code> and <code>addTarget</code>.
  * 
  * @author Tobias Schoeneberg, www.metas.de - FR [ 2897194  ] Advanced Zoom and RelationTypes
  * 
@@ -48,6 +58,7 @@ public class GenericZoomProvider implements IZoomProvider {
 
 	private Map<String, Integer> queries;
 
+	@Override
 	public List<ZoomInfoFactory.ZoomInfo> retrieveZoomInfos(PO po) {
 		// User preference
 		boolean detailedZoom = "Y".equals(Env.getContext(Env.getCtx(), "P|IsDetailedZoomAcross"));
@@ -98,9 +109,23 @@ public class GenericZoomProvider implements IZoomProvider {
 			+ "	AND t.IsView='N' "); // not views
 		if (detailedZoom) {
 			sqlb.append(
-					  " AND (    ( c.ColumnName=? AND c.AD_Reference_ID=19) " 
-					+ "       OR ( c.ColumnName=? AND c.AD_Reference_ID=30 AND c.AD_Reference_Value_ID IS NULL ) "
-					+ "       OR ( c.AD_Reference_ID IN (18, 30) AND c.AD_Reference_Value_ID=r.AD_Reference_ID AND tr.TableName=? ) ) "); 
+					  " AND (    ( c.ColumnName=? AND c.AD_Reference_ID IN (?,?)) "); // TableDir/TableDirUU
+			if (MLocation.COLUMNNAME_C_Location_ID.equals(po.get_KeyColumns()[0]))
+				sqlb.append(" OR c.AD_Reference_ID=").append(DisplayType.Location);
+			else if (MAccount.COLUMNNAME_C_ValidCombination_ID.equals(po.get_KeyColumns()[0]))
+				sqlb.append(" OR c.AD_Reference_ID=").append(DisplayType.Account);
+			else if (MLocator.COLUMNNAME_M_Locator_ID.equals(po.get_KeyColumns()[0]))
+				sqlb.append(" OR c.AD_Reference_ID=").append(DisplayType.Locator);
+			else if (MImage.COLUMNNAME_AD_Image_ID.equals(po.get_KeyColumns()[0]))
+				sqlb.append(" OR c.AD_Reference_ID=").append(DisplayType.Image);
+			else if (MResourceAssignment.COLUMNNAME_S_ResourceAssignment_ID.equals(po.get_KeyColumns()[0]))
+				sqlb.append(" OR c.AD_Reference_ID=").append(DisplayType.Assignment);
+			else if (MAttributeSetInstance.COLUMNNAME_M_AttributeSetInstance_ID.equals(po.get_KeyColumns()[0]))
+				sqlb.append(" OR c.AD_Reference_ID=").append(DisplayType.PAttribute);
+			else if (MChart.COLUMNNAME_AD_Chart_ID.equals(po.get_KeyColumns()[0]))
+				sqlb.append(" OR c.AD_Reference_ID=").append(DisplayType.Chart);
+			sqlb.append("     OR ( c.ColumnName=? AND c.AD_Reference_ID IN (?,?) AND c.AD_Reference_Value_ID IS NULL ) " // Search/SearchUU
+					+ "       OR ( c.AD_Reference_ID IN (?,?,?,?) AND c.AD_Reference_Value_ID=r.AD_Reference_ID AND tr.TableName=? ) ) "); // Table/Search/Table/SearchUU
 		} else  {
 			sqlb.append(" AND c.ColumnName=? ");
 		}
@@ -118,7 +143,15 @@ public class GenericZoomProvider implements IZoomProvider {
 			}
 			pstmt.setString(index++, po.get_KeyColumns()[0]);
 			if (detailedZoom) {
+				pstmt.setInt(index++, DisplayType.TableDir);
+				pstmt.setInt(index++, DisplayType.TableDirUU);
 				pstmt.setString(index++, po.get_KeyColumns()[0]);
+				pstmt.setInt(index++, DisplayType.Search);
+				pstmt.setInt(index++, DisplayType.SearchUU);
+				pstmt.setInt(index++, DisplayType.Table);
+				pstmt.setInt(index++, DisplayType.TableUU);
+				pstmt.setInt(index++, DisplayType.Search);
+				pstmt.setInt(index++, DisplayType.SearchUU);
 				pstmt.setString(index++, po.get_TableName());
 			}
 			rs = pstmt.executeQuery();
@@ -159,27 +192,36 @@ public class GenericZoomProvider implements IZoomProvider {
 		}
 	}
 
+	/**
+	 * 
+	 * @param targetTableName
+	 * @param targetColumnName
+	 * @param AD_Tab_ID
+	 * @param po
+	 * @return MQuery
+	 */
 	private MQuery evaluateQuery(String targetTableName, String targetColumnName, int AD_Tab_ID, final PO po) {
 		Properties ctx = Env.getCtx();
 		int clientID = Env.getAD_Client_ID(ctx);
 		
 		final MQuery query = new MQuery();
 		MTable table = MTable.get(ctx, targetTableName);
-		if (table.getColumnIndex("AD_Client_ID") < 0) // table doesn't have AD_Client_ID
+		if (! table.columnExistsInDB("AD_Client_ID")) // table doesn't have AD_Client_ID
 			return null;
 
 		int tabIDLoop = AD_Tab_ID;
 		int levelUp = 0;
 		while (true) {
-			MTab tab = new MTab(ctx, tabIDLoop, null);
+			MTab tab = MTab.get(tabIDLoop);
 			String whereCtx = tab.getWhereClause();
 			if (!Util.isEmpty(whereCtx, true)) {
+				List<Object> params = new ArrayList<Object>();
 				if (whereCtx.indexOf("@") != -1)
-					whereCtx = Env.parseVariable(whereCtx, po, null, true);
+					whereCtx = Env.parseVariableForSql(whereCtx, po, null, true, params);
 				if (whereCtx.indexOf("@") != -1) // could not parse - probably window context variable in where tab
 					return null;
 				if (levelUp == 0) {
-					query.addRestriction("(" + whereCtx + ")");
+					query.addRestriction(new SQLFragment("(" + whereCtx + ")", params));
 				} else if (levelUp == 1) {
 					MTable parentTable = MTable.get(ctx, tab.getAD_Table_ID());
 					String parentTableName = parentTable.getTableName();
@@ -192,7 +234,7 @@ public class GenericZoomProvider implements IZoomProvider {
 						.append(" WHERE ")
 						.append(whereCtx)
 						.append(")");
-					query.addRestriction("(" + subquery + ")");
+					query.addRestriction(new SQLFragment("(" + subquery + ")", params));
 				} else {
 					// Cannot add where beyond the first parent - need to implement recursion
 					return null;
@@ -204,10 +246,24 @@ public class GenericZoomProvider implements IZoomProvider {
 				break;
 		}
 
-		query.addRestriction(targetColumnName + "=" + po.get_ID());
+		MColumn column = table.getColumn(targetColumnName);
+		String refTableName = column.getReferenceTableName();
+		MTable refTable = MTable.get(ctx, refTableName);
+		List<Object> params = new ArrayList<Object>();
+		StringBuilder restriction = new StringBuilder(targetTableName)
+				.append(".")
+				.append(targetColumnName)
+				.append("=?");
+		if (refTable.isUUIDKeyTable()) {
+			params.add(po.get_UUID());
+			query.setZoomValue(po.get_UUID());
+		} else {
+			params.add(po.get_ID());
+			query.setZoomValue(po.get_ID());
+		}
+		query.addRestriction(new SQLFragment(restriction.toString(), params));
 		query.setZoomTableName(targetTableName);
 		query.setZoomColumnName(targetColumnName);
-		query.setZoomValue(po.get_ID());
 
 		String accessLevel = table.getAccessLevel();
 		if (   clientID != 0
@@ -217,29 +273,37 @@ public class GenericZoomProvider implements IZoomProvider {
 		if (   clientID != 0
 			&& ( MTable.ACCESSLEVEL_All.equals(accessLevel)
 			  || MTable.ACCESSLEVEL_SystemPlusClient.equals(accessLevel))) {
-			query.addRestriction("AD_Client_ID IN (0, " + clientID + ")");
+			query.addRestriction(new SQLFragment(targetTableName+".AD_Client_ID IN (?,?)", List.of(0, clientID)));
 		} else {
-			query.addRestriction("AD_Client_ID=" + clientID);
+			query.addRestriction(new SQLFragment(targetTableName+".AD_Client_ID=?", List.of(clientID)));
 		}
 
+		SQLFragment filter = query.getSQLFilter(true);
 		StringBuilder sqlb = new StringBuilder("SELECT COUNT(*) FROM ")
 				.append(targetTableName)
 				.append(" WHERE ")
-				.append(query.getWhereClause(true));
+				.append(filter.sqlClause());
 		String sql = sqlb.toString();
 		int count = -1;
-		if (queries.containsKey(sql)) {
-			count = queries.get(sql);
+		if (queries.containsKey(filter.toString())) {
+			count = queries.get(filter.toString());
 		} else {
 			int timeout = MSysConfig.getIntValue(MSysConfig.ZOOM_ACROSS_QUERY_TIMEOUT, 5, Env.getAD_Client_ID(Env.getCtx())); // default 5 seconds
-			count = getSQLValueTimeout(null, sql, timeout);
-			queries.put(sql, count);
+			count = getSQLValueTimeout(null, sql, timeout, filter.parameters());
+			queries.put(filter.toString(), count);
 		}
 		query.setRecordCount(count);
 		return query;
 	}
 
-	private int getSQLValueTimeout(Object object, String sql, int timeOut) {
+	/**
+	 * @param object
+	 * @param sql
+	 * @param timeOut
+	 * @param parameters 
+	 * @return sql value from DB
+	 */
+	private int getSQLValueTimeout(Object object, String sql, int timeOut, List<Object> parameters) {
     	int retValue = -1;
     	PreparedStatement pstmt = null;
     	ResultSet rs = null;
@@ -247,6 +311,9 @@ public class GenericZoomProvider implements IZoomProvider {
     		pstmt = DB.prepareStatement(sql, null);
 			if (timeOut > 0)
 				pstmt.setQueryTimeout(timeOut);
+			if (parameters != null && !parameters.isEmpty()) {
+				DB.setParameters(pstmt, parameters);
+			}
     		rs = pstmt.executeQuery();
     		if (rs.next())
     			retValue = rs.getInt(1);

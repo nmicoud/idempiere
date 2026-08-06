@@ -18,6 +18,8 @@ package org.adempiere.webui.panel;
 
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -42,7 +44,7 @@ import org.compiere.util.Msg;
 import org.compiere.util.Util;
 import org.zkoss.calendar.Calendars;
 import org.zkoss.calendar.event.CalendarsEvent;
-import org.zkoss.calendar.impl.SimpleCalendarEvent;
+import org.zkoss.calendar.impl.SimpleCalendarItem;
 import org.zkoss.calendar.impl.SimpleCalendarModel;
 import org.zkoss.util.Locales;
 import org.zkoss.zk.ui.Component;
@@ -57,11 +59,9 @@ import org.zkoss.zul.North;
 import org.zkoss.zul.South;
 
 /**
- *	Visual and Control Part of Schedule.
- *  Contains Time and Schedule Panels
+ *	Window to view and manage scheduling of resources (S_Resource and S_ResourceAssignment)
  *
  * 	@author 	Jorg Janke
- * 	@version 	$Id: VSchedule.java,v 1.3 2006/07/30 00:51:27 jjanke Exp $
  * 
  *  Zk Port
  *  @author Low Heng Sin
@@ -69,7 +69,7 @@ import org.zkoss.zul.South;
 public class WSchedule extends Window implements EventListener<Event>
 {
 	/**
-	 * 
+	 * generated serial id
 	 */
 	private static final long serialVersionUID = -4819513326165148245L;
 	private static final String ON_MOBILE_SET_SELECTED_TAB_ECHO = "onMobileSetSelectedTabEcho";
@@ -80,7 +80,6 @@ public class WSchedule extends Window implements EventListener<Event>
 	/**
 	 *	Constructor
 	 *  @param is InfoSchedule for call back
-	 *  @param type Type of schedule TYPE_...
 	 */
 	public WSchedule (InfoSchedule is)
 	{		
@@ -132,10 +131,10 @@ public class WSchedule extends Window implements EventListener<Event>
 	private Component btnRefresh;
 	
 	/**
-	 * 	Static init
+	 * 	Layout window
 	 *  <pre>
-	 * 	timePanel (West)
-	 *  schedlePanel (in schedulePane - Center)
+	 *  timePanel (West)
+	 *  schedulePanel (in schedulePane - Center)
 	 *  </pre>
 	 * 	@throws Exception
 	 */
@@ -166,9 +165,9 @@ public class WSchedule extends Window implements EventListener<Event>
 		TimeZone timezone = SessionManager.getAppDesktop().getClientInfo().timeZone;
 		calendars.addTimeZone(timezone.getID(), timezone);
 		
-		calendars.addEventListener(CalendarsEvent.ON_EVENT_CREATE, this);
-		calendars.addEventListener(CalendarsEvent.ON_EVENT_EDIT, this);
-		calendars.addEventListener(CalendarsEvent.ON_EVENT_UPDATE, this);
+		calendars.addEventListener(CalendarsEvent.ON_ITEM_CREATE, this);
+		calendars.addEventListener(CalendarsEvent.ON_ITEM_EDIT, this);
+		calendars.addEventListener(CalendarsEvent.ON_ITEM_UPDATE, this);
 		
 		this.appendChild(calendarContainer);		
 		
@@ -238,17 +237,22 @@ public class WSchedule extends Window implements EventListener<Event>
 	public void recreate (int S_Resource_ID, Date date)
 	{
 		this.S_Resource_ID = S_Resource_ID;
-		calendars.setCurrentDate(date);
-		
+		calendars.setCurrentDateTime(LocalDateTime.ofInstant(date.toInstant(),
+				calendars.getDefaultTimeZone().toZoneId()));
+
 		Events.echoEvent("onAfterReCreate", this, null);
 	}	//	recreate
 
+	/**
+	 * Update calendar model ({@link #scm})
+	 */
 	private void updateModel() {
 		ScheduleUtil m_model = new ScheduleUtil (Env.getCtx());
 		
 		//		Calculate Start Day
 		GregorianCalendar cal = new GregorianCalendar();
-		cal.setTime(calendars.getCurrentDate());
+		cal.setTime(Date.from(calendars.getCurrentDateTime()
+				.atZone(calendars.getDefaultTimeZone().toZoneId()).toInstant()));
 		cal.set(Calendar.HOUR, 0);
 		cal.set(Calendar.MINUTE, 0);
 		cal.set(Calendar.SECOND, 0);
@@ -264,31 +268,15 @@ public class WSchedule extends Window implements EventListener<Event>
 		scm = new SimpleCalendarModel();
 		if (S_Resource_ID > 0) {
 			MAssignmentSlot[] list = m_model.getAssignmentSlots (S_Resource_ID, startDate, endDate, null, true, null);
-			
+
 			for(MAssignmentSlot mas : list) {
-				SimpleCalendarEvent event = new SimpleCalendarEvent();
-				Timestamp startTime = mas.getStartTime();
-				Timestamp endTime = mas.getEndTime();
-				Calendar calStart = Calendar.getInstance();
-				calStart.setTime(startTime);
-				Calendar calEnd = Calendar.getInstance();
-				calEnd.setTime(endTime);
-				
-				calStart.add(Calendar.DAY_OF_MONTH, 1);
-				if (calStart.get(Calendar.YEAR) == calEnd.get(Calendar.YEAR) && calStart.get(Calendar.MONTH) == calEnd.get(Calendar.MONTH)
-					&& calStart.get(Calendar.DAY_OF_MONTH) == calEnd.get(Calendar.DAY_OF_MONTH)) {
-					if (calEnd.get(Calendar.HOUR_OF_DAY) == 0 && calEnd.get(Calendar.MINUTE) == 0) {
-						calEnd.add(Calendar.DAY_OF_MONTH, -1);
-						calEnd.set(Calendar.HOUR_OF_DAY, 23);
-					}
-				}
-				
-				event.setBeginDate(startTime);
-				event.setEndDate(calEnd.getTime());
+				SimpleCalendarItem event = new SimpleCalendarItem();
+				event.setBeginDate(mas.getStartTime());
+				event.setEndDate(mas.getEndTime());
 				event.setTitle(mas.getName());
 				event.setContent(mas.getDescription() != null ? mas.getDescription() : mas.getName());
-				event.setHeaderColor('#'+ZkCssHelper.createHexColorString(mas.getColor(true)));
-				event.setContentColor('#'+ZkCssHelper.createHexColorString(mas.getColor(true)));
+				event.setHeaderStyle("background-color:" + '#' + ZkCssHelper.createHexColorString(mas.getColor(true)));
+				event.setContentStyle("background-color:" + '#' + ZkCssHelper.createHexColorString(mas.getColor(true)));
 				if (!mas.isAssignment() || mas.getMAssignment().isConfirmed())
 					event.setLocked(true);
 				scm.add(event);
@@ -298,10 +286,14 @@ public class WSchedule extends Window implements EventListener<Event>
 		calendars.setModel(scm);
 	}
 	
+	/**
+	 * @return SimpleCalendarModel
+	 */
 	public SimpleCalendarModel getModel() {
 		return scm;
 	}
 	
+	@Override
 	public void onEvent(Event event) throws Exception {
 		String type = event.getName();
 		if (type.equals(Events.ON_CLICK)) {
@@ -329,20 +321,32 @@ public class WSchedule extends Window implements EventListener<Event>
 		}
 	}
 	
+	/**
+	 * Select current day
+	 */
 	private void btnCurrentDateClicked() {
-		calendars.setCurrentDate(Calendar.getInstance(calendars.getDefaultTimeZone()).getTime());
+		calendars.setCurrentDateTime(LocalDateTime.ofInstant(
+				Calendar.getInstance(calendars.getDefaultTimeZone()).toInstant(),
+				calendars.getDefaultTimeZone().toZoneId()));
 		updateDateLabel();
 		updateModel();
 	}
 	
+	/**
+	 * Update label after calendar selection change
+	 */
 	private void updateDateLabel() {
-		Date b = calendars.getBeginDate();
-		Date e = calendars.getEndDate();
+		LocalDateTime b = calendars.getBeginDateTime();
+		LocalDateTime e = calendars.getEndDateTime();
 		SimpleDateFormat sdfV = new SimpleDateFormat("yyyy/MMM/dd", Locales.getCurrent());
-		sdfV.setTimeZone(calendars.getDefaultTimeZone());
-		lblDate.setValue(sdfV.format(b) + " - " + sdfV.format(e));
+		DateTimeFormatter dtf = DateTimeFormatter.ofPattern(sdfV.toPattern());
+		lblDate.setValue(dtf.format(b) + " - " + dtf.format(e));
 	}
 	
+	/**
+	 * Move to next/previous calendar page
+	 * @param isNext
+	 */
 	private void divArrowClicked(boolean isNext) {
 		if (isNext)
 			calendars.nextPage();
@@ -352,6 +356,10 @@ public class WSchedule extends Window implements EventListener<Event>
 		updateModel();
 	}
 	
+	/**
+	 * select different calendar tab/presentation
+	 * @param days
+	 */
 	private void divTabClicked(int days) {		
 		if (days > 0) {
 			calendars.setMold("default");
@@ -363,6 +371,10 @@ public class WSchedule extends Window implements EventListener<Event>
 		updateModel();
 	}
 
+	/**
+	 * Add pane to north of {@link #borderlayout}
+	 * @param pane
+	 */
 	public void addNorthPane(Component pane) {
 		if (borderlayout != null) {
 			if (borderlayout.getNorth() != null) {
@@ -374,6 +386,11 @@ public class WSchedule extends Window implements EventListener<Event>
 		}
 	}
 	
+	/**
+	 * Add pane to south of {@link #borderlayout}
+	 * @param pane
+	 * @param height
+	 */
 	public void addSouthPane(Component pane, String height) {
 		if (borderlayout != null) {
 			if (borderlayout.getSouth() != null) {
@@ -388,6 +405,9 @@ public class WSchedule extends Window implements EventListener<Event>
 		}
 	}
 	
+	/**
+	 * Remove {@link #btnRefresh}
+	 */
 	public void removeRefreshButton() {
 		if (btnRefresh != null) {
 			btnRefresh.detach();

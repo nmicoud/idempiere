@@ -28,6 +28,10 @@ import org.compiere.util.DB;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 
+/**
+ * Process to create or update DB index from AD_TableIndex definition.
+ */
+@org.adempiere.base.annotation.Process
 public class TableIndexValidate extends SvrProcess {
 
 	private int		p_AD_TableIndex_ID = 0; 
@@ -47,6 +51,15 @@ public class TableIndexValidate extends SvrProcess {
 		return validateTableIndex(getCtx(), index, get_TrxName(), getProcessInfo());
 	}
 	
+	/**
+	 * Create or update DB index from AD_TableIndex definition.
+	 * @param ctx
+	 * @param index
+	 * @param trxName
+	 * @param pi
+	 * @return info text
+	 * @throws Exception
+	 */
 	public static String validateTableIndex(Properties ctx, MTableIndex index, String trxName, ProcessInfo pi) throws Exception 
 	{
 		Trx trx = Trx.get(trxName, true);
@@ -57,9 +70,9 @@ public class TableIndexValidate extends SvrProcess {
 			tableName = tableName.toUpperCase();
 		else if (md.storesLowerCaseIdentifiers())
 			tableName = tableName.toLowerCase();
-		
-		String catalog = "REFERENCE";
-		String schema = null;
+
+		String catalog = DB.getDatabase().getCatalog();
+		String schema = DB.getDatabase().getSchema();
 		String[] indexColsFromDB = new String[30];
 		String[] ascOrDescColsFromDB = new String[30];
 		int numIndexColsFromDB = 0;
@@ -87,7 +100,7 @@ public class TableIndexValidate extends SvrProcess {
 		}
 		rs.close();
 		
-		MIndexColumn[] indexCols = index.getColumns(true);
+		MIndexColumn[] indexCols = index.getColumns(true, true);
 		boolean modified = false;
 		
 		if (indexCols.length <= 0)

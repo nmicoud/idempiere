@@ -13,9 +13,7 @@
  *****************************************************************************/
 package org.adempiere.webui.dashboard;
 
-import java.util.HashMap;
-import java.util.Map;
-
+import org.adempiere.base.GeneratedCodeCoverageExclusion;
 import org.adempiere.webui.component.Button;
 import org.adempiere.webui.desktop.IDesktop;
 import org.adempiere.webui.session.SessionManager;
@@ -47,7 +45,9 @@ import org.zkoss.zul.Vbox;
  * Contributors: 
  * Deepak Pansheriya - showing only notes message
  */
-@Deprecated // replaced with DPDocumentStatus
+@Deprecated (since="13", forRemoval=true) // replaced with DPDocumentStatus
+@SuppressWarnings("removal")
+@GeneratedCodeCoverageExclusion
 public class DPActivities extends DashboardPanel implements EventListener<Event> {
 	/**
 	 * 
@@ -148,12 +148,7 @@ public class DPActivities extends DashboardPanel implements EventListener<Event>
 			btnUnprocessed.setLabel(labelU + " : " + noOfUnprocessed);
 		
 		EventQueue<Event> queue = EventQueues.lookup(IDesktop.ACTIVITIES_EVENT_QUEUE, true);
-		Map<String, Object> map = new HashMap<String, Object>();
-		map.put("notice", noOfNotice);
-		map.put("request", noOfRequest);
-		map.put("workflow", noOfWorkflow);
-		map.put("unprocessed", noOfUnprocessed);
-		Event event = new Event(IDesktop.ON_ACTIVITIES_CHANGED_EVENT, null, map);
+		Event event = new Event(IDesktop.ON_ACTIVITIES_CHANGED_EVENT, null, noOfNotice + noOfRequest+ noOfWorkflow + noOfUnprocessed);
 		queue.publish(event);
 	}
 
@@ -185,5 +180,10 @@ public class DPActivities extends DashboardPanel implements EventListener<Event>
             	if(menuId > 0) SessionManager.getAppDesktop().onMenuSelected(menuId);
             }
         }
+	}
+
+	@Override
+	public boolean isLazy() {
+		return true;
 	}
 }

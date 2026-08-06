@@ -18,6 +18,7 @@ package org.compiere.model;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
+import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
@@ -28,6 +29,8 @@ import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
+import org.eevolution.model.MPPProductBOM;
+import org.eevolution.model.MPPProductBOMLine;
 import org.idempiere.cache.ImmutableIntPOCache;
 import org.idempiere.cache.ImmutablePOSupport;
 
@@ -37,23 +40,23 @@ import org.idempiere.cache.ImmutablePOSupport;
  *	@author Jorg Janke
  *	@version $Id: MProduct.java,v 1.5 2006/07/30 00:51:05 jjanke Exp $
  * 
- * @author Teo Sarca, SC ARHIPAC SERVICE SRL
+ *  @author Teo Sarca, SC ARHIPAC SERVICE SRL
  * 			<li>FR [ 1885153 ] Refactor: getMMPolicy code
  * 			<li>BF [ 1885414 ] ASI should be always mandatory if CostingLevel is Batch/Lot
  * 			<li>FR [ 2093551 ] Refactor/Add org.compiere.model.MProduct.getCostingLevel
  * 			<li>FR [ 2093569 ] Refactor/Add org.compiere.model.MProduct.getCostingMethod
  * 			<li>BF [ 2824795 ] Deleting Resource product should be forbidden
- * 				https://sourceforge.net/tracker/?func=detail&aid=2824795&group_id=176962&atid=879332
+ * 				https://sourceforge.net/p/adempiere/bugs/1988/
  * 
- * @author Mark Ostermann (mark_o), metas consult GmbH
+ *  @author Mark Ostermann (mark_o), metas consult GmbH
  * 			<li>BF [ 2814628 ] Wrong evaluation of Product inactive in beforeSave()
  */
 public class MProduct extends X_M_Product implements ImmutablePOSupport
 {
 	/**
-	 * 
+	 * generated serial id
 	 */
-	private static final long serialVersionUID = 8710213660955199146L;
+	private static final long serialVersionUID = 5086571475777568115L;
 
 	/**
 	 * 	Get MProduct from Cache (immutable)
@@ -119,11 +122,11 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	}
 	
 	/**
-	 * 	Get MProducts from db
+	 * 	Get MProducts from DB
 	 *	@param ctx context
 	 *	@param whereClause sql where clause
 	 *	@param trxName trx
-	 *	@return MProducts
+	 *	@return array of MProduct
 	 */
 	public static MProduct[] get (Properties ctx, String whereClause, String trxName)
 	{
@@ -132,7 +135,6 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 								.list();
 		return list.toArray(new MProduct[list.size()]);
 	}	//	get
-
 
 	/**
 	 * Get MProduct using UPC/EAN (case sensitive)
@@ -155,6 +157,7 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	 * @return MProduct or null if not found
 	 * @deprecated Since 3.5.3a. Please use {@link #forS_Resource_ID(Properties, int, String)}
 	 */
+	@Deprecated (since="13", forRemoval=true)
 	public static MProduct forS_Resource_ID(Properties ctx, int S_Resource_ID)
 	{
 		return forS_Resource_ID(ctx, S_Resource_ID, null);
@@ -196,8 +199,7 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 		}
 		return p;
 	}
-	
-	
+		
 	/**
 	 * 	Is Product Stocked
 	 * 	@param ctx context
@@ -213,7 +215,19 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	/**	Cache						*/
 	private static ImmutableIntPOCache<Integer,MProduct> s_cache	= new ImmutableIntPOCache<Integer,MProduct>(Table_Name, 40, 5);	//	5 minutes
 	
-	/**************************************************************************
+    /**
+     * UUID based Constructor
+     * @param ctx  Context
+     * @param M_Product_UU  UUID key
+     * @param trxName Transaction
+     */
+    public MProduct(Properties ctx, String M_Product_UU, String trxName) {
+        super(ctx, M_Product_UU, trxName);
+		if (Util.isEmpty(M_Product_UU))
+			setInitialDefaults();
+    }
+
+	/**
 	 * 	Standard Constructor
 	 *	@param ctx context
 	 *	@param M_Product_ID id
@@ -221,31 +235,40 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	 */
 	public MProduct (Properties ctx, int M_Product_ID, String trxName)
 	{
-		super (ctx, M_Product_ID, trxName);
-		if (M_Product_ID == 0)
-		{
-		//	setValue (null);
-		//	setName (null);
-		//	setM_Product_Category_ID (0);
-		//	setC_TaxCategory_ID (0);
-		//	setC_UOM_ID (0);
-		//
-			setProductType (PRODUCTTYPE_Item);	// I
-			setIsBOM (false);	// N
-			setIsInvoicePrintDetails (false);
-			setIsPickListPrintDetails (false);
-			setIsPurchased (true);	// Y
-			setIsSold (true);	// Y
-			setIsStocked (true);	// Y
-			setIsSummary (false);
-			setIsVerified (false);	// N
-			setIsWebStoreFeatured (false);
-			setIsSelfService(true);
-			setIsExcludeAutoDelivery(false);
-			setProcessing (false);	// N
-			setLowLevel(0);
-		}
+		this (ctx, M_Product_ID, trxName, (String[]) null);
 	}	//	MProduct
+
+	/**
+	 * @param ctx
+	 * @param M_Product_ID
+	 * @param trxName
+	 * @param virtualColumns
+	 */
+	public MProduct(Properties ctx, int M_Product_ID, String trxName, String... virtualColumns) {
+		super(ctx, M_Product_ID, trxName, virtualColumns);
+		if (M_Product_ID == 0)
+			setInitialDefaults();
+	}
+
+	/**
+	 * Set the initial defaults for a new record
+	 */
+	private void setInitialDefaults() {
+		setProductType (PRODUCTTYPE_Item);	// I
+		setIsBOM (false);	// N
+		setIsInvoicePrintDetails (false);
+		setIsPickListPrintDetails (false);
+		setIsPurchased (true);	// Y
+		setIsSold (true);	// Y
+		setIsStocked (true);	// Y
+		setIsSummary (false);
+		setIsVerified (false);	// N
+		setIsWebStoreFeatured (false);
+		setIsSelfService(true);
+		setIsExcludeAutoDelivery(false);
+		setProcessing (false);	// N
+		setLowLevel(0);
+	}
 
 	/**
 	 * 	Load constructor
@@ -307,10 +330,14 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 		setDescriptionURL(impP.getDescriptionURL());
 		setVolume(impP.getVolume());
 		setWeight(impP.getWeight());
+		setCustomsTariffNumber(impP.getCustomsTariffNumber());
+		setGroup1(impP.getGroup1());
+		setGroup2(impP.getGroup2());
+		setM_AttributeSet_ID(impP.getM_AttributeSet_ID());
 	}	//	MProduct
 	
 	/**
-	 * 
+	 * Copy constructor
 	 * @param copy
 	 */
 	public MProduct(MProduct copy) 
@@ -319,7 +346,7 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	}
 
 	/**
-	 * 
+	 * Copy constructor
 	 * @param ctx
 	 * @param copy
 	 */
@@ -329,7 +356,7 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	}
 
 	/**
-	 * 
+	 * Copy constructor
 	 * @param ctx
 	 * @param copy
 	 * @param trxName
@@ -346,7 +373,8 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	private MProductDownload[] m_downloads = null;
 	
 	/**
-	 * 	Set Expense Type
+	 * 	Set Expense Type.<br/>
+	 *  Copy over value, name, description, UOM, product category and tax category.
 	 *	@param parent expense type
 	 *	@return true if changed
 	 */
@@ -405,7 +433,8 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	}	//	setExpenseType
 	
 	/**
-	 * 	Set Resource
+	 * 	Set Resource.<br/>
+	 *  Copy over IsActive, Value, Name and Description.
 	 *	@param parent resource
 	 *	@return true if changed
 	 */
@@ -456,7 +485,7 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	public boolean setResource (MResourceType parent)
 	{
 		boolean changed = false;
-		if (PRODUCTTYPE_Resource.equals(getProductType()))
+		if (!PRODUCTTYPE_Resource.equals(getProductType()))
 		{
 			setProductType(PRODUCTTYPE_Resource);
 			changed = true;
@@ -480,8 +509,7 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 		//
 		return changed;
 	}	//	setResource
-	
-	
+		
 	/**	UOM Precision			*/
 	private Integer		m_precision = null;
 	
@@ -500,11 +528,10 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 		}
 		return m_precision.intValue();
 	}	//	getUOMPrecision
-	
-	
+		
 	/**
-	 * 	Create Asset Group for this product
-	 *	@return asset group id
+	 * 	Get asset group id
+	 *	@return A_Asset_Group_ID
 	 */
 	public int getA_Asset_Group_ID()
 	{
@@ -524,7 +551,7 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 
 	/**
 	 * 	Get Attribute Set
-	 *	@return set or null
+	 *	@return MAttributeSet or null
 	 */
 	public MAttributeSet getAttributeSet()
 	{
@@ -534,8 +561,8 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	}	//	getAttributeSet
 	
 	/**
-	 * 	Has the Product Instance Attribute
-	 *	@return true if instance attributes
+	 * 	Is the Product has Instance Attribute
+	 *	@return true if product has instance attributes
 	 */
 	public boolean isInstanceAttribute()
 	{
@@ -546,8 +573,8 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	}	//	isInstanceAttribute
 	
 	/**
-	 * 	Create One Asset Per UOM
-	 *	@return individual asset
+	 * 	Is One Asset Per UOM
+	 *	@return true if it is one asset per UOM
 	 */
 	public boolean isOneAssetPerUOM()
 	{
@@ -559,8 +586,8 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	}	//	isOneAssetPerUOM
 	
 	/**
-	 * 	Product is Item
-	 *	@return true if item
+	 * 	Is Product of Item type
+	 *	@return true if product is of item type (PRODUCTTYPE_Item)
 	 */
 	public boolean isItem()
 	{
@@ -568,8 +595,8 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	}	//	isItem
 		
 	/**
-	 * 	Product is an Item and Stocked
-	 *	@return true if stocked and item
+	 * 	Product is an Item and is Stocked
+	 *	@return true if stocked and is item
 	 */
 	@Override
 	public boolean isStocked ()
@@ -600,9 +627,9 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	}	//	getUOMSymbol
 		
 	/**
-	 * 	Get Active(!) Product Downloads
-	 * 	@param requery requery
-	 *	@return array of downloads
+	 * 	Get Active Product Downloads
+	 * 	@param requery true to re-query from DB
+	 *	@return array of product downloads
 	 */
 	public MProductDownload[] getProductDownloads (boolean requery)
 	{
@@ -621,7 +648,7 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	}	//	getProductDownloads
 	
 	/**
-	 * 	Does the product have downloads
+	 * 	Is product have downloads
 	 *	@return true if downloads exists
 	 */
 	public boolean hasDownloads()
@@ -641,44 +668,69 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	@Override
 	protected boolean beforeSave (boolean newRecord)
 	{
-		//	Check Storage
+		// Validate changes to make a product inactive or non-stocked
 		if (!newRecord && 	//	
 			((is_ValueChanged("IsActive") && !isActive())		//	now not active 
 			|| (is_ValueChanged("IsStocked") && !isStocked())	//	now not stocked
-			|| (is_ValueChanged("ProductType") 					//	from Item
+			|| (is_ValueChanged("ProductType") 					//	from Item to non-Item
 				&& PRODUCTTYPE_Item.equals(get_ValueOld("ProductType")))))
 		{
+			// Disallow change if there are on hand, ordered or reserved quantity
 			String errMsg = verifyStorage();
 			if (! Util.isEmpty(errMsg))
 			{
 				log.saveError("Error", Msg.parseTranslation(getCtx(), errMsg)); 
 				return false;
 			}
+						
+			removeStorageRecords();
+			
+			// Disallow change if product is part of an active BOM
+			if (is_ValueChanged("IsActive") && !isActive())
+			{
+				errMsg = verifyBOM();
+				if (! Util.isEmpty(errMsg))
+				{
+					log.saveError("Error", errMsg); 
+					return false;
+				}				
+			}
 		}	//	storage
 	
-		// it checks if UOM has been changed , if so disallow the change if the condition is true.
+		// Validate UOM change
 		if ((!newRecord) && is_ValueChanged("C_UOM_ID") && hasInventoryOrCost ()) {
 			log.saveError("Error", Msg.getMsg(getCtx(), "SaveUomError"));
 			return false; 
 		}
 		
-		//	Reset Stocked if not Item
-		//AZ Goodwill: Bug Fix isStocked always return false
-		//if (isStocked() && !PRODUCTTYPE_Item.equals(getProductType()))
+		// Block change of IsUseDateMaterialPolicy when product has on hand storage
+		if (!newRecord && is_ValueChanged(COLUMNNAME_IsUseDateMaterialPolicy))
+		{
+			BigDecimal qtyOnHand = DB.getSQLValueBDEx(get_TrxName(),
+				"SELECT COALESCE(SUM(QtyOnHand),0) FROM M_StorageOnHand WHERE M_Product_ID=?", getM_Product_ID());
+			if (qtyOnHand.signum() != 0)
+			{
+				log.saveError("Error", Msg.getMsg(getCtx(), "CannotChangeUseDateMaterialPolicy"));
+				return false;
+			}
+		}
+
+		// Reset IsStocked to false if not Item product type
 		if (!PRODUCTTYPE_Item.equals(getProductType()))
 			setIsStocked(false);
 		
-		//	UOM reset
+		// reset UOM precision 
 		if (m_precision != null && is_ValueChanged("C_UOM_ID"))
 			m_precision = null;
 		
-		// AttributeSetInstance reset
+		// Validate whether need to reset M_AttributeSetInstance_ID to zero after change of M_AttributeSet_ID
 		if (getM_AttributeSetInstance_ID() > 0 && is_ValueChanged(COLUMNNAME_M_AttributeSet_ID))
 		{
 			MAttributeSetInstance asi = new MAttributeSetInstance(getCtx(), getM_AttributeSetInstance_ID(), get_TrxName());
 			if (asi.getM_AttributeSet_ID() != getM_AttributeSet_ID())
 				setM_AttributeSetInstance_ID(0);
 		}
+		// Delete old M_AttributeSetInstance_ID record if not reference by other product
 		if (!newRecord && is_ValueChanged(COLUMNNAME_M_AttributeSetInstance_ID))
 		{
 			// IDEMPIERE-2752 check if the ASI is referenced in other products before trying to delete it
@@ -702,6 +754,10 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 		return true;
 	}	//	beforeSave
 
+	/**
+	 * Verify that product has no on hand, ordered and reserved quantity.
+	 * @return error message or empty string
+	 */
 	private String verifyStorage() {
 		BigDecimal qtyOnHand = Env.ZERO;
 		BigDecimal qtyOrdered = Env.ZERO;
@@ -729,8 +785,67 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	}
 
 	/**
-	 * 	HasInventoryOrCost 
-	 *	@return true if it has Inventory or Cost
+	 * Delete storage on hand and reservation records.<br/>
+	 * For product that's using Lot or Serial, on hand is update to zero instead of delete.
+	 */
+	private void removeStorageRecords() {
+		int cnt = 0;
+		//safe to remove if not using lot or serial
+		if (isLot() || isSerial()) {
+			//for lot/serial, make sure everything is zero
+			cnt = DB.executeUpdateEx("UPDATE M_StorageOnHand SET QtyOnHand=0 WHERE M_Product_ID=? AND QtyOnHand != 0", new Object[] {getM_Product_ID()}, get_TrxName());
+			if (log.isLoggable(Level.INFO)) {
+				log.log(Level.INFO, toString()+" #M_StorageOnHand Updated=" + cnt);
+			}
+		} else {
+			cnt = DB.executeUpdateEx("DELETE FROM M_StorageOnHand WHERE M_Product_ID=?", new Object[] {getM_Product_ID()}, get_TrxName());
+			if (log.isLoggable(Level.INFO)) {
+				log.log(Level.INFO, toString()+" #M_StorageOnHand Deleted=" + cnt);
+			}
+		}		
+		
+		//clear all reservation data
+		cnt = DB.executeUpdateEx("DELETE FROM M_StorageReservation WHERE M_Product_ID=?", new Object[] {getM_Product_ID()}, get_TrxName());
+		if (log.isLoggable(Level.INFO)) {
+			log.log(Level.INFO, toString()+" #M_StorageReservation Deleted=" + cnt);
+		}
+		cnt = DB.executeUpdateEx("DELETE FROM M_StorageReservationLog WHERE M_Product_ID=?", new Object[] {getM_Product_ID()}, get_TrxName());
+		if (log.isLoggable(Level.INFO)) {
+			log.log(Level.INFO, toString()+" #M_StorageReservationLog Deleted=" + cnt);
+		}
+	}
+
+	/**
+	 * Verify product not in any active BOM.
+	 * @return error message or null
+	 */
+	private String verifyBOM() {
+		Query query = new Query(getCtx(), MPPProductBOMLine.Table_Name, MPPProductBOMLine.COLUMNNAME_M_Product_ID+"=?", get_TrxName());
+		List<MPPProductBOMLine> list = query.setOnlyActiveRecords(true)
+											.setClient_ID()
+											.setParameters(getM_Product_ID())
+											.list();
+		for(MPPProductBOMLine line : list) {
+			MPPProductBOM bom = line.getParent();
+			if (bom.isActive()) {
+				StringBuilder errMsg = new StringBuilder();
+				errMsg.append(Msg.getMsg(Env.getCtx(), "DeActivateProductInActiveBOM"));
+				String bomName = bom.getName();
+				errMsg.append(" (BOM: ")
+					.append(bomName);
+				String parentValue = MProduct.get(bom.getM_Product_ID()).getValue();
+				if (!parentValue.equals(bomName))
+					errMsg.append(", ").append(parentValue);
+				errMsg.append(")");
+				return errMsg.toString();
+			}
+		}
+		
+		return null;
+	}
+	
+	/**
+	 *	@return true if product has inventory transaction (MTransaction) or cost detail (MCostDetail) records.
 	 */
 	protected boolean hasInventoryOrCost ()
 	{
@@ -765,11 +880,11 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 		if (!success)
 			return success;
 		
-		//	Value/Name change in Account
+		//	Value/Name change, update Combination and Description of C_ValidCombination records
 		if (!newRecord && (is_ValueChanged("Value") || is_ValueChanged("Name")))
 			MAccount.updateValueDescription(getCtx(), "M_Product_ID=" + getM_Product_ID(), get_TrxName());
 		
-		//	Name/Description Change in Asset	MAsset.setValueNameDescription
+		//	Name/Description Change, update Asset
 		if (!newRecord && (is_ValueChanged("Name") || is_ValueChanged("Description")))
 		{
 			String sql = "UPDATE A_Asset a "
@@ -778,37 +893,60 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 					+ "FROM M_Product p "
 					+ "WHERE p.M_Product_ID=a.M_Product_ID) "
 				+ "WHERE IsActive='Y'"
-			//	+ " AND GuaranteeDate > getDate()"
 				+ "  AND M_Product_ID=" + getM_Product_ID();
 			int no = DB.executeUpdate(sql, get_TrxName());
 			if (log.isLoggable(Level.FINE)) log.fine("Asset Description updated #" + no);
 		}
 		
-		//	New - Acct, Tree, Old Costing
+		//	New - Create accounting and tree record
 		if (newRecord)
 		{
 			insert_Accounting("M_Product_Acct", "M_Product_Category_Acct",
-				"p.M_Product_Category_ID=" + getM_Product_Category_ID());
+				"p.M_Product_Category_ID=" + 
+				(getM_Product_Category_ID() > MTable.MAX_OFFICIAL_ID && Env.isLogMigrationScript(get_TableName())
+				 ? PO.buildUUIDSubquery("M_Product_Category", MProductCategory.get(getM_Product_Category_ID()).getM_Product_Category_UU())
+				 : getM_Product_Category_ID()));
 			insert_Tree(X_AD_Tree.TREETYPE_Product);
 		}
+		// Update driven by value tree
 		if (newRecord || is_ValueChanged(COLUMNNAME_Value))
 			update_Tree(MTree_Base.TREETYPE_Product);
 		
-		//	New Costing
+		//	Create New Costing record
 		if (newRecord || is_ValueChanged("M_Product_Category_ID"))
 			MCost.create(this);
 
+		// Make BOM in-active after product have been changed to in-active 
+		if (!newRecord && success && is_ValueChanged(COLUMNNAME_IsActive))
+		{
+			if (!isActive() && isBOM())
+			{
+				StringBuilder where = new StringBuilder();
+				where.append("AD_Client_ID=? ")
+				   .append("AND M_Product_ID=? ")
+				   .append("AND IsActive='Y'");
+				Query query  = new Query(Env.getCtx(), MPPProductBOM.Table_Name, where.toString(), get_TrxName());
+				List<MPPProductBOM> boms = query.setParameters(getAD_Client_ID(), getM_Product_ID()).list();
+				for(MPPProductBOM bom : boms) 
+				{
+					bom.setIsActive(false);
+					bom.saveEx();
+				}
+			}
+		}
+		
 		return success;
 	}	//	afterSave
 
 	@Override
 	protected boolean beforeDelete ()
 	{
+		// Can't delete if this is a resource product (with S_Resource_ID reference)
 		if (PRODUCTTYPE_Resource.equals(getProductType()) && getS_Resource_ID() > 0)
 		{
 			throw new AdempiereException("@S_Resource_ID@<>0");
 		}
-		//	Check Storage
+		// Can't delete product has on hand, ordered or reserved quanttiy
 		if (isStocked() || PRODUCTTYPE_Item.equals(getProductType()))
 		{
 			String errMsg = verifyStorage();
@@ -819,31 +957,8 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 			}
 			
 		}
-		//	delete costing		
+		// Delete costing		
 		MCost.delete(this);
-		
-		// [ 1674225 ] Delete Product: Costing deletion error
-		/*MAcctSchema[] mass = MAcctSchema.getClientAcctSchema(getCtx(),getAD_Client_ID(), get_TrxName());
-		for(int i=0; i<mass.length; i++)
-		{
-			// Get Cost Elements
-			MCostElement[] ces = MCostElement.getMaterialWithCostingMethods(this);
-			MCostElement ce = null;
-			for(int j=0; j<ces.length; j++)
-			{
-				if(MCostElement.COSTINGMETHOD_StandardCosting.equals(ces[i].getCostingMethod()))
-				{
-					ce = ces[i];
-					break;
-				}
-			}
-			
-			if(ce == null)
-				continue;
-			
-			MCost mcost = MCost.get(this, 0, mass[i], 0, ce.getM_CostElement_ID());
-			mcost.delete(true, get_TrxName());
-		}*/
 		
 		//
 		return true; 
@@ -852,6 +967,7 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	@Override
 	protected boolean afterDelete (boolean success)
 	{
+		// Delete tree record
 		if (success)
 			delete_Tree(X_AD_Tree.TREETYPE_Product);
 		return success;
@@ -861,7 +977,7 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	 * Get attribute instance for this product by attribute name
 	 * @param name
 	 * @param trxName
-	 * @return
+	 * @return MAttributeInstance or null
 	 */
 	public MAttributeInstance getAttributeInstance(String name, String trxName) {
 		MAttributeInstance instance = null;
@@ -880,8 +996,8 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 
 	/**
 	 * Gets Material Management Policy.
-	 * Tries: Product Category, Client (in this order) 
-	 * @return Material Management Policy
+	 * Tries: Product Category, Client (in this order). 
+	 * @return Material Management Policy (Fifo, Lifo)
 	 */
 	public String getMMPolicy() {
 		MProductCategory pc = MProductCategory.get(getCtx(), getM_Product_Category_ID());
@@ -892,8 +1008,8 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	}
 	
 	/**
-	 * Check if use GuaranteeDate for Material Policy
-	 * @return
+	 * Check if product use GuaranteeDate for Material Policy
+	 * @return true if product uses GuaranteeDate for Material Policy
 	 */
 	public boolean isUseGuaranteeDateForMPolicy(){
 		MAttributeSet as = getAttributeSet();
@@ -910,8 +1026,18 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	 * @param isSOTrx is outgoing trx?
 	 * @return true if ASI is mandatory, false otherwise
 	 */
+	@Deprecated (since="13", forRemoval=true)
 	public boolean isASIMandatory(boolean isSOTrx) {
-		//
+		return isASIMandatoryFor(null, isSOTrx);
+	}
+	
+	/**
+	 * Check if ASI is mandatory according to mandatory type
+	 * @param mandatoryType X_M_AttributeSet.MANDATORYTYPE_*
+	 * @param isSOTrx
+	 * @return true if ASI is mandatory, false otherwise
+	 */
+	public boolean isASIMandatoryFor(String mandatoryType, boolean isSOTrx) {
 		//	If CostingLevel is BatchLot ASI is always mandatory - check all client acct schemas
 		MAcctSchema[] mass = MAcctSchema.getClientAcctSchema(getCtx(), getAD_Client_ID(), get_TrxName());
 		for (MAcctSchema as : mass)
@@ -927,14 +1053,15 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 		if (M_AttributeSet_ID != 0)
 		{
 			MAttributeSet mas = MAttributeSet.get(getCtx(), M_AttributeSet_ID);
-			if (mas == null || !mas.isInstanceAttribute())
+			if (mas == null || !mas.isInstanceAttribute()){
 				return false;
-			// Outgoing transaction
-			else if (isSOTrx)
-				return mas.isMandatory();
+			} else if (isSOTrx){ // Outgoing transaction
+				return mas.isMandatoryAlways() || (mas.isMandatory() && mas.getMandatoryType().equals(mandatoryType));
+			}
 			// Incoming transaction
-			else // isSOTrx == false
+			else{ // isSOTrx == false
 				return mas.isMandatoryAlways();
+			}
 		}
 		//
 		// Default not mandatory
@@ -944,7 +1071,7 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	/**
 	 * Get Product Costing Level
 	 * @param as accounting schema
-	 * @return product costing level
+	 * @return product costing level (X_C_AcctSchema.COSTINGLEVEL_*)
 	 */
 	public String getCostingLevel(MAcctSchema as)
 	{
@@ -959,8 +1086,8 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 	
 	/**
 	 * Get Product Costing Method
-	 * @param C_AcctSchema_ID accounting schema ID
-	 * @return product costing method
+	 * @param as accounting schema
+	 * @return product costing method (X_C_AcctSchema.COSTINGMETHOD_*)
 	 */
 	public String getCostingMethod(MAcctSchema as)
 	{
@@ -973,14 +1100,26 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 		return costingMethod;
 	}
 	
+	/**
+	 * @param as
+	 * @param AD_Org_ID
+	 * @param M_ASI_ID
+	 * @return MCost or null
+	 */
 	public MCost getCostingRecord(MAcctSchema as, int AD_Org_ID, int M_ASI_ID)
 	{
 		return getCostingRecord(as, AD_Org_ID, M_ASI_ID, getCostingMethod(as));
 	}
 	
+	/**
+	 * @param as
+	 * @param AD_Org_ID
+	 * @param M_ASI_ID
+	 * @param costingMethod
+	 * @return MCost or null
+	 */
 	public MCost getCostingRecord(MAcctSchema as, int AD_Org_ID, int M_ASI_ID, String costingMethod)
 	{
-		
 		String costingLevel = getCostingLevel(as);
 		if (MAcctSchema.COSTINGLEVEL_Client.equals(costingLevel))
 		{
@@ -1003,6 +1142,38 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 		return cost.is_new() ? null : cost;
 	}
 	
+	/**
+	 * @param as
+	 * @param AD_Org_ID
+	 * @param M_ASI_ID
+	 * @param costingMethod
+	 * @param dateAcct
+	 * @return ICostInfo or null
+	 */
+	public ICostInfo getCostInfo(MAcctSchema as, int AD_Org_ID, int M_ASI_ID, String costingMethod, Timestamp dateAcct)
+	{		
+		String costingLevel = getCostingLevel(as);
+		if (MAcctSchema.COSTINGLEVEL_Client.equals(costingLevel))
+		{
+			AD_Org_ID = 0;
+			M_ASI_ID = 0;
+		}
+		else if (MAcctSchema.COSTINGLEVEL_Organization.equals(costingLevel))
+			M_ASI_ID = 0;
+		else if (MAcctSchema.COSTINGLEVEL_BatchLot.equals(costingLevel))
+		{
+			AD_Org_ID = 0;
+			if (M_ASI_ID == 0)
+				return null;
+		}
+		MCostElement ce = MCostElement.getMaterialCostElement(getCtx(), costingMethod, AD_Org_ID);
+		if (ce == null) {
+			return null;
+		}
+		return MCost.getCostInfo(getCtx(), getAD_Client_ID(), AD_Org_ID, getM_Product_ID(), 
+				as.getM_CostType_ID(), as.getC_AcctSchema_ID(), ce.getM_CostElement_ID(), M_ASI_ID, dateAcct, null, get_TrxName());
+	}
+	
 	@Override
 	public MProduct markImmutable() 
 	{
@@ -1015,4 +1186,31 @@ public class MProduct extends X_M_Product implements ImmutablePOSupport
 		return this;
 	}
 
+	/**
+	 * @return true if instance of product is managed with serial no
+	 */
+	public boolean isSerial() {
+		if (getM_AttributeSet_ID() == 0)
+			return false;
+		
+		MAttributeSet as = MAttributeSet.get(getM_AttributeSet_ID());
+		if (as.isInstanceAttribute() && as.isSerNo())
+			return true;
+		else
+			return false;
+	}
+	
+	/**
+	 * @return true if instance of product is managed with lot
+	 */
+	public boolean isLot() {
+		if (getM_AttributeSet_ID() == 0)
+			return false;
+		
+		MAttributeSet as = MAttributeSet.get(getM_AttributeSet_ID());		
+		if (as.isInstanceAttribute() && as.isLot())
+			return true;
+		else
+			return false;
+	}
 }	//	MProduct

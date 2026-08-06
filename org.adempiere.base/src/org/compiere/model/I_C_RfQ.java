@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for C_RfQ
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_C_RfQ 
 {
@@ -44,8 +44,8 @@ public interface I_C_RfQ
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -53,12 +53,12 @@ public interface I_C_RfQ
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -75,21 +75,23 @@ public interface I_C_RfQ
 	  */
 	public int getAD_User_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_User getAD_User() throws RuntimeException;
 
     /** Column name C_BPartner_ID */
     public static final String COLUMNNAME_C_BPartner_ID = "C_BPartner_ID";
 
-	/** Set Business Partner .
+	/** Set Business Partner.
 	  * Identifies a Business Partner
 	  */
 	public void setC_BPartner_ID (int C_BPartner_ID);
 
-	/** Get Business Partner .
+	/** Get Business Partner.
 	  * Identifies a Business Partner
 	  */
 	public int getC_BPartner_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_BPartner getC_BPartner() throws RuntimeException;
 
     /** Column name C_BPartner_Location_ID */
@@ -105,6 +107,7 @@ public interface I_C_RfQ
 	  */
 	public int getC_BPartner_Location_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_BPartner_Location getC_BPartner_Location() throws RuntimeException;
 
     /** Column name C_Currency_ID */
@@ -120,16 +123,8 @@ public interface I_C_RfQ
 	  */
 	public int getC_Currency_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_Currency getC_Currency() throws RuntimeException;
-
-    /** Column name CopyLines */
-    public static final String COLUMNNAME_CopyLines = "CopyLines";
-
-	/** Set Copy Lines	  */
-	public void setCopyLines (String CopyLines);
-
-	/** Get Copy Lines	  */
-	public String getCopyLines();
 
     /** Column name C_Order_ID */
     public static final String COLUMNNAME_C_Order_ID = "C_Order_ID";
@@ -144,45 +139,8 @@ public interface I_C_RfQ
 	  */
 	public int getC_Order_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_Order getC_Order() throws RuntimeException;
-
-    /** Column name Created */
-    public static final String COLUMNNAME_Created = "Created";
-
-	/** Get Created.
-	  * Date this record was created
-	  */
-	public Timestamp getCreated();
-
-    /** Column name CreatedBy */
-    public static final String COLUMNNAME_CreatedBy = "CreatedBy";
-
-	/** Get Created By.
-	  * User who created this records
-	  */
-	public int getCreatedBy();
-
-    /** Column name CreatePO */
-    public static final String COLUMNNAME_CreatePO = "CreatePO";
-
-	/** Set Create PO.
-	  * Create Purchase Order
-	  */
-	public void setCreatePO (String CreatePO);
-
-	/** Get Create PO.
-	  * Create Purchase Order
-	  */
-	public String getCreatePO();
-
-    /** Column name CreateSO */
-    public static final String COLUMNNAME_CreateSO = "CreateSO";
-
-	/** Set Create SO	  */
-	public void setCreateSO (String CreateSO);
-
-	/** Get Create SO	  */
-	public String getCreateSO();
 
     /** Column name C_RfQ_ID */
     public static final String COLUMNNAME_C_RfQ_ID = "C_RfQ_ID";
@@ -210,6 +168,7 @@ public interface I_C_RfQ
 	  */
 	public int getC_RfQ_Topic_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_RfQ_Topic getC_RfQ_Topic() throws RuntimeException;
 
     /** Column name C_RfQ_UU */
@@ -220,6 +179,53 @@ public interface I_C_RfQ
 
 	/** Get C_RfQ_UU	  */
 	public String getC_RfQ_UU();
+
+    /** Column name CopyLines */
+    public static final String COLUMNNAME_CopyLines = "CopyLines";
+
+	/** Set Copy Lines	  */
+	public void setCopyLines (String CopyLines);
+
+	/** Get Copy Lines	  */
+	public String getCopyLines();
+
+    /** Column name CreatePO */
+    public static final String COLUMNNAME_CreatePO = "CreatePO";
+
+	/** Set Create PO.
+	  * Create Purchase Order
+	  */
+	public void setCreatePO (String CreatePO);
+
+	/** Get Create PO.
+	  * Create Purchase Order
+	  */
+	public String getCreatePO();
+
+    /** Column name CreateSO */
+    public static final String COLUMNNAME_CreateSO = "CreateSO";
+
+	/** Set Create SO	  */
+	public void setCreateSO (String CreateSO);
+
+	/** Get Create SO	  */
+	public String getCreateSO();
+
+    /** Column name Created */
+    public static final String COLUMNNAME_Created = "Created";
+
+	/** Get Created.
+	  * Date this record was created
+	  */
+	public Timestamp getCreated();
+
+    /** Column name CreatedBy */
+    public static final String COLUMNNAME_CreatedBy = "CreatedBy";
+
+	/** Get Created By.
+	  * User who created this records
+	  */
+	public int getCreatedBy();
 
     /** Column name DateResponse */
     public static final String COLUMNNAME_DateResponse = "DateResponse";
@@ -482,6 +488,7 @@ public interface I_C_RfQ
 	  */
 	public int getSalesRep_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_User getSalesRep() throws RuntimeException;
 
     /** Column name Updated */

@@ -23,11 +23,17 @@ import org.adempiere.webui.event.ContextMenuEvent;
 import org.adempiere.webui.event.ContextMenuListener;
 import org.adempiere.webui.event.ValueChangeEvent;
 import org.adempiere.webui.theme.ThemeManager;
+import org.adempiere.webui.util.Icon;
 import org.adempiere.webui.window.WFieldRecordInfo;
 import org.compiere.model.GridField;
+import org.compiere.util.DisplayType;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.Events;
 
+/**
+ * Default editor for {@link DisplayType#URL}.<br/>
+ * Implemented with {@link Urlbox} component. 
+ */
 public class WUrlEditor extends WEditor implements ContextMenuListener
 {
 	private static final String[] LISTENER_EVENTS = {Events.ON_CHANGE, Events.ON_OK};
@@ -51,8 +57,30 @@ public class WUrlEditor extends WEditor implements ContextMenuListener
 	public WUrlEditor(GridField gridField, boolean tableEditor, IEditorConfiguration editorConfiguration)
 	{
 		super(new Urlbox(), gridField, tableEditor, editorConfiguration);
+		init();
+	}
+
+    /**
+     *
+     * @param columnName
+     * @param label
+     * @param description
+     * @param mandatory
+     * @param readonly
+     * @param updateable
+     */
+    public WUrlEditor(String columnName, String label, String description, boolean mandatory, boolean readonly, boolean updateable) {
+		super(new Urlbox(), columnName, label, description, mandatory, readonly, updateable);
+		init();
+	}
+	
+    /**
+     * Init component and context menu
+     */
+	private void init()
+    {
 		if (ThemeManager.isUseFontIconForImage())
-			getComponent().getButton().setIconSclass("z-icon-Online");
+			getComponent().getButton().setIconSclass(Icon.getIconSclass(Icon.ONLINE));
 		else
 			getComponent().setButtonImage(ThemeManager.getThemeResource("images/Online16.png"));
 		
@@ -110,7 +138,7 @@ public class WUrlEditor extends WEditor implements ContextMenuListener
 		getComponent().setEnabled(readWrite);
 	}
 
-
+	@Override
 	public void onEvent(Event event)
 	{
 		if (Events.ON_CHANGE.equals(event.getName()) || Events.ON_OK.equals(event.getName()))
@@ -128,6 +156,7 @@ public class WUrlEditor extends WEditor implements ContextMenuListener
 		}
 	}
 
+	@Override
 	public String[] getEvents()
     {
         return LISTENER_EVENTS;

@@ -106,8 +106,7 @@ public class TranslationTable
 	private static Integer	s_activeLanguages = null;
 	
 	/**	Cache						*/
-	private static CCache<String,TranslationTable> s_cache = new CCache<String,TranslationTable>(null, "TranslationTable", 20, true);
-
+	private static CCache<String,TranslationTable> s_cache = new CCache<String,TranslationTable>(null, "TranslationTable", 20);
 	
 	/**
 	 * 	Translation Table
@@ -134,7 +133,7 @@ public class TranslationTable
 	private ArrayList<String>	m_columns = new ArrayList<String>();
 	
 	/**
-	 * 	Add Translation Columns
+	 * 	Discover Translation Columns
 	 */
 	private void initColumns()
 	{
@@ -251,6 +250,7 @@ public class TranslationTable
 	 * 	String Representation
 	 *	@return info
 	 */
+	@Override
 	public String toString ()
 	{
 		StringBuilder sb = new StringBuilder ("TranslationTable[");

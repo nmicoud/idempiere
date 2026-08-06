@@ -25,21 +25,32 @@
 package org.idempiere.test.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.util.List;
 
+import org.adempiere.base.Core;
 import org.compiere.model.MBPartner;
 import org.compiere.model.MInOut;
 import org.compiere.model.MInOutConfirm;
 import org.compiere.model.MInOutLine;
 import org.compiere.model.MOrder;
 import org.compiere.model.MOrderLine;
+import org.compiere.model.MPInstance;
+import org.compiere.model.MPInstanceLog;
+import org.compiere.model.MPInstancePara;
 import org.compiere.model.MProcess;
 import org.compiere.model.MProduct;
+import org.compiere.model.Query;
+import org.compiere.model.SystemIDs;
+import org.compiere.model.X_AD_PInstance_Log;
+import org.compiere.print.MPrintFormat;
 import org.compiere.process.DocAction;
+import org.compiere.process.ProcessCall;
 import org.compiere.process.ProcessInfo;
 import org.compiere.process.ServerProcessCtl;
 import org.compiere.util.Env;
@@ -50,12 +61,15 @@ import org.compiere.wf.MWFNodeNext;
 import org.compiere.wf.MWFNodePara;
 import org.compiere.wf.MWorkflow;
 import org.idempiere.test.AbstractTestCase;
+import org.idempiere.test.DictionaryIDs;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
 /**
  * @author hengsin
  *
  */
+@Isolated
 public class ProcessTest extends AbstractTestCase {
 
 	/**
@@ -69,7 +83,7 @@ public class ProcessTest extends AbstractTestCase {
 		//first test, using MProcess.processIt
 		MOrder order = new MOrder(Env.getCtx(), 0, getTrxName());
 		//Joe Block
-		order.setBPartner(MBPartner.get(Env.getCtx(), 118));
+		order.setBPartner(MBPartner.get(Env.getCtx(), DictionaryIDs.C_BPartner.JOE_BLOCK.id));
 		order.setC_DocTypeTarget_ID(MOrder.DocSubTypeSO_Standard);
 		order.setDeliveryRule(MOrder.DELIVERYRULE_CompleteOrder);
 		order.setDocStatus(DocAction.STATUS_Drafted);
@@ -82,12 +96,12 @@ public class ProcessTest extends AbstractTestCase {
 		MOrderLine line1 = new MOrderLine(order);
 		line1.setLine(10);
 		//Azalea Bush
-		line1.setProduct(MProduct.get(Env.getCtx(), 128));
+		line1.setProduct(MProduct.get(Env.getCtx(), DictionaryIDs.M_Product.AZALEA_BUSH.id));
 		line1.setQty(new BigDecimal("1"));
 		line1.setDatePromised(today);
 		line1.saveEx();
 		
-		int Process_Order=104;
+		int Process_Order=SystemIDs.PROCESS_C_ORDER_PROCESS;
 		MProcess process = MProcess.get(Env.getCtx(), Process_Order);
 		ProcessInfo pi = new ProcessInfo(process.getName(), process.get_ID());
 		pi.setAD_Client_ID(getAD_Client_ID());
@@ -117,8 +131,8 @@ public class ProcessTest extends AbstractTestCase {
 	
 	@Test
 	public void testJavaProcess() {
-		int Verify_BOM=136;
-		int Patio_Chair=133;
+		int Verify_BOM=SystemIDs.PROCESS_PP_PRODUCT_BOM;
+		int Patio_Chair=DictionaryIDs.M_Product.P_CHAIR.id;
 		
 		//first, test MProcess.processIt
 		MProcess process = MProcess.get(Env.getCtx(), Verify_BOM);
@@ -140,6 +154,8 @@ public class ProcessTest extends AbstractTestCase {
 		pi.setAD_User_ID(getAD_User_ID());
 		pi.setRecord_ID(Patio_Chair);
 		pi.setTransactionName(getTrxName());
+		if(process.getAD_PrintFormat_ID() > 0)
+			pi.setTransientObject(MPrintFormat.get(process.getAD_PrintFormat_ID()));
 		ServerProcessCtl.process(pi, getTrx());
 		if (pi.isError()) {
 			fail("Error running Verify BOM process" + (Util.isEmpty(pi.getSummary()) ? "" : " : "+pi.getSummary()));
@@ -266,10 +282,49 @@ public class ProcessTest extends AbstractTestCase {
 			
 			inout.load(getTrxName());
 			assertEquals(DocAction.STATUS_Completed, inout.getDocStatus(), "Expected Completed Status for Shipment");
-		} finally {			
+		} finally {		
+			rollback();
 			docCompleteNodeNext.deleteEx(true);
 			processNodePara.deleteEx(true);
 			processNode.deleteEx(true);
 		}
+	}
+
+	@Test
+	public void testCoreJavaProcessMapping() {
+		Query query = new Query(Env.getCtx(), MProcess.Table_Name, "AD_Process_ID < 1000000 AND ClassName IS NOT NULL "
+				+ " AND EXISTS (select 1 from ad_menu where isactive='Y' and ad_process_id=ad_process.ad_process_id)", getTrxName());
+		List<MProcess> processes = query.setOnlyActiveRecords(true).list();
+		for (MProcess process : processes) {
+			ProcessCall pc = Core.getProcess(process.getClassname());
+			assertNotNull(pc, "Failed to load ProcessCall instance for " + process.toString() + ", " + process.getClassname());
+		}
+	}	
+	
+	@Test
+	public void testGetInstanceLog() {
+		// Run the validate business partner process
+		MProcess process = MProcess.get(SystemIDs.PROCESS_C_BPARTNER_VALIDATE);
+		MPInstance pinstance = new MPInstance(process, 0, 0, null);
+		MPInstancePara[] paras = pinstance.getParameters();
+		for (MPInstancePara para : paras) {
+			if (para.getParameterName().equals("C_BPartner_ID")) {
+				para.setP_Number(DictionaryIDs.C_BPartner.JOE_BLOCK.id);
+				para.saveEx();
+				break;
+			}
+		}
+		
+		ProcessInfo pi = new ProcessInfo(process.getName(), SystemIDs.PROCESS_C_BPARTNER_VALIDATE);
+		pi.setAD_PInstance_ID(pinstance.getAD_PInstance_ID());
+		//use local process trx to create pinstance log immediately
+		process.processIt(pi, null, true);
+		assertTrue(!pi.isError(), pi.getSummary());
+		
+		MPInstanceLog[] logs = pinstance.getLog();
+		assertTrue(logs != null && logs.length > 0, "Failed to retrieve process instance logs");
+		assertEquals(pinstance.getAD_PInstance_ID(), logs[0].getAD_PInstance_ID(), "Invalid MPInstanceLog.AD_PInstance_ID value");
+		assertTrue(logs[0].getAD_PInstance_Log_UU() != null && logs[0].getAD_PInstance_Log_UU().length() == 36, "Invalid MPInstanceLog.AD_PInstance_Log_UU value");
+		assertEquals(X_AD_PInstance_Log.PINSTANCELOGTYPE_Result, logs[0].getPInstanceLogType(), "Invalid MPInstanceLog.PInstanceLogType value");
 	}
 }

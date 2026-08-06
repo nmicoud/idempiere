@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.base.GeneratedCodeCoverageExclusion;
 import org.adempiere.util.ProcessUtil;
 import org.compiere.process.ProcessInfo;
 import org.compiere.util.DB;
@@ -48,9 +49,9 @@ import org.idempiere.cache.ImmutablePOCache;
 public class MProcess extends X_AD_Process implements ImmutablePOSupport
 {
 	/**
-	 * 
+	 * generated serial id 
 	 */
-	private static final long serialVersionUID = 6928560924056836659L;
+	private static final long serialVersionUID = -2068744950300991237L;
 
 	/**
 	 * 	Get MProcess from Cache (immutable)
@@ -152,14 +153,24 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 		return p;
 	}	//	getFromMenu
 
-
 	/**	Cache ID						*/
-	private static ImmutableIntPOCache<Integer,MProcess>	s_cache	= new ImmutableIntPOCache<Integer,MProcess>(Table_Name, 20);
+	private static ImmutableIntPOCache<Integer,MProcess>	s_cache	= new ImmutableIntPOCache<Integer,MProcess>(Table_Name, 20, 0, false, 0);
 	/**	Cache UUID						*/
-	private static ImmutablePOCache<String,MProcess>	s_cacheUU	= new ImmutablePOCache<String,MProcess>(Table_Name, Table_Name+"|AD_Process_UU", 20);
+	private static ImmutablePOCache<String,MProcess>	s_cacheUU	= new ImmutablePOCache<String,MProcess>(Table_Name, Table_Name+"|AD_Process_UU", 20, 0, false, 0);
 	
-	
-	/**************************************************************************
+    /**
+     * UUID based Constructor
+     * @param ctx  Context
+     * @param AD_Process_UU  UUID key
+     * @param trxName Transaction
+     */
+    public MProcess(Properties ctx, String AD_Process_UU, String trxName) {
+        super(ctx, AD_Process_UU, trxName);
+		if (Util.isEmpty(AD_Process_UU))
+			setInitialDefaults();
+    }
+
+	/**
 	 * 	Standard Constructor
 	 *	@param ctx context
 	 *	@param AD_Process_ID process
@@ -169,15 +180,18 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 	{
 		super (ctx, AD_Process_ID, trxName);
 		if (AD_Process_ID == 0)
-		{
-		//	setValue (null);
-		//	setName (null);
-			setIsReport (false);
-			setAccessLevel (ACCESSLEVEL_All);
-			setEntityType (ENTITYTYPE_UserMaintained);
-			setIsBetaFunctionality(false);
-		}
+			setInitialDefaults();
 	}	//	MProcess
+
+	/**
+	 * Set the initial defaults for a new record
+	 */
+	private void setInitialDefaults() {
+		setIsReport (false);
+		setAccessLevel (ACCESSLEVEL_All);
+		setEntityType (ENTITYTYPE_UserMaintained);
+		setIsBetaFunctionality(false);
+	}
 
 	/**
 	 * 	Load Constructor
@@ -191,7 +205,7 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 	}	//	MProcess
 
 	/**
-	 * 
+	 * Copy constructor
 	 * @param copy
 	 */
 	public MProcess(MProcess copy) 
@@ -200,7 +214,7 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 	}
 
 	/**
-	 * 
+	 * Copy constructor
 	 * @param ctx
 	 * @param copy
 	 */
@@ -210,7 +224,7 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 	}
 
 	/**
-	 * 
+	 * Copy constructor
 	 * @param ctx
 	 * @param copy
 	 * @param trxName
@@ -226,8 +240,8 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 	private MProcessPara[]		m_parameters = null;
 
 	/**
-	 * 	Get Parameters
-	 *	@return parameters
+	 * 	Get Process Parameters
+	 *	@return process parameters
 	 */
 	public MProcessPara[] getParameters()
 	{
@@ -249,9 +263,9 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 	}	//	getParameters
 
 	/**
-	 * 	Get Parameter with ColumnName
+	 * 	Get Process Parameter with ColumnName
 	 *	@param name column name
-	 *	@return parameter or null
+	 *	@return process parameter or null
 	 */
 	public MProcessPara getParameter(String name)
 	{
@@ -264,12 +278,11 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 		return null;
 	}	//	getParameter
 	
-	
-	
 	/**
 	 * 	String Representation
 	 *	@return info
 	 */
+	@Override
 	public String toString ()
 	{
 		StringBuilder sb = new StringBuilder ("MProcess[")
@@ -278,28 +291,31 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 			.append ("]");
 		return sb.toString ();
 	}	//	toString
-
 	
-	/**************************************************************************
+	/**
 	 * 	Process w/o parameter
 	 *	@param Record_ID record
 	 *	@param trx transaction
 	 *	@return Process Instance
 	 */
+	@Deprecated (since="13", forRemoval=true)
 	public MPInstance processIt (int Record_ID, Trx trx)
 	{
 		return processIt(Record_ID, trx, true);
 	}
 
-	/**************************************************************************
+	/**
 	 * 	Process w/o parameter
 	 *	@param Record_ID record
 	 *	@param trx transaction
 	 *	@return Process Instance
 	 */
+	@Deprecated (since="13", forRemoval=true)
+	@SuppressWarnings("removal")
+	@GeneratedCodeCoverageExclusion
 	public MPInstance processIt (int Record_ID, Trx trx, boolean managedTrx)
 	{
-		MPInstance pInstance = new MPInstance (this, Record_ID);
+		MPInstance pInstance = new MPInstance (getCtx(), this.getAD_Process_ID(), Record_ID);
 		//	Lock
 		pInstance.setIsProcessing(true);
 		pInstance.saveEx();
@@ -314,6 +330,7 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 		//	Unlock
 		pInstance.setResult(ok ? MPInstance.RESULT_OK : MPInstance.RESULT_ERROR);
 		pInstance.setErrorMsg(processInfo.getSummary());
+		pInstance.setJsonData(processInfo.getJsonData());
 		pInstance.setIsProcessing(false);
 		pInstance.saveEx();
 		//
@@ -322,7 +339,7 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 	}	//	process
 
 	/**
-	 * 	Process It (sync)
+	 * 	Call {@link #processIt(ProcessInfo, Trx, boolean)}.
 	 *	@param pi Process Info
 	 *	@param trx transaction
 	 *	@return true if OK
@@ -333,16 +350,17 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 	}
 
 	/**
-	 * 	Process It (sync)
+	 * 	Execute the process
 	 *	@param pi Process Info
 	 *	@param trx transaction
+	 *  @param managedTrx true to manage commit and rollback
 	 *	@return true if OK
 	 */
 	public boolean processIt (ProcessInfo pi, Trx trx, boolean managedTrx)
 	{
 		if (pi.getAD_PInstance_ID() == 0)
 		{
-			MPInstance pInstance = new MPInstance (this, pi.getRecord_ID());
+			MPInstance pInstance = new MPInstance (getCtx(), this.getAD_Process_ID(), pi.getTable_ID(), pi.getRecord_ID(), pi.getRecord_UU());
 			//	Lock
 			pInstance.setIsProcessing(true);
 			pInstance.saveEx();
@@ -365,6 +383,7 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 				String errmsg = pi.getSummary();
 				pinstance.setResult(!pi.isError());
 				pinstance.setErrorMsg(errmsg);
+				pinstance.setJsonData(pi.getJsonData());
 				pinstance.saveEx();
 				ok = !pi.isError();
 			}
@@ -395,8 +414,8 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 	}	//	process
 
 	/**
-	 * 	Is this a Java Process
-	 *	@return true if java process
+	 * 	Is this using Java Process
+	 *	@return true if this is using java process
 	 */
 	public boolean isJavaProcess()
 	{
@@ -404,8 +423,8 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 	}	//	is JavaProcess
 	
 	/**
-	 * Is this a db procedure
-	 * @return true if db procedure
+	 * Is this using DB procedure
+	 * @return true if this is using DB procedure
 	 */
 	public boolean isDatabaseProcedure()
 	{
@@ -413,8 +432,8 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 	}
 	
 	/**
-	 * 	Is Force Background
-	 *	@return true if force background
+	 * 	Is Force running in Background
+	 *	@return true if force to run in background
 	 */
 	public boolean isForceBackground()
 	{
@@ -422,8 +441,8 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 	}
 	
 	/**
-	 * 	Is Force Foreground
-	 *	@return true if force foreground
+	 * 	Is Force running Foreground
+	 *	@return true if force to run in foreground
 	 */
 	public boolean isForceForeground()
 	{
@@ -431,11 +450,10 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 	}
 	
 	/**
-	 *  Start Database Process
+	 *  Run Database Process
 	 *  @param ProcedureName PL/SQL procedure name
-	 *  @param pInstance process instance
+	 *  @param processInfo process info
 	 *  @param managedTrx false if trx is managed by caller
-	 *	see ProcessCtl.startProcess
 	 *  @return true if success
 	 */
 	private boolean startProcess (String ProcedureName, ProcessInfo processInfo, Trx trx, boolean managedTrx)
@@ -447,13 +465,8 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 		return ProcessUtil.startDatabaseProcedure(processInfo, ProcedureName, trx, managedTrx);
 	}   //  startProcess
 
-
 	/**
-	 *  Start Java Class (sync).
-	 *      instanciate the class implementing the interface ProcessCall.
-	 *  The class can be a Server/Client class (when in Package
-	 *  org adempiere.process or org.compiere.model) or a client only class
-	 *  (e.g. in org.compiere.report)
+	 *  Run Java Class process
 	 *
 	 *  @param Classname    name of the class to call
 	 *  @param pi	process info
@@ -472,42 +485,36 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 			return ProcessUtil.startJavaProcess(getCtx(), pi, trx, managedTrx);
 		}
 	}   //  startClass
-
 	
 	/**
-	 * 	Is it a Workflow
-	 *	@return true if Workflow
+	 * 	Is it a Workflow process
+	 *	@return true if this is a Workflow process
 	 */
 	public boolean isWorkflow()
 	{
 		return getAD_Workflow_ID() > 0;
 	}	//	isWorkflow
-	
-	
+		
 	/**
 	 * 	Update Statistics
 	 *	@param seconds sec
 	 *  @deprecated - use UPDATE instead
 	 */
+	@Deprecated (since="13", forRemoval=true)
 	public void addStatistics (int seconds)
 	{
 		setStatistic_Count(getStatistic_Count() + 1);
 		setStatistic_Seconds(getStatistic_Seconds() + seconds);
 	}	//	addStatistics
-	
-	
-	/**
-	 * 	After Save
-	 *	@param newRecord new
-	 *	@param success success
-	 *	@return success
-	 */
+		
+	@Override
 	protected boolean afterSave (boolean newRecord, boolean success)
 	{
 		if (!success)
 			return success;
-		if (newRecord)	//	Add to all automatic roles
+		if (newRecord)	
 		{
+			// Create new Process Access record for all automatic role
 			MRole[] roles = MRole.getOf(getCtx(), "IsManual='N'");
 			for (int i = 0; i < roles.length; i++)
 			{
@@ -520,6 +527,7 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 		else if (is_ValueChanged("IsActive") || is_ValueChanged("Name") 
 			|| is_ValueChanged("Description") || is_ValueChanged("Help"))
 		{
+			// Update Menu
 			MMenu[] menues = MMenu.get(getCtx(), "AD_Process_ID=" + getAD_Process_ID(), get_TrxName());
 			for (int i = 0; i < menues.length; i++)
 			{
@@ -528,7 +536,8 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 				menues[i].setDescription(getDescription());
 				menues[i].saveEx();
 			}
-			MWFNode[] nodes = MWindow.getWFNodes(getCtx(), "AD_Process_ID=" + getAD_Process_ID(), get_TrxName());
+			// Update workflow node
+			MWFNode[] nodes = MWFNode.getWFNodes(getCtx(), "AD_Process_ID=" + getAD_Process_ID(), get_TrxName());
 			for (int i = 0; i < nodes.length; i++)
 			{
 				boolean changed = false;
@@ -552,10 +561,10 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 	}	//	afterSave
 	
 	/**
-	 * Grant independence to GenerateModel from AD_Process_ID
-	 * @param value
+	 * Get AD_Process_ID via Value (Search key)
+	 * @param value AD_Process.Value
 	 * @param trxName
-	 * @return
+	 * @return AD_Process_ID
 	 */
 	public static int getProcess_ID(String value, String trxName)
 	{
@@ -564,16 +573,13 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 	}
 	
 	/**
-	 * Copy settings from another process
-	 * overwrites existing data
-	 * (including translations)
+	 * Copy values and parameters from another process
 	 * and saves.
-	 * Not overwritten: name, value, entitytype
+	 * Not overwritten: name, value, entitytype.
 	 * @param source 
 	 */
 	public void copyFrom (MProcess source)
 	{
-
 		if (log.isLoggable(Level.FINE))log.log(Level.FINE, "Copying from:" + source + ", to: " + this);
 		setAccessLevel(source.getAccessLevel());
 		setAD_Form_ID(source.getAD_Form_ID());
@@ -603,7 +609,7 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 	}
 
 	/**
-	 * 	Process It without closing the given transaction - used from workflow engine.
+	 * 	Execute process without closing the given transaction - used from workflow engine.
 	 *	@param pi Process Info
 	 *	@param trx transaction
 	 *	@return true if OK
@@ -623,6 +629,13 @@ public class MProcess extends X_AD_Process implements ImmutablePOSupport
 		if (m_parameters != null && m_parameters.length > 0)
 			Arrays.stream(m_parameters).forEach(e -> e.markImmutable());
 		return this;
+	}
+
+	@Override
+	protected boolean beforeSave(boolean newRecord) {
+		if (getAllowMultipleExecution() == null)
+			setAllowMultipleExecution(ALLOWMULTIPLEEXECUTION_NotFromSameUserAndParameters);
+		return true;
 	}
 
 }	//	MProcess

@@ -29,7 +29,7 @@ import org.compiere.util.ValueNamePair;
  * Deprecated with IDEMPIERE-4566
  * moved to org.idempiere.process.TranslationImpExp
  */
-@Deprecated
+@Deprecated (since="13", forRemoval=true)
 public class TranslationController
 {
 	public TranslationController()
@@ -83,7 +83,7 @@ public class TranslationController
 		//	Fill Language
 		String sql = "SELECT Name, AD_Language "
 			+ "FROM AD_Language "
-			+ "WHERE IsActive='Y' AND (IsSystemLanguage='Y' OR IsBaseLanguage='Y')"
+			+ "WHERE IsActive='Y' AND (IsSystemLanguage='Y' OR IsBaseLanguage='Y') "
 			+ "ORDER BY Name";
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;

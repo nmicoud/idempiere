@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for C_DocType
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_C_DocType 
 {
@@ -44,8 +44,8 @@ public interface I_C_DocType
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -53,12 +53,12 @@ public interface I_C_DocType
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -75,6 +75,7 @@ public interface I_C_DocType
 	  */
 	public int getAD_PrintFormat_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_PrintFormat getAD_PrintFormat() throws RuntimeException;
 
     /** Column name C_DocTypeDifference_ID */
@@ -90,20 +91,8 @@ public interface I_C_DocType
 	  */
 	public int getC_DocTypeDifference_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_DocType getC_DocTypeDifference() throws RuntimeException;
-
-    /** Column name C_DocType_ID */
-    public static final String COLUMNNAME_C_DocType_ID = "C_DocType_ID";
-
-	/** Set Document Type.
-	  * Document type or rules
-	  */
-	public void setC_DocType_ID (int C_DocType_ID);
-
-	/** Get Document Type.
-	  * Document type or rules
-	  */
-	public int getC_DocType_ID();
 
     /** Column name C_DocTypeInvoice_ID */
     public static final String COLUMNNAME_C_DocTypeInvoice_ID = "C_DocTypeInvoice_ID";
@@ -118,6 +107,7 @@ public interface I_C_DocType
 	  */
 	public int getC_DocTypeInvoice_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_DocType getC_DocTypeInvoice() throws RuntimeException;
 
     /** Column name C_DocTypeProforma_ID */
@@ -133,6 +123,7 @@ public interface I_C_DocType
 	  */
 	public int getC_DocTypeProforma_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_DocType getC_DocTypeProforma() throws RuntimeException;
 
     /** Column name C_DocTypeShipment_ID */
@@ -148,7 +139,21 @@ public interface I_C_DocType
 	  */
 	public int getC_DocTypeShipment_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_DocType getC_DocTypeShipment() throws RuntimeException;
+
+    /** Column name C_DocType_ID */
+    public static final String COLUMNNAME_C_DocType_ID = "C_DocType_ID";
+
+	/** Set Document Type.
+	  * Document type or rules
+	  */
+	public void setC_DocType_ID (int C_DocType_ID);
+
+	/** Get Document Type.
+	  * Document type or rules
+	  */
+	public int getC_DocType_ID();
 
     /** Column name C_DocType_UU */
     public static final String COLUMNNAME_C_DocType_UU = "C_DocType_UU";
@@ -184,6 +189,7 @@ public interface I_C_DocType
 	/** Get Definite Sequence	  */
 	public int getDefiniteSequence_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Sequence getDefiniteSequence() throws RuntimeException;
 
     /** Column name Description */
@@ -202,12 +208,12 @@ public interface I_C_DocType
     /** Column name DocBaseType */
     public static final String COLUMNNAME_DocBaseType = "DocBaseType";
 
-	/** Set Document BaseType.
+	/** Set Document Base Type.
 	  * Logical type of document
 	  */
 	public void setDocBaseType (String DocBaseType);
 
-	/** Get Document BaseType.
+	/** Get Document Base Type.
 	  * Logical type of document
 	  */
 	public String getDocBaseType();
@@ -225,6 +231,7 @@ public interface I_C_DocType
 	  */
 	public int getDocNoSequence_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Sequence getDocNoSequence() throws RuntimeException;
 
     /** Column name DocSubTypeInv */
@@ -292,6 +299,7 @@ public interface I_C_DocType
 	  */
 	public int getGL_Category_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_GL_Category getGL_Category() throws RuntimeException;
 
     /** Column name HasCharges */
@@ -332,6 +340,62 @@ public interface I_C_DocType
 	  * The record is active in the system
 	  */
 	public boolean isActive();
+
+    /** Column name IsAlwaysPosted */
+    public static final String COLUMNNAME_IsAlwaysPosted = "IsAlwaysPosted";
+
+	/** Set Always Posted.
+	  * Posts the document if &quot;
+AlwaysPosted&quot;
+ is checked, regardless of accounting schema.
+	  */
+	public void setIsAlwaysPosted (boolean IsAlwaysPosted);
+
+	/** Get Always Posted.
+	  * Posts the document if &quot;
+AlwaysPosted&quot;
+ is checked, regardless of accounting schema.
+	  */
+	public boolean isAlwaysPosted();
+
+    /** Column name IsAutoGenerateInout */
+    public static final String COLUMNNAME_IsAutoGenerateInout = "IsAutoGenerateInout";
+
+	/** Set Generate Shipment.
+	  * Automatically Generate Shipment after (Sales/Purchase) Order completed
+	  */
+	public void setIsAutoGenerateInout (boolean IsAutoGenerateInout);
+
+	/** Get Generate Shipment.
+	  * Automatically Generate Shipment after (Sales/Purchase) Order completed
+	  */
+	public boolean isAutoGenerateInout();
+
+    /** Column name IsAutoGenerateInvoice */
+    public static final String COLUMNNAME_IsAutoGenerateInvoice = "IsAutoGenerateInvoice";
+
+	/** Set Generate Invoice.
+	  * Automatically Generate Invoice after (Sales/Purchase) Order completed
+	  */
+	public void setIsAutoGenerateInvoice (boolean IsAutoGenerateInvoice);
+
+	/** Get Generate Invoice.
+	  * Automatically Generate Invoice after (Sales/Purchase) Order completed
+	  */
+	public boolean isAutoGenerateInvoice();
+
+    /** Column name IsCanBeReactivated */
+    public static final String COLUMNNAME_IsCanBeReactivated = "IsCanBeReactivated";
+
+	/** Set Can Be Reactivated.
+	  * This document can be reactivated
+	  */
+	public void setIsCanBeReactivated (boolean IsCanBeReactivated);
+
+	/** Get Can Be Reactivated.
+	  * This document can be reactivated
+	  */
+	public boolean isCanBeReactivated();
 
     /** Column name IsChargeOrProductMandatory */
     public static final String COLUMNNAME_IsChargeOrProductMandatory = "IsChargeOrProductMandatory";
@@ -394,6 +458,19 @@ public interface I_C_DocType
 	  */
 	public boolean isDocNoControlled();
 
+    /** Column name IsInTransit */
+    public static final String COLUMNNAME_IsInTransit = "IsInTransit";
+
+	/** Set In Transit.
+	  * Movement is in transit
+	  */
+	public void setIsInTransit (boolean IsInTransit);
+
+	/** Get In Transit.
+	  * Movement is in transit
+	  */
+	public boolean isInTransit();
+
     /** Column name IsIndexed */
     public static final String COLUMNNAME_IsIndexed = "IsIndexed";
 
@@ -407,18 +484,14 @@ public interface I_C_DocType
 	  */
 	public boolean isIndexed();
 
-    /** Column name IsInTransit */
-    public static final String COLUMNNAME_IsInTransit = "IsInTransit";
+    /** Column name IsNoPriceListCheck */
+    public static final String COLUMNNAME_IsNoPriceListCheck = "IsNoPriceListCheck";
 
-	/** Set In Transit.
-	  * Movement is in transit
-	  */
-	public void setIsInTransit (boolean IsInTransit);
+	/** Set Allow Product Without Price List	  */
+	public void setIsNoPriceListCheck (boolean IsNoPriceListCheck);
 
-	/** Get In Transit.
-	  * Movement is in transit
-	  */
-	public boolean isInTransit();
+	/** Get Allow Product Without Price List	  */
+	public boolean isNoPriceListCheck();
 
     /** Column name IsOverwriteDateOnComplete */
     public static final String COLUMNNAME_IsOverwriteDateOnComplete = "IsOverwriteDateOnComplete";
@@ -464,19 +537,6 @@ public interface I_C_DocType
 	  */
 	public boolean isPrepareSplitDocument();
 
-    /** Column name IsShipConfirm */
-    public static final String COLUMNNAME_IsShipConfirm = "IsShipConfirm";
-
-	/** Set Ship/Receipt Confirmation.
-	  * Require Ship or Receipt Confirmation before processing
-	  */
-	public void setIsShipConfirm (boolean IsShipConfirm);
-
-	/** Get Ship/Receipt Confirmation.
-	  * Require Ship or Receipt Confirmation before processing
-	  */
-	public boolean isShipConfirm();
-
     /** Column name IsSOTrx */
     public static final String COLUMNNAME_IsSOTrx = "IsSOTrx";
 
@@ -489,6 +549,19 @@ public interface I_C_DocType
 	  * This is a Sales Transaction
 	  */
 	public boolean isSOTrx();
+
+    /** Column name IsShipConfirm */
+    public static final String COLUMNNAME_IsShipConfirm = "IsShipConfirm";
+
+	/** Set Ship/Receipt Confirmation.
+	  * Require Ship or Receipt Confirmation before processing
+	  */
+	public void setIsShipConfirm (boolean IsShipConfirm);
+
+	/** Get Ship/Receipt Confirmation.
+	  * Require Ship or Receipt Confirmation before processing
+	  */
+	public boolean isShipConfirm();
 
     /** Column name IsSplitWhenDifference */
     public static final String COLUMNNAME_IsSplitWhenDifference = "IsSplitWhenDifference";

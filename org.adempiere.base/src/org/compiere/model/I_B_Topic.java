@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for B_Topic
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_B_Topic 
 {
@@ -44,8 +44,8 @@ public interface I_B_Topic
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -53,12 +53,12 @@ public interface I_B_Topic
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -75,20 +75,8 @@ public interface I_B_Topic
 	  */
 	public int getB_TopicCategory_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_B_TopicCategory getB_TopicCategory() throws RuntimeException;
-
-    /** Column name B_Topic_ID */
-    public static final String COLUMNNAME_B_Topic_ID = "B_Topic_ID";
-
-	/** Set Topic.
-	  * Auction Topic
-	  */
-	public void setB_Topic_ID (int B_Topic_ID);
-
-	/** Get Topic.
-	  * Auction Topic
-	  */
-	public int getB_Topic_ID();
 
     /** Column name B_TopicType_ID */
     public static final String COLUMNNAME_B_TopicType_ID = "B_TopicType_ID";
@@ -103,7 +91,21 @@ public interface I_B_Topic
 	  */
 	public int getB_TopicType_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_B_TopicType getB_TopicType() throws RuntimeException;
+
+    /** Column name B_Topic_ID */
+    public static final String COLUMNNAME_B_Topic_ID = "B_Topic_ID";
+
+	/** Set Topic.
+	  * Auction Topic
+	  */
+	public void setB_Topic_ID (int B_Topic_ID);
+
+	/** Get Topic.
+	  * Auction Topic
+	  */
+	public int getB_Topic_ID();
 
     /** Column name B_Topic_UU */
     public static final String COLUMNNAME_B_Topic_UU = "B_Topic_UU";

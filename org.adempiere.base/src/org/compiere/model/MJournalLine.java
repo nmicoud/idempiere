@@ -25,22 +25,35 @@ import java.util.Properties;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.compiere.util.Util;
 
 /**
- *  Journal Line Model
+ *  GL Journal Line Model
  *
  *	@author Jorg Janke
  *	@author Cristina Ghita
  *  	<li>BF [ 2855807 ] AD_Org_ID from account 
- *  		https://sourceforge.net/tracker/?func=detail&aid=2855807&group_id=176962&atid=879332
+ *  		https://sourceforge.net/p/adempiere/bugs/2084/
  *	@version $Id: MJournalLine.java,v 1.3 2006/07/30 00:51:05 jjanke Exp $
  */
 public class MJournalLine extends X_GL_JournalLine
 {
 	/**
-	 * 
+	 * generated serial id
 	 */
 	private static final long serialVersionUID = 253571209449736797L;
+
+    /**
+     * UUID based Constructor
+     * @param ctx  Context
+     * @param GL_JournalLine_UU  UUID key
+     * @param trxName Transaction
+     */
+    public MJournalLine(Properties ctx, String GL_JournalLine_UU, String trxName) {
+        super(ctx, GL_JournalLine_UU, trxName);
+		if (Util.isEmpty(GL_JournalLine_UU))
+			setInitialDefaults();
+    }
 
 	/**
 	 * 	Standard Constructor
@@ -52,22 +65,22 @@ public class MJournalLine extends X_GL_JournalLine
 	{
 		super (ctx, GL_JournalLine_ID, trxName);
 		if (GL_JournalLine_ID == 0)
-		{
-		//	setGL_JournalLine_ID (0);		//	PK
-		//	setGL_Journal_ID (0);			//	Parent
-		//	setC_Currency_ID (0);
-		//	setC_ValidCombination_ID (0);
-			setLine (0);
-			setAmtAcctCr (Env.ZERO);
-			setAmtAcctDr (Env.ZERO);
-			setAmtSourceCr (Env.ZERO);
-			setAmtSourceDr (Env.ZERO);
-			setCurrencyRate (Env.ONE);
-		//	setC_ConversionType_ID (0);
-			setDateAcct (new Timestamp(System.currentTimeMillis()));
-			setIsGenerated (true);
-		}
+			setInitialDefaults();
 	}	//	MJournalLine
+
+	/**
+	 * Set the initial defaults for a new record
+	 */
+	private void setInitialDefaults() {
+		setLine (0);
+		setAmtAcctCr (Env.ZERO);
+		setAmtAcctDr (Env.ZERO);
+		setAmtSourceCr (Env.ZERO);
+		setAmtSourceDr (Env.ZERO);
+		setCurrencyRate (Env.ONE);
+		setDateAcct (new Timestamp(System.currentTimeMillis()));
+		setIsGenerated (true);
+	}
 
 	/**
 	 * 	Load Constructor
@@ -109,9 +122,8 @@ public class MJournalLine extends X_GL_JournalLine
 		return m_parent;
 	}	//	getParent
 	
-
 	/**	Currency Precision		*/
-	protected int					m_precision = 2;
+	protected int				m_precision = 2;
 	/**	Account Combination		*/
 	protected MAccount		 	m_account = null;
 	/** Account Element			*/
@@ -119,7 +131,7 @@ public class MJournalLine extends X_GL_JournalLine
 	
 	/**
 	 * 	Set Currency Info
-	 *	@param C_Currency_ID currenct
+	 *	@param C_Currency_ID currency
 	 *	@param C_ConversionType_ID type
 	 *	@param CurrencyRate rate
 	 */
@@ -155,8 +167,9 @@ public class MJournalLine extends X_GL_JournalLine
 	
 	/**
 	 * 	Set Currency Rate
-	 *	@param CurrencyRate check for null (->one)
+	 *	@param CurrencyRate check for null or negative value (-&gt;one)
 	 */
+	@Override
 	public void setCurrencyRate (BigDecimal CurrencyRate)
 	{
 		if (CurrencyRate == null)
@@ -175,7 +188,7 @@ public class MJournalLine extends X_GL_JournalLine
 	
 	/**
 	 * 	Set Accounted Amounts only if not 0.
-	 * 	Amounts overwritten in beforeSave - set conversion rate
+	 * 	Amounts overwritten in beforeSave - set conversion rate.
 	 *	@param AmtAcctDr Dr
 	 *	@param AmtAcctCr Cr
 	 */
@@ -281,30 +294,26 @@ public class MJournalLine extends X_GL_JournalLine
 		}
 		return acct.isDocControlled();
 	}	//	isDocControlled
-	
-	
-	/**************************************************************************
-	 * 	Before Save
-	 *	@param newRecord new
-	 *	@return true 
-	 */
+		
+	@Override
 	protected boolean beforeSave (boolean newRecord)
 	{
-		if (newRecord && getParent().isComplete()) {
-			log.saveError("ParentComplete", Msg.translate(getCtx(), "GL_JournalLine"));
+		if (newRecord && getParent().isProcessed()) {
+			log.saveError("ParentComplete", Msg.translate(getCtx(), "GL_Journal_ID"));
 			return false;
 		}
 
 		if (getAD_Org_ID() <= 0) //	Set Line Org to Doc Org if still not set 
 			setAD_Org_ID(getParent().getAD_Org_ID()); 
+		// Set Line
 		if (getLine() == 0)
 			setLine(DB.getSQLValueEx(get_TrxName(), "SELECT COALESCE(MAX(Line), 0) + 10 FROM GL_JournalLine WHERE GL_Journal_ID = ?", getGL_Journal_ID()));
+		// Set currency and conversion type from parent
 		if (getC_Currency_ID() == 0)
 			setC_Currency_ID(getParent().getC_Currency_ID());
 		if (getC_ConversionType_ID() == 0)
 			setC_ConversionType_ID(getParent().getC_ConversionType_ID());
 
-		// idempiere 344 - nmicoud
 		if (!getOrCreateCombination())
 			return false;
 		if (getC_ValidCombination_ID() <= 0)
@@ -313,9 +322,8 @@ public class MJournalLine extends X_GL_JournalLine
 			return false;
 		}
 		fillDimensionsFromCombination();
-		// end idempiere 344 - nmicoud
 
-		//	Acct Amts
+		//	Set Acct Amts from Source Amts
 		BigDecimal rate = getCurrencyRate();
 		BigDecimal amt = rate.multiply(getAmtSourceDr());
 		if (amt.scale() > getPrecision())
@@ -329,13 +337,7 @@ public class MJournalLine extends X_GL_JournalLine
 		return true;
 	}	//	beforeSave
 	
-	/**
-	 * 	After Save.
-	 * 	Update Journal/Batch Total
-	 *	@param newRecord true if new record
-	 *	@param success true if success
-	 *	@return success
-	 */
+	@Override
 	protected boolean afterSave (boolean newRecord, boolean success)
 	{
 		if (!success)
@@ -343,12 +345,7 @@ public class MJournalLine extends X_GL_JournalLine
 		return updateJournalTotal();
 	}	//	afterSave
 	
-	
-	/**
-	 * 	After Delete
-	 *	@param success true if deleted
-	 *	@return true if success
-	 */
+	@Override
 	protected boolean afterDelete (boolean success)
 	{
 		if (!success)
@@ -358,7 +355,7 @@ public class MJournalLine extends X_GL_JournalLine
 
 	
 	/**
-	 * 	Update Journal and Batch Total
+	 * 	Update Journal and Journal Batch Total
 	 *	@return true if success
 	 */
 	protected boolean updateJournalTotal()
@@ -388,7 +385,9 @@ public class MJournalLine extends X_GL_JournalLine
 		return no == 1;
 	}	//	updateJournalTotal
 
-	/** Update combination and optionally **/
+	/** 
+	 * Get or create new valid combination record. Set C_ValidCombination_ID.
+	 */
 	protected boolean getOrCreateCombination()
 	{
 		if (getC_ValidCombination_ID() == 0
@@ -410,7 +409,7 @@ public class MJournalLine extends X_GL_JournalLine
 			MJournal gl = new MJournal(getCtx(), getGL_Journal_ID(), get_TrxName());
 
 			// Validate all mandatory combinations are set
-			MAcctSchema as = (MAcctSchema) getParent().getC_AcctSchema();
+			MAcctSchema as = MAcctSchema.get(getParent().getC_AcctSchema_ID());
 			String errorFields = "";
 			for (MAcctSchemaElement elem : MAcctSchemaElement.getAcctSchemaElements(as)) {
 				if (! elem.isMandatory())
@@ -438,6 +437,18 @@ public class MJournalLine extends X_GL_JournalLine
 					errorFields += "@" + COLUMNNAME_User1_ID + "@, ";
 				if (MAcctSchemaElement.ELEMENTTYPE_UserElementList2.equals(et) && getUser2_ID() == 0)
 					errorFields += "@" + COLUMNNAME_User2_ID + "@, ";
+				if (MAcctSchemaElement.ELEMENTTYPE_Department.equals(et) && getC_Department_ID() == 0)
+					errorFields += "@" + COLUMNNAME_C_Department_ID + "@, ";
+				if (MAcctSchemaElement.ELEMENTTYPE_CostCenter.equals(et) && getC_CostCenter_ID() == 0)
+					errorFields += "@" + COLUMNNAME_C_CostCenter_ID + "@, ";
+				if (MAcctSchemaElement.ELEMENTTYPE_Employee.equals(et) && getC_Employee_ID() == 0)
+					errorFields += "@" + COLUMNNAME_C_Employee_ID + "@, ";
+				if (MAcctSchemaElement.ELEMENTTYPE_Warehouse.equals(et) && getM_Warehouse_ID() == 0)
+					errorFields += "@" + COLUMNNAME_M_Warehouse_ID + "@, ";
+				if (MAcctSchemaElement.ELEMENTTYPE_Charge.equals(et) && getC_Charge_ID() == 0)
+					errorFields += "@" + COLUMNNAME_C_Charge_ID + "@, ";
+				if (MAcctSchemaElement.ELEMENTTYPE_AttributeSetInstance.equals(et) && getM_AttributeSetInstance_ID() == 0)
+					errorFields += "@" + COLUMNNAME_M_AttributeSetInstance_ID + "@, ";
 			}
 			if (errorFields.length() > 0)
 			{
@@ -464,7 +475,9 @@ public class MJournalLine extends X_GL_JournalLine
 		return true;
 	}	//	getOrCreateCombination
 
-	/** Fill Accounting Dimensions from line combination **/
+	/** 
+	 * Fill Accounting Dimensions from valid combination. 
+	 */
 	protected void fillDimensionsFromCombination()
 	{
 		if (getC_ValidCombination_ID() > 0)

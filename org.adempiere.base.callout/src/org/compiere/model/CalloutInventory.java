@@ -17,13 +17,10 @@
 package org.compiere.model;
 
 import java.math.BigDecimal;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.math.RoundingMode;
 import java.util.Properties;
 import java.util.logging.Level;
 
-import org.compiere.util.DB;
 import org.compiere.util.Env;
 
 /**
@@ -60,7 +57,7 @@ public class CalloutInventory extends CalloutEngine
 
 		if ("M_Product_ID".equals(mField.getColumnName())) {
 			// product changed - remove old ASI
-			mTab.setValue("M_AttributeSetInstance_ID", null);
+			mTab.setValue("M_AttributeSetInstance_ID", 0);
 		}
 
 		//	Get Book Value
@@ -96,7 +93,16 @@ public class CalloutInventory extends CalloutEngine
 			if (M_AttributeSetInstance_ID != 0)
 				mTab.setValue(MInventoryLine.COLUMNNAME_M_AttributeSetInstance_ID, M_AttributeSetInstance_ID);
 			else
-				mTab.setValue(MInventoryLine.COLUMNNAME_M_AttributeSetInstance_ID, null);
+				mTab.setValue(MInventoryLine.COLUMNNAME_M_AttributeSetInstance_ID, 0);
+
+			// Set UOM from product and reset QtyEntered
+			MProduct product = MProduct.get(ctx, M_Product_ID);
+			if (product != null) {
+				mTab.setValue("C_UOM_ID", product.getC_UOM_ID());
+				mTab.setValue("QtyEntered", Env.ZERO);
+				mTab.setValue("QtyCount", Env.ZERO);
+				mTab.setValue("QtyInternalUse", Env.ZERO);
+			}
 		}
 			
 		// Set QtyBook from first storage location
@@ -104,7 +110,19 @@ public class CalloutInventory extends CalloutEngine
 		BigDecimal bd = null;
 		if (MDocType.DOCSUBTYPEINV_PhysicalInventory.equals(docSubTypeInv)) {
 			try {
-				bd = setQtyBook(M_AttributeSetInstance_ID, M_Product_ID, M_Locator_ID);
+				String trxName = null;
+				if (   mTab != null
+					&& mTab.getTableModel() != null) {
+					GridTable gt = mTab.getTableModel();
+					if (gt.isImporting()) {
+						trxName = gt.get_TrxName();
+					}
+				}
+				if (mTab.getValue("M_Inventory_ID") == null)
+					return null;
+				MInventory inventory = new MInventory(ctx, (Integer) mTab.getValue("M_Inventory_ID"), trxName);
+				bd = MStorageOnHand.getQtyOnHandForLocatorWithASIMovementDate(M_Product_ID, M_Locator_ID, 
+						M_AttributeSetInstance_ID, inventory.getMovementDate(), trxName);
 				mTab.setValue("QtyBook", bd);
 			} catch (Exception e) {
 				return e.getLocalizedMessage();
@@ -118,60 +136,75 @@ public class CalloutInventory extends CalloutEngine
 			+ " - QtyBook=" + bd);
 		return "";
 	}   //  product
-	
-	
+
 	/**
-	 * kviiksaar
-	 * 
-	 * Returns the current Book Qty for given parameters or 0
-	 * 
-	 * @param M_AttributeSetInstance_ID
-	 * @param M_Product_ID
-	 * @param M_Locator_ID
-	 * @return
-	 * @throws Exception
+	 *	Inventory Line - Quantity / UOM.
+	 *		- called from C_UOM_ID, QtyEntered
+	 *		- converts QtyEntered to product UOM and stores in QtyCount (Physical) or QtyInternalUse (Internal Use)
+	 *	@param ctx context
+	 *	@param WindowNo window no
+	 *	@param mTab tab model
+	 *	@param mField field model
+	 *	@param value new value
+	 *	@return error message or ""
 	 */
-	private BigDecimal setQtyBook (int M_AttributeSetInstance_ID, int M_Product_ID, int M_Locator_ID) throws Exception {
-		// Set QtyBook from first storage location
-		BigDecimal bd = null;
-		String sql = "SELECT SUM(QtyOnHand) FROM M_StorageOnHand "
-			+ "WHERE M_Product_ID=?"	//	1
-			+ " AND M_Locator_ID=?"		//	2
-			+ " AND M_AttributeSetInstance_ID=?"; //3
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		try
-		{
-			pstmt = DB.prepareStatement(sql, null);
-			pstmt.setInt(1, M_Product_ID);
-			pstmt.setInt(2, M_Locator_ID);
-			pstmt.setInt(3, M_AttributeSetInstance_ID);
-			rs = pstmt.executeQuery();
-			if (rs.next())
-			{
-				bd = rs.getBigDecimal(1);
-				if (bd != null)
-					return bd;
-			} else {
-				// gwu: 1719401: clear Booked Quantity to zero first in case the query returns no rows, 
-				// for example when the locator has never stored a particular product.
-				return Env.ZERO;
+	public String qty (Properties ctx, int WindowNo, GridTab mTab, GridField mField, Object value)
+	{
+		if (isCalloutActive() || value == null)
+			return "";
+
+		int M_Product_ID = Env.getContextAsInt(ctx, WindowNo, mTab.getTabNo(), "M_Product_ID");
+		if (M_Product_ID == 0)
+			return "";
+
+		int doctypeid = Env.getContextAsInt(ctx, WindowNo, "C_DocType_ID");
+		String docSubTypeInv = null;
+		if (doctypeid > 0) {
+			MDocType dt = MDocType.get(ctx, doctypeid);
+			docSubTypeInv = dt.getDocSubTypeInv();
+		}
+		// CostAdjustment lines don't use QtyEntered
+		if (MDocType.DOCSUBTYPEINV_CostAdjustment.equals(docSubTypeInv))
+			return "";
+
+		int C_UOM_ID = Env.getContextAsInt(ctx, WindowNo, mTab.getTabNo(), "C_UOM_ID");
+		if (C_UOM_ID == 0)
+			return "";
+
+		BigDecimal QtyEntered;
+
+		// UOM changed - re-scale QtyEntered to new UOM precision and reconvert
+		if (mField.getColumnName().equals("C_UOM_ID")) {
+			int C_UOM_To_ID = ((Integer) value).intValue();
+			QtyEntered = (BigDecimal) mTab.getValue("QtyEntered");
+			if (QtyEntered == null)
+				QtyEntered = Env.ZERO;
+			BigDecimal QtyEntered1 = QtyEntered.setScale(MUOM.getPrecision(ctx, C_UOM_To_ID), RoundingMode.HALF_UP);
+			if (QtyEntered.compareTo(QtyEntered1) != 0) {
+				QtyEntered = QtyEntered1;
+				mTab.setValue("QtyEntered", QtyEntered);
+			}
+		} else {
+			// QtyEntered changed
+			QtyEntered = (BigDecimal) value;
+			BigDecimal QtyEntered1 = QtyEntered.setScale(MUOM.getPrecision(ctx, C_UOM_ID), RoundingMode.HALF_UP);
+			if (QtyEntered.compareTo(QtyEntered1) != 0) {
+				QtyEntered = QtyEntered1;
+				mTab.setValue("QtyEntered", QtyEntered);
 			}
 		}
-		catch (SQLException e)
-		{
-			log.log(Level.SEVERE, sql, e);
-			throw new Exception(e.getLocalizedMessage());
-		}
-		finally
-		{
-			DB.close(rs, pstmt);
-			rs = null;
-			pstmt = null;
-		}
 
-		return Env.ZERO;
-	}
-	
+		// Convert QtyEntered (entered UOM) -> stock UOM
+		BigDecimal qtyConverted = MUOMConversion.convertProductFrom(ctx, M_Product_ID, C_UOM_ID, QtyEntered);
+		if (qtyConverted == null)
+			qtyConverted = QtyEntered;
+
+		if (MDocType.DOCSUBTYPEINV_InternalUseInventory.equals(docSubTypeInv))
+			mTab.setValue("QtyInternalUse", qtyConverted);
+		else if (MDocType.DOCSUBTYPEINV_PhysicalInventory.equals(docSubTypeInv))
+			mTab.setValue("QtyCount", qtyConverted);
+
+		return "";
+	}	//	qty
 
 }	//	CalloutInventory

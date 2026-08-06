@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for A_Asset_Change
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_A_Asset_Change 
 {
@@ -41,6 +41,43 @@ public interface I_A_Asset_Change
 
     /** Load Meta Data */
 
+    /** Column name AD_Client_ID */
+    public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
+
+	/** Get Tenant.
+	  * Tenant for this installation.
+	  */
+	public int getAD_Client_ID();
+
+    /** Column name AD_Org_ID */
+    public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
+
+	/** Set Organization.
+	  * Organizational entity within tenant
+	  */
+	public void setAD_Org_ID (int AD_Org_ID);
+
+	/** Get Organization.
+	  * Organizational entity within tenant
+	  */
+	public int getAD_Org_ID();
+
+    /** Column name AD_User_ID */
+    public static final String COLUMNNAME_AD_User_ID = "AD_User_ID";
+
+	/** Set User/Contact.
+	  * User within the system - Internal or Business Partner Contact
+	  */
+	public void setAD_User_ID (int AD_User_ID);
+
+	/** Get User/Contact.
+	  * User within the system - Internal or Business Partner Contact
+	  */
+	public int getAD_User_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_AD_User getAD_User() throws RuntimeException;
+
     /** Column name A_Accumdepreciation_Acct */
     public static final String COLUMNNAME_A_Accumdepreciation_Acct = "A_Accumdepreciation_Acct";
 
@@ -50,6 +87,7 @@ public interface I_A_Asset_Change
 	/** Get Accumulated Depreciation Account	  */
 	public int getA_Accumdepreciation_Acct();
 
+	@Deprecated(since="13") // use better methods with cache
 	public I_C_ValidCombination getA_Accumdepreciation_A() throws RuntimeException;
 
     /** Column name A_Asset_Acct */
@@ -61,6 +99,7 @@ public interface I_A_Asset_Change
 	/** Get Asset Acct	  */
 	public int getA_Asset_Acct();
 
+	@Deprecated(since="13") // use better methods with cache
 	public I_C_ValidCombination getA_Asset_A() throws RuntimeException;
 
     /** Column name A_Asset_Acct_ID */
@@ -121,6 +160,7 @@ public interface I_A_Asset_Change
 	  */
 	public int getA_Asset_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_A_Asset getA_Asset() throws RuntimeException;
 
     /** Column name A_Asset_Retirement_ID */
@@ -145,14 +185,6 @@ public interface I_A_Asset_Change
 	/** Get Revaluation Date	  */
 	public Timestamp getA_Asset_RevalDate();
 
-    /** Column name AD_Client_ID */
-    public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
-
-	/** Get Client.
-	  * Client/Tenant for this installation.
-	  */
-	public int getAD_Client_ID();
-
     /** Column name A_Depreciation_Acct */
     public static final String COLUMNNAME_A_Depreciation_Acct = "A_Depreciation_Acct";
 
@@ -162,6 +194,7 @@ public interface I_A_Asset_Change
 	/** Get Depreciation Account	  */
 	public int getA_Depreciation_Acct();
 
+	@Deprecated(since="13") // use better methods with cache
 	public I_C_ValidCombination getA_Depreciation_A() throws RuntimeException;
 
     /** Column name A_Depreciation_Manual_Amount */
@@ -191,6 +224,7 @@ public interface I_A_Asset_Change
 	/** Get A_Depreciation_Table_Header_ID	  */
 	public int getA_Depreciation_Table_Header_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_A_Depreciation_Table_Header getA_Depreciation_Table_Header() throws RuntimeException;
 
     /** Column name A_Depreciation_Variable_Perc */
@@ -211,6 +245,7 @@ public interface I_A_Asset_Change
 	/** Get Disposal Loss Acct	  */
 	public int getA_Disposal_Loss_Acct();
 
+	@Deprecated(since="13") // use better methods with cache
 	public I_C_ValidCombination getA_Disposal_Loss_A() throws RuntimeException;
 
     /** Column name A_Disposal_Revenue_Acct */
@@ -222,35 +257,8 @@ public interface I_A_Asset_Change
 	/** Get Disposal Revenue Acct	  */
 	public int getA_Disposal_Revenue_Acct();
 
+	@Deprecated(since="13") // use better methods with cache
 	public I_C_ValidCombination getA_Disposal_Revenue_A() throws RuntimeException;
-
-    /** Column name AD_Org_ID */
-    public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
-
-	/** Set Organization.
-	  * Organizational entity within client
-	  */
-	public void setAD_Org_ID (int AD_Org_ID);
-
-	/** Get Organization.
-	  * Organizational entity within client
-	  */
-	public int getAD_Org_ID();
-
-    /** Column name AD_User_ID */
-    public static final String COLUMNNAME_AD_User_ID = "AD_User_ID";
-
-	/** Set User/Contact.
-	  * User within the system - Internal or Business Partner Contact
-	  */
-	public void setAD_User_ID (int AD_User_ID);
-
-	/** Get User/Contact.
-	  * User within the system - Internal or Business Partner Contact
-	  */
-	public int getAD_User_ID();
-
-	public org.compiere.model.I_AD_User getAD_User() throws RuntimeException;
 
     /** Column name A_Parent_Asset_ID */
     public static final String COLUMNNAME_A_Parent_Asset_ID = "A_Parent_Asset_ID";
@@ -261,6 +269,7 @@ public interface I_A_Asset_Change
 	/** Get Parent Asset	  */
 	public int getA_Parent_Asset_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_A_Asset getA_Parent_Asset() throws RuntimeException;
 
     /** Column name A_Period_End */
@@ -419,19 +428,19 @@ public interface I_A_Asset_Change
     /** Column name AssetAccumDepreciationAmt */
     public static final String COLUMNNAME_AssetAccumDepreciationAmt = "AssetAccumDepreciationAmt";
 
-	/** Set AssetAccumDepreciationAmt	  */
+	/** Set Asset Accum Depreciation Amt	  */
 	public void setAssetAccumDepreciationAmt (BigDecimal AssetAccumDepreciationAmt);
 
-	/** Get AssetAccumDepreciationAmt	  */
+	/** Get Asset Accum Depreciation Amt	  */
 	public BigDecimal getAssetAccumDepreciationAmt();
 
     /** Column name AssetBookValueAmt */
     public static final String COLUMNNAME_AssetBookValueAmt = "AssetBookValueAmt";
 
-	/** Set AssetBookValueAmt	  */
+	/** Set Asset Book Value Amt	  */
 	public void setAssetBookValueAmt (BigDecimal AssetBookValueAmt);
 
-	/** Get AssetBookValueAmt	  */
+	/** Get Asset Book Value Amt	  */
 	public BigDecimal getAssetBookValueAmt();
 
     /** Column name AssetDepreciationDate */
@@ -512,21 +521,23 @@ public interface I_A_Asset_Change
 	  */
 	public int getC_AcctSchema_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_AcctSchema getC_AcctSchema() throws RuntimeException;
 
     /** Column name C_BPartner_ID */
     public static final String COLUMNNAME_C_BPartner_ID = "C_BPartner_ID";
 
-	/** Set Business Partner .
+	/** Set Business Partner.
 	  * Identifies a Business Partner
 	  */
 	public void setC_BPartner_ID (int C_BPartner_ID);
 
-	/** Get Business Partner .
+	/** Get Business Partner.
 	  * Identifies a Business Partner
 	  */
 	public int getC_BPartner_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_BPartner getC_BPartner() throws RuntimeException;
 
     /** Column name C_BPartner_Location_ID */
@@ -542,34 +553,8 @@ public interface I_A_Asset_Change
 	  */
 	public int getC_BPartner_Location_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_BPartner_Location getC_BPartner_Location() throws RuntimeException;
-
-    /** Column name ChangeAmt */
-    public static final String COLUMNNAME_ChangeAmt = "ChangeAmt";
-
-	/** Set ChangeAmt	  */
-	public void setChangeAmt (BigDecimal ChangeAmt);
-
-	/** Get ChangeAmt	  */
-	public BigDecimal getChangeAmt();
-
-    /** Column name ChangeDate */
-    public static final String COLUMNNAME_ChangeDate = "ChangeDate";
-
-	/** Set ChangeDate	  */
-	public void setChangeDate (Timestamp ChangeDate);
-
-	/** Get ChangeDate	  */
-	public Timestamp getChangeDate();
-
-    /** Column name ChangeType */
-    public static final String COLUMNNAME_ChangeType = "ChangeType";
-
-	/** Set ChangeType	  */
-	public void setChangeType (String ChangeType);
-
-	/** Get ChangeType	  */
-	public String getChangeType();
 
     /** Column name C_Location_ID */
     public static final String COLUMNNAME_C_Location_ID = "C_Location_ID";
@@ -584,7 +569,51 @@ public interface I_A_Asset_Change
 	  */
 	public int getC_Location_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public I_C_Location getC_Location() throws RuntimeException;
+
+    /** Column name C_ValidCombination_ID */
+    public static final String COLUMNNAME_C_ValidCombination_ID = "C_ValidCombination_ID";
+
+	/** Set Combination.
+	  * Valid Account Combination
+	  */
+	public void setC_ValidCombination_ID (int C_ValidCombination_ID);
+
+	/** Get Combination.
+	  * Valid Account Combination
+	  */
+	public int getC_ValidCombination_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public I_C_ValidCombination getC_ValidCombination() throws RuntimeException;
+
+    /** Column name ChangeAmt */
+    public static final String COLUMNNAME_ChangeAmt = "ChangeAmt";
+
+	/** Set Change Amt	  */
+	public void setChangeAmt (BigDecimal ChangeAmt);
+
+	/** Get Change Amt	  */
+	public BigDecimal getChangeAmt();
+
+    /** Column name ChangeDate */
+    public static final String COLUMNNAME_ChangeDate = "ChangeDate";
+
+	/** Set Change Date	  */
+	public void setChangeDate (Timestamp ChangeDate);
+
+	/** Get Change Date	  */
+	public Timestamp getChangeDate();
+
+    /** Column name ChangeType */
+    public static final String COLUMNNAME_ChangeType = "ChangeType";
+
+	/** Set Change Type	  */
+	public void setChangeType (String ChangeType);
+
+	/** Get Change Type	  */
+	public String getChangeType();
 
     /** Column name Created */
     public static final String COLUMNNAME_Created = "Created";
@@ -601,21 +630,6 @@ public interface I_A_Asset_Change
 	  * User who created this records
 	  */
 	public int getCreatedBy();
-
-    /** Column name C_ValidCombination_ID */
-    public static final String COLUMNNAME_C_ValidCombination_ID = "C_ValidCombination_ID";
-
-	/** Set Combination.
-	  * Valid Account Combination
-	  */
-	public void setC_ValidCombination_ID (int C_ValidCombination_ID);
-
-	/** Get Combination.
-	  * Valid Account Combination
-	  */
-	public int getC_ValidCombination_ID();
-
-	public I_C_ValidCombination getC_ValidCombination() throws RuntimeException;
 
     /** Column name DateAcct */
     public static final String COLUMNNAME_DateAcct = "DateAcct";
@@ -737,12 +751,12 @@ public interface I_A_Asset_Change
     /** Column name PostingType */
     public static final String COLUMNNAME_PostingType = "PostingType";
 
-	/** Set PostingType.
+	/** Set Posting Type.
 	  * The type of posted amount for the transaction
 	  */
 	public void setPostingType (String PostingType);
 
-	/** Get PostingType.
+	/** Get Posting Type.
 	  * The type of posted amount for the transaction
 	  */
 	public String getPostingType();
@@ -804,12 +818,12 @@ public interface I_A_Asset_Change
 	/** Set Usable Life - Years.
 	  * Years of the usable life of the asset
 	  */
-	public void setUseLifeYears (int UseLifeYears);
+	public void setUseLifeYears (BigDecimal UseLifeYears);
 
 	/** Get Usable Life - Years.
 	  * Years of the usable life of the asset
 	  */
-	public int getUseLifeYears();
+	public BigDecimal getUseLifeYears();
 
     /** Column name UseUnits */
     public static final String COLUMNNAME_UseUnits = "UseUnits";

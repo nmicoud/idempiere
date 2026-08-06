@@ -28,10 +28,12 @@ import java.util.logging.Level;
 
 import org.adempiere.exceptions.FillMandatoryException;
 import org.adempiere.util.IProcessUI;
-import org.compiere.process.SvrProcess;
 import org.compiere.util.Env;
 import org.compiere.util.Language;
-
+import org.compiere.util.Msg;
+import org.compiere.util.Util;
+import org.idempiere.cache.ImmutableIntPOCache;
+import org.idempiere.cache.ImmutablePOSupport;
 
 /**
  *	Year Model
@@ -43,12 +45,62 @@ import org.compiere.util.Language;
  * 			<li>BF [ 1761918 ] Error creating periods for a year with per. created partial
  * 			<li>BF [ 2430755 ] Year Create Periods display proper error message
  */
-public class MYear extends X_C_Year
+public class MYear extends X_C_Year implements ImmutablePOSupport
 {
 	/**
-	 * 
+	 * generated serial id 
 	 */
 	private static final long serialVersionUID = 2110541427179611810L;
+
+	/**
+	 * Cache
+	 */
+	private static ImmutableIntPOCache<Integer, MYear>	s_cache = new ImmutableIntPOCache<Integer, MYear>(Table_Name, 12, 1440);
+
+	/**
+	 * @param  C_Year_ID
+	 * @return           MYear
+	 */
+	public static MYear get(int C_Year_ID)
+	{
+		return get(Env.getCtx(), C_Year_ID);
+	}
+
+	/**
+	 * @param  ctx
+	 * @param  C_Year_ID
+	 * @return           MYear
+	 */
+	public static MYear get(Properties ctx, int C_Year_ID)
+	{
+		Integer key = Integer.valueOf(C_Year_ID);
+		MYear retValue = s_cache.get(ctx, key);
+		if (retValue == null)
+		{
+			retValue = new MYear(ctx, C_Year_ID, (String) null);
+
+			if (retValue.get_ID() == C_Year_ID)
+			{
+				retValue.markImmutable();
+				s_cache.put(key, retValue);
+				return retValue;
+			}
+			return null;
+		}
+		return retValue;
+	}
+
+    /**
+     * UUID based Constructor
+     * @param ctx  Context
+     * @param C_Year_UU  UUID key
+     * @param trxName Transaction
+     */
+    public MYear(Properties ctx, String C_Year_UU, String trxName) {
+        super(ctx, C_Year_UU, trxName);
+		if (Util.isEmpty(C_Year_UU))
+			setInitialDefaults();
+    }
 
 	/**
 	 * 	Standard Constructor
@@ -60,12 +112,15 @@ public class MYear extends X_C_Year
 	{
 		super (ctx, C_Year_ID, trxName);
 		if (C_Year_ID == 0)
-		{
-		//	setC_Calendar_ID (0);
-		//	setYear (null);
-			setProcessing (false);	// N
-		}		
+			setInitialDefaults();
 	}	//	MYear
+
+	/**
+	 * Set the initial defaults for a new record
+	 */
+	private void setInitialDefaults() {
+		setProcessing (false);	// N
+	}
 
 	/**
 	 * 	Load Constructor
@@ -89,8 +144,7 @@ public class MYear extends X_C_Year
 		setC_Calendar_ID(calendar.getC_Calendar_ID());
 		setYear();
 	}	//	MYear
-	
-	
+		
 	/**
 	 * 	Set current Year
 	 */
@@ -135,7 +189,7 @@ public class MYear extends X_C_Year
 	
 	/**
 	 * 	Get last two characters of year
-	 *	@return 01
+	 *	@return last two characters of year, for e.g 01 for year 2001
 	 */
 	public String getYY()
 	{
@@ -150,6 +204,7 @@ public class MYear extends X_C_Year
 	 * 	String Representation
 	 *	@return info
 	 */
+	@Override
 	public String toString ()
 	{
 		StringBuilder sb = new StringBuilder ("MYear[");
@@ -171,12 +226,11 @@ public class MYear extends X_C_Year
 		return true;
 	}	//	beforeSave
 	
-		/**
-	 * 	Create 12 Standard (Jan-Dec) Periods.
-	 * 	Creates also Period Control from DocType.
-	 * 	@see DocumentTypeVerify#createPeriodControls(Properties, int, SvrProcess, String)
+	/**
+	 * 	Create 12 Standard (Jan-Dec) Periods. <br/>
+	 * 	Creates also Period Control from DocType.<br/>
+	 * 	Cross Reference: org.compiere.process.DocumentTypeVerify.createPeriodControls(Properties, int, SvrProcess, String)
 	 * 	@param locale locale 
-	 *	@return true if created
 	 */
 	public void createStdPeriods(Locale locale)
 	{
@@ -185,9 +239,9 @@ public class MYear extends X_C_Year
 	}	//	createStdPeriods
 	
 	/**
-	 * 	Create 12 Standard Periods from the specified start date.
-	 * 	Creates also Period Control from DocType.
-	 * 	@see DocumentTypeVerify#createPeriodControls(Properties, int, SvrProcess, String)
+	 * 	Create 12 Standard Periods from the specified start date.<br/>
+	 * 	Creates also Period Control from DocType.<br/>
+	 * 	see DocumentTypeVerify#createPeriodControls(Properties, int, SvrProcess, String)
 	 * 	@param locale locale
 	 *	@param startDate first day of the calendar year
      *  @param dateFormat SimpleDateFormat pattern for generating the period names.
@@ -234,6 +288,7 @@ public class MYear extends X_C_Year
 
 		//
 		IProcessUI processMonitor = Env.getProcessUI(getCtx());
+		BatchInsert<MPeriod> batchInsertPeriod = new BatchInsert<>(MPeriod.class);
 		for (int month = 0; month < 12; month++)
 		{
 			
@@ -258,17 +313,31 @@ public class MYear extends X_C_Year
 				period.setStartDate(start);
 				period.setEndDate(end);
 			}
-			if (processMonitor != null)
-			{
-				processMonitor.statusUpdate(period.toString());
-			}
-			period.saveEx(get_TrxName());	//	Creates Period Control
+			batchInsertPeriod.add(period); // Saving period	creates Period Control
 			// get first day of next month
 			cal.add(Calendar.DAY_OF_YEAR, 1);
 		}
+		if (processMonitor != null)
+		{
+			processMonitor.statusUpdate(Msg.getMsg(getCtx(), "RowCount", new Object[] {batchInsertPeriod.getCount()}));
+		}
+		batchInsertPeriod.executeBatch(get_TrxName());
 		
 		return true;
 		
 	}	//	createStdPeriods
-	
+
+	/**
+	 * Mark this PO as immutable
+	 */
+	@Override
+	public MYear markImmutable()
+	{
+		if (is_Immutable())
+			return this;
+
+		makeImmutable();
+
+		return this;
+	}
 }	//	MYear

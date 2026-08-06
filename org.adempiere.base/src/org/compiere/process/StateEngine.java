@@ -18,15 +18,16 @@ package org.compiere.process;
 
 import static org.compiere.model.SystemIDs.REFERENCE_WFINSTANCE_STATE;
 
+import java.util.logging.Level;
+
 import org.compiere.model.MRefList;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 import org.compiere.util.Util;
 
-
 /**
- *	Process State Engine.
- *	Based on OMG Workflow State
+ *	Workflow State Engine.<br/>
+ *	Based on OMG Workflow State.
  *	
  *  @author Jorg Janke
  *  @version $Id: StateEngine.java,v 1.3 2006/07/30 00:54:44 jjanke Exp $
@@ -90,8 +91,8 @@ public class StateEngine
 	protected CLogger	log = null;
 	
 	/**
-	 * 	Are Exception Thrown
-	 *	@return trie if exceptions thrown
+	 * 	Is throw Exception when there is error
+	 *	@return true if exceptions is thrown when there is error
 	 */
 	public boolean isThrowException()
 	{
@@ -100,14 +101,13 @@ public class StateEngine
 	
 	/**
 	 * 	Set if Exceptions are Thrown
-	 *	 * @param throwException boolean
+	 *	@param throwException
 	 */
 	public void setThrowException(boolean throwException)
 	{
 		m_throwException = throwException;
 	}	//	setThrowException
-	
-	
+		
 	/**
 	 * 	Get State
 	 *	@return state
@@ -217,11 +217,8 @@ public class StateEngine
 		return STATE_Terminated.equals(m_state);
 	}	//	isTerminated
 
-	
-
-
-	/**************************************************************************
-	 * 	Start: not started -> running
+	/**
+	 * 	Start: not started -&gt; running
 	 *	@return true if set to running
 	 */
 	public boolean start()
@@ -231,7 +228,7 @@ public class StateEngine
 		if (isNotStarted())
 		{
 			m_state = STATE_Running;
-			log.info("starting ...");
+			if (log.isLoggable(Level.INFO)) log.info("starting ...");
 			return true;
 		}
 		String msg = "start failed: Not Not Started (" + getState() + ")";
@@ -242,8 +239,8 @@ public class StateEngine
 	}	//	start
 	
 	/**
-	 * 	Resume: suspended -> running
-	 *	@return true if set to sunning
+	 * 	Resume: suspended -&gt; running
+	 *	@return true if set to running
 	 */
 	public boolean resume()	//	raises CannotResume, NotRunning, NotSuspended
 	{
@@ -252,7 +249,7 @@ public class StateEngine
 		if (isSuspended())
 		{
 			m_state = STATE_Running;
-			log.info("resuming ...");
+			if (log.isLoggable(Level.INFO)) log.info("resuming ...");
 			return true;
 		}
 		String msg = "resume failed: Not Suspended (" + getState() + ")";
@@ -263,7 +260,7 @@ public class StateEngine
 	}	//	resume
 
 	/**
-	 * 	Suspend: running -> suspended
+	 * 	Suspend: running -&gt; suspended
 	 *	@return true if suspended
 	 */
 	public boolean suspend()	//	raises CannotSuspend, NotRunning, AlreadySuspended
@@ -273,7 +270,7 @@ public class StateEngine
 		if (isRunning())
 		{
 			m_state = STATE_Suspended;
-			log.info("suspending ...");
+			if (log.isLoggable(Level.INFO)) log.info("suspending ...");
 			return true;
 		}
 		String msg = "suspend failed: Not Running (" + getState() + ")";
@@ -284,7 +281,7 @@ public class StateEngine
 	}	//	suspend
 
 	/**
-	 * 	Complete: running -> completed
+	 * 	Complete: running -&gt; completed
 	 *	@return true if set to completed
 	 */
 	public boolean complete()
@@ -294,7 +291,7 @@ public class StateEngine
 		if (isRunning())
 		{
 			m_state = STATE_Completed;
-			log.info("completing ...");
+			if (log.isLoggable(Level.INFO)) log.info("completing ...");
 			return true;
 		}
 		String msg = "complete failed: Not Running (" + getState() + ")";
@@ -305,7 +302,7 @@ public class StateEngine
 	}	//	complete
 	
 	/**
-	 * 	Abort: open -> aborted
+	 * 	Abort: open -&gt; aborted
 	 *	@return true if set to aborted
 	 */
 	public boolean abort()	//	raises CannotStop, NotRunning
@@ -315,7 +312,7 @@ public class StateEngine
 		if (isOpen())
 		{
 			m_state = STATE_Aborted;
-			log.info("aborting ...");
+			if (log.isLoggable(Level.INFO)) log.info("aborting ...");
 			return true;
 		}
 		String msg = "abort failed: Not Open (" + getState() + ")";
@@ -326,7 +323,7 @@ public class StateEngine
 	}	//	abort
 	
 	/**
-	 * 	Terminate: open -> terminated
+	 * 	Terminate: open -&gt; terminated
 	 *	@return true if set to terminated
 	 */
 	public boolean terminate()	//	raises CannotStop, NotRunning
@@ -336,7 +333,7 @@ public class StateEngine
 		if (isOpen())
 		{
 			m_state = STATE_Terminated;
-			log.info("terminating ...");
+			if (log.isLoggable(Level.INFO)) log.info("terminating ...");
 			return true;
 		}
 		String msg = "terminate failed: Not Open (" + getState() + ")";
@@ -378,8 +375,7 @@ public class StateEngine
 		}
 	 	return false;
 	}	//	isValidNewState
-	
-	
+		
 	/**
 	 * 	Set State to new State
 	 *	@param newState new state
@@ -406,7 +402,7 @@ public class StateEngine
 	}	//	setState
 
 	/**
-	 * 	Get Action Options based on current State
+	 * 	Get Workflow Action Options based on current State
 	 *	@return array of actions
 	 */
 	public String[] getActionOptions()
@@ -438,8 +434,8 @@ public class StateEngine
 	}	//	isValidAction
 	
 	/**
-	 * 	Process
-	 *	@param action action
+	 * 	Process workflow action
+	 *	@param action
 	 *	@return true if set to new state
 	 */
 	public boolean process (String action)	//	raises InvalidState, TransitionNotAllowed
@@ -489,6 +485,7 @@ public class StateEngine
 	 * 	String Representation
 	 *	@return info
 	 */
+	@Override
 	public String toString ()
 	{
 		return getStateInfo();

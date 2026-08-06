@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Properties;
 
 import org.compiere.util.Env;
+import org.compiere.util.Util;
 
 /**
  *	Revenue Recognition Plan
@@ -35,9 +36,21 @@ import org.compiere.util.Env;
 public class MRevenueRecognitionPlan extends X_C_RevenueRecognition_Plan
 {
 	/**
-	 * 
+	 * generated serial id
 	 */
 	private static final long serialVersionUID = -8437258098744762898L;
+
+    /**
+     * UUID based Constructor
+     * @param ctx  Context
+     * @param C_RevenueRecognition_Plan_UU  UUID key
+     * @param trxName Transaction
+     */
+    public MRevenueRecognitionPlan(Properties ctx, String C_RevenueRecognition_Plan_UU, String trxName) {
+        super(ctx, C_RevenueRecognition_Plan_UU, trxName);
+		if (Util.isEmpty(C_RevenueRecognition_Plan_UU))
+			setInitialDefaults();
+    }
 
 	/**
 	 * 	Standard Constructor
@@ -48,18 +61,16 @@ public class MRevenueRecognitionPlan extends X_C_RevenueRecognition_Plan
 	{
 		super (ctx, C_RevenueRecognition_Plan_ID, trxName);
 		if (C_RevenueRecognition_Plan_ID == 0)
-		{
-		//	setC_AcctSchema_ID (0);
-		//	setC_Currency_ID (0);
-		//	setC_InvoiceLine_ID (0);
-		//	setC_RevenueRecognition_ID (0);
-		//	setC_RevenueRecognition_Plan_ID (0);
-		//	setP_Revenue_Acct (0);
-		//	setUnEarnedRevenue_Acct (0);
-			setTotalAmt (Env.ZERO);
-			setRecognizedAmt (Env.ZERO);
-		}	
+			setInitialDefaults();
 	}	//	MRevenueRecognitionPlan
+
+	/**
+	 * Set the initial defaults for a new record
+	 */
+	private void setInitialDefaults() {
+		setTotalAmt (Env.ZERO);
+		setRecognizedAmt (Env.ZERO);
+	}
 
 	/**
 	 * 	Load Constructor
@@ -70,14 +81,8 @@ public class MRevenueRecognitionPlan extends X_C_RevenueRecognition_Plan
 	{
 		super(ctx, rs, trxName);
 	}	//	MRevenueRecognitionPlan
-
 	
-	/**
-	 * 	After Save
-	 *	@param newRecord new
-	 *	@param success success
-	 *	@return success
-	 */
+	@Override
 	protected boolean afterSave (boolean newRecord, boolean success)
 	{
 		if (newRecord)
@@ -85,7 +90,9 @@ public class MRevenueRecognitionPlan extends X_C_RevenueRecognition_Plan
 			MRevenueRecognition rr = new MRevenueRecognition(getCtx(), getC_RevenueRecognition_ID(), get_TrxName());
 			if (rr.isTimeBased())
 			{
-				MInvoiceLine il = (MInvoiceLine) getC_InvoiceLine();
+				// Time base revenue recognition. 
+				// Create C_RevenueRecognition_Run records starting from C_InvoiceLine.RRStartDate or C_Invoice.DateInvoiced.
+				MInvoiceLine il = new MInvoiceLine(getCtx(), getC_InvoiceLine_ID(), get_TrxName());
 
 				Calendar cal = Calendar.getInstance();
 				Timestamp startDate = new Timestamp(cal.getTimeInMillis());
@@ -102,7 +109,6 @@ public class MRevenueRecognitionPlan extends X_C_RevenueRecognition_Plan
 				else if ( MRevenueRecognition.RECOGNITIONFREQUENCY_Year.equals(rr.getRecognitionFrequency()))
 					interval = 12;
 				
-
 				int periods = rr.getNoMonths();
 				BigDecimal amt = getTotalAmt().divide(new BigDecimal(periods + ""), RoundingMode.HALF_UP);
 				BigDecimal total = Env.ZERO;
@@ -135,8 +141,7 @@ public class MRevenueRecognitionPlan extends X_C_RevenueRecognition_Plan
 				}
 				
 				cal.set(Calendar.MONTH, 0);  // January
-				
-				
+								
 				for ( int i = 0; i <= periods - 1; i++ )
 				{
 					Calendar cal2 = Calendar.getInstance();
@@ -161,6 +166,7 @@ public class MRevenueRecognitionPlan extends X_C_RevenueRecognition_Plan
 			}
 			else
 			{
+				// Create C_RevenueRecognition_Run record from configured C_RevenueRecog_Service records
 				List<MRevenueRecogService> services = rr.getServicesList();
 				BigDecimal totalAmt = Env.ZERO;
 				MRevenueRecognitionRun last = null;

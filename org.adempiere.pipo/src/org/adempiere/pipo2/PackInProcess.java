@@ -23,12 +23,12 @@ import java.util.logging.Level;
 
 import org.compiere.model.MAttachment;
 import org.compiere.model.MAttachmentEntry;
+import org.compiere.model.MProcessPara;
 import org.compiere.model.X_AD_Package_Imp_Proc;
 import org.compiere.process.ProcessInfoParameter;
 import org.compiere.process.SvrProcess;
 import org.compiere.tools.FileUtil;
 import org.compiere.util.AdempiereSystemError;
-import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 
 /**
@@ -38,8 +38,6 @@ import org.compiere.util.Env;
  */
 public class PackInProcess extends SvrProcess {
 
-	/** Logger */
-	private static final CLogger log = CLogger.getCLogger(PackInProcess.class);
 	//update system maintain dictionary, default to false
 	private boolean m_UpdateDictionary = false;
 	private String m_packageDirectory = null;
@@ -63,7 +61,8 @@ public class PackInProcess extends SvrProcess {
 					packageName = param.getParameter().toString();
 				} else if ("Version".equals(param.getParameterName())) {
 					packageVersion = param.getParameter().toString();
-				}
+				} else
+					MProcessPara.validateUnknownParameter(getProcessInfo().getAD_Process_ID(), param);
 			}
 		}
 	} // prepare
@@ -84,7 +83,7 @@ public class PackInProcess extends SvrProcess {
 			packageDirectory = System.getProperty("java.io.tmpdir");
 		}
 
-		String targetDirName = packageDirectory + File.separator + "packin" + Env.getContext(getCtx(), "#AD_User_ID");
+		String targetDirName = packageDirectory + File.separator + "packin" + Env.getContext(getCtx(), Env.AD_USER_ID);
 		File targetDir = new File(targetDirName);
 
 		if (targetDir.exists()) {
@@ -115,9 +114,13 @@ public class PackInProcess extends SvrProcess {
 		String parentDir = Zipper.getParentDir(zipFilepath);
 		Zipper.unpackFile(zipFilepath, targetDir);
 
-		String dict_file = packageDirectory + File.separator
-				+ "packin" + Env.getContext(getCtx(), "#AD_User_ID") + File.separator + parentDir + File.separator
-				+ "dict" + File.separator + "PackOut.xml";
+		String dictBase = packageDirectory + File.separator
+				+ "packin" + Env.getContext(getCtx(), Env.AD_USER_ID) + File.separator + parentDir + File.separator
+				+ "dict" + File.separator;
+		String dict_file;
+		if      (new File(dictBase + "PackOut.json").exists()) dict_file = dictBase + "PackOut.json";
+		else if (new File(dictBase + "PackOut.yaml").exists()) dict_file = dictBase + "PackOut.yaml";
+		else                                                   dict_file = dictBase + "PackOut.xml";
 
 		if (log.isLoggable(Level.INFO)) log.info("dict file->" + dict_file);
 
@@ -127,7 +130,7 @@ public class PackInProcess extends SvrProcess {
 			m_UpdateDictionary = false;
 
 		m_packageDirectory = packageDirectory + File.separator
-				+ "packin" + Env.getContext(getCtx(), "#AD_User_ID") + File.separator + parentDir + File.separator;
+				+ "packin" + Env.getContext(getCtx(), Env.AD_USER_ID) + File.separator + parentDir + File.separator;
 
 		PackIn packIn = new PackIn();
 		packIn.setPackageDirectory(m_packageDirectory);
@@ -148,6 +151,7 @@ public class PackInProcess extends SvrProcess {
 		} catch (Exception e) {
 			adPackageImp.setP_Msg(e.getLocalizedMessage());
 			packIn.getNotifier().addFailureLine(e.getLocalizedMessage());
+			packIn.getNotifier().addException(e);
 			packIn.setSuccess(false);
 			log.log(Level.SEVERE, "importXML:", e);
 			throw e;

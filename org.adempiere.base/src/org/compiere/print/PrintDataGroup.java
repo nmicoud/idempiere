@@ -16,10 +16,11 @@
  *****************************************************************************/
 package org.compiere.print;
 
-import java.math.BigDecimal;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  *	Group By Management
@@ -39,32 +40,31 @@ public class PrintDataGroup
 	/**	Column-Function Delimiter		*/
 	static public final String	DELIMITER = "~";
 	/**	Grand Total Indicator			*/
-	static public final String 	TOTAL = "=TOTAL=";
+	static public final int 	TOTAL = -1;
 	/**	NULL substitute value			*/
 	static private final Object	NULL = new String();
 
 	/**	List of group columns			*/
-	private ArrayList<String>		m_groups = new ArrayList<String>();
+	private ArrayList<Integer>		m_groups = new ArrayList<Integer>();
 	/** Map of group column & value		*/
-	private HashMap<String,Object> 	m_groupMap = new HashMap<String,Object>();
+	private HashMap<Integer,Object> 	m_groupMap = new HashMap<Integer,Object>();
 	/**	List of column_function			*/
-	private ArrayList<String>		m_functions = new ArrayList<String>();
+	private HashMap<Integer,List<Character>>		m_functions = new HashMap<>();
 	/** Map of group_function column & function	*/
 	private HashMap<String,PrintDataFunction>	m_groupFunction = new HashMap<String,PrintDataFunction>();
 
-	
-	/**************************************************************************
+	/**
 	 * 	Add Group Column
-	 * 	@param groupColumnName group column
+	 * 	@param AD_PrintFormatItem_ID group column
 	 */
-	public void addGroupColumn (String groupColumnName)
+	public void addGroupColumn (int AD_PrintFormatItem_ID)
 	{
-		m_groups.add(groupColumnName);
+		m_groups.add(AD_PrintFormatItem_ID);
 	}	//	addGroup
 
 	/**
-	 * 	Get Grouyp Column Count.
-	 *  TOTAL is included as a column
+	 * 	Get Group Column Count.
+	 *  TOTAL is included as a column.
 	 * 	@return number of groups
 	 */
 	public int getGroupColumnCount()
@@ -73,102 +73,93 @@ public class PrintDataGroup
 	}	//	getGroupColumnCount
 
 	/**
-	 * 	Column has a function
-	 * 	@param columnName column name or TOTAL
-	 * 	@return true if column has function
+	 * 	Is group column
+	 * 	@param AD_PrintFormatItem_ID column or TOTAL
+	 * 	@return true if it is a group column 
 	 */
-	public boolean isGroupColumn (String columnName)
+	public boolean isGroupColumn (int AD_PrintFormatItem_ID)
 	{
-		if (columnName == null || m_groups.size() == 0)
-			return false;
-		for (int i = 0; i < m_groups.size(); i++)
-		{
-			if (columnName.equals(m_groups.get(i)))
-				return true;
-		}
-		return false;
+		return m_groups.contains(AD_PrintFormatItem_ID);
 	}	//	isGroupColumn
 
 	/**
 	 * 	Check for Group Change
-	 * 	@param groupColumnName column name
+	 * 	@param AD_PrintFormatItem_ID group column
 	 * 	@param value column value
-	 * 	@return null if no group change otherwise old value
+	 *  @param force
+	 * 	@return null if no group change, otherwise old value
 	 */
-	public Object groupChange (String groupColumnName, Object value, boolean force)
+	public Object groupChange (int AD_PrintFormatItem_ID, Object value, boolean force)
 	{
-		if (!isGroupColumn(groupColumnName))
+		if (!isGroupColumn(AD_PrintFormatItem_ID))
 			return null;
 		Object newValue = value;
 		if (newValue == null)
 			newValue = NULL;
 		//
-		if (m_groupMap.containsKey(groupColumnName))
+		if (m_groupMap.containsKey(AD_PrintFormatItem_ID))
 		{
-			Object oldValue = m_groupMap.get(groupColumnName);
+			Object oldValue = m_groupMap.get(AD_PrintFormatItem_ID);
 			if (newValue.equals(oldValue) && !force )
 				return null;
-			m_groupMap.put(groupColumnName, newValue);
+			m_groupMap.put(AD_PrintFormatItem_ID, newValue);
 			return oldValue;
 		}
-		m_groupMap.put(groupColumnName, newValue);
+		m_groupMap.put(AD_PrintFormatItem_ID, newValue);
 		return null;
 	}	//	groupChange
-
 	
-	/**************************************************************************
+	/**
 	 * 	Add Function Column
-	 * 	@param functionColumnName column name
+	 * 	@param AD_PrintFormatItem_ID column
 	 * 	@param function function
 	 */
-	public void addFunction (String functionColumnName, char function)
+	public void addFunction (int AD_PrintFormatItem_ID, char function)
 	{
-		m_functions.add(functionColumnName + DELIMITER + function);
+		List<Character> list = m_functions.get(AD_PrintFormatItem_ID);
+		if (list == null) 
+		{
+			list =  new ArrayList<Character>();
+			m_functions.put(AD_PrintFormatItem_ID, list);
+		}
+		if (!list.contains(function))
+			list.add(function);
 		if (!m_groups.contains(TOTAL))
 			m_groups.add(TOTAL);
 	}	//	addFunction
 
 	/**
-	 * 	Column has a function
-	 * 	@param columnName column name
-	 * 	@return true if column has function
+	 * 	Is function column
+	 * 	@param AD_PrintFormatItem_ID column
+	 * 	@return true if it is a function column
 	 */
-	public boolean isFunctionColumn (String columnName)
+	public boolean isFunctionColumn (int AD_PrintFormatItem_ID)
 	{
-		if (columnName == null || m_functions.size() == 0)
-			return false;
-		for (int i = 0; i < m_functions.size(); i++)
-		{
-			String f = (String)m_functions.get(i);
-			if (f.startsWith(columnName))
-				return true;
-		}
-		return false;
+		return m_functions.containsKey(AD_PrintFormatItem_ID);
 	}	//	isFunctionColumn
 
 	/**
-	 * 	Get calculated functions of column
-	 *  @param columnName column name or TOTAL
-	 * 	@return array of functions
+	 * 	Get applicable functions of a group column
+	 *  @param groupId group column or TOTAL
+	 * 	@return array of applicable functions
 	 */
-	public char[] getFunctions(String columnName)
+	public char[] getFunctions(int groupId)
 	{
-		ArrayList<String> list = new ArrayList<String>();	//	the final function List
+		ArrayList<Character> list = new ArrayList<Character>();	//	the final function List
 		Iterator<String> it = m_groupFunction.keySet().iterator();
 		while(it.hasNext())
 		{
 			String group_function = (String)it.next();	//	=TOTAL=~LoadSeq
-			if (group_function.startsWith(columnName))
+			if (group_function.startsWith(Integer.toString(groupId)))
 			{
-				group_function = group_function.substring(group_function.lastIndexOf(DELIMITER)+1);	//	LoadSeq
-				for (int i = 0; i < m_functions.size(); i++)
+				String functionColumn = group_function.substring(group_function.lastIndexOf(DELIMITER)+1);	//	LoadSeq
+				List<Character> fs = m_functions.get(Integer.parseInt(functionColumn));
+				if (fs != null && fs.size() > 0)
 				{
-					String col_function = ((String)m_functions.get(i));	//	LoadSeq~A
-					if (col_function.startsWith(group_function))
+					for (Character f : fs)
 					{
-						String function = col_function.substring(col_function.lastIndexOf(DELIMITER)+1);
-						if (!list.contains(function))
-							list.add(function);
+						if (!list.contains(f))
+							list.add(f);
 					}
 				}
 			}
@@ -176,46 +167,46 @@ public class PrintDataGroup
 		//	Return Value
 		char[] retValue = new char[list.size()];
 		for (int i = 0; i < retValue.length; i++)
-			retValue[i] = ((String)list.get(i)).charAt(0);
-	//	log.finest( "PrintDataGroup.getFunctions for " + columnName + "/" + retValue.length, new String(retValue));
+			retValue[i] = list.get(i);
 		return retValue;
 	}	//	getFunctions
 
 	/**
-	 * 	Column has a function
-	 * 	@param columnName column name
-	 *  @param function function
-	 * 	@return true if column has function
+	 * 	Is Column has a function
+	 * 	@param AD_PrintFormatItem_ID column
+	 *  @param function function constant (F_*)
+	 * 	@return true if column has a function
 	 */
-	public boolean isFunctionColumn (String columnName, char function)
+	public boolean isFunctionColumn (int AD_PrintFormatItem_ID, char function)
 	{
-		if (columnName == null || m_functions.size() == 0)
+		if (m_functions.size() == 0)
 			return false;
-		String key = columnName + DELIMITER + function;
-		for (int i = 0; i < m_functions.size(); i++)
+		List<Character> fs = m_functions.get(AD_PrintFormatItem_ID);
+		if (fs != null && fs.size() > 0)
 		{
-			String f = (String)m_functions.get(i);
-			if (f.equals(key))
-				return true;
+			for (Character f : fs)
+			{
+				if (f.charValue() == function)
+					return true;
+			}
 		}
 		return false;
 	}	//	isFunctionColumn
-
 	
-	/**************************************************************************
+	/**
 	 * 	Add Value to groups
-	 * 	@param functionColumnName column name
+	 * 	@param functionColumnId function column
 	 * 	@param functionValue value
 	 */
-	public void addValue (String functionColumnName, BigDecimal functionValue)
+	public void addValue (int functionColumnId, Serializable functionValue)
 	{
-		if (!isFunctionColumn(functionColumnName))
+		if (!isFunctionColumn(functionColumnId))
 			return;
 		//	Group Breaks
 		for (int i = 0; i < m_groups.size(); i++)
 		{
-			String groupColumnName = (String)m_groups.get(i);
-			String key = groupColumnName + DELIMITER + functionColumnName;
+			int groupId = m_groups.get(i);
+			String key = groupId + DELIMITER + functionColumnId;
 			PrintDataFunction pdf = (PrintDataFunction)m_groupFunction.get(key);
 			if (pdf == null)
 				pdf = new PrintDataFunction();
@@ -226,15 +217,15 @@ public class PrintDataGroup
 
 	/**
 	 * 	Get Value
-	 * 	@param groupColumnName group column name (or TOTAL)
-	 * 	@param functionColumnName function column name
-	 * 	@param function function
+	 * 	@param groupId group column (or TOTAL)
+	 * 	@param functionColumnId function column
+	 * 	@param function function constant (F_*)
 	 * 	@return value
 	 */
-	public BigDecimal getValue (String groupColumnName, String functionColumnName,
+	public Serializable getValue (int groupId, int functionColumnId,
 		char function)
 	{
-		String key = groupColumnName + DELIMITER + functionColumnName;
+		String key = groupId + DELIMITER + functionColumnId;
 		PrintDataFunction pdf = (PrintDataFunction)m_groupFunction.get(key);
 		if (pdf == null)
 			return null;
@@ -243,21 +234,22 @@ public class PrintDataGroup
 
 	/**
 	 * 	Reset Function values
-	 * 	@param groupColumnName group column name (or TOTAL)
-	 * 	@param functionColumnName function column name
+	 * 	@param groupId group column (or TOTAL)
+	 * 	@param functionColumnId function column
 	 */
-	public void reset (String groupColumnName, String functionColumnName)
+	public void reset (int groupId, int functionColumnId)
 	{
-		String key = groupColumnName + DELIMITER + functionColumnName;
+		String key = groupId + DELIMITER + functionColumnId;
 		PrintDataFunction pdf = (PrintDataFunction)m_groupFunction.get(key);
 		if (pdf != null)
 			pdf.reset();
 	}	//	reset
 	
-	/**************************************************************************
+	/**
 	 * 	String Representation
 	 * 	@return info
 	 */
+	@Override
 	public String toString ()
 	{
 		return toString(false);
@@ -280,7 +272,7 @@ public class PrintDataGroup
 		}
 		if (withData)
 		{
-			Iterator<String> it = m_groupMap.keySet().iterator();
+			Iterator<Integer> it = m_groupMap.keySet().iterator();
 			while(it.hasNext())
 			{
 				Object key = it.next();

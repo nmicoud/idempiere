@@ -22,7 +22,6 @@ import static org.compiere.model.SystemIDs.TREE_MENUPRIMARY;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -31,40 +30,43 @@ import org.adempiere.base.event.EventManager;
 import org.adempiere.base.event.IEventManager;
 import org.adempiere.base.event.IEventTopics;
 import org.adempiere.model.MBroadcastMessage;
+import org.adempiere.util.Callback;
 import org.adempiere.webui.ClientInfo;
 import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.adwindow.ADWindow;
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.apps.BusyDialog;
 import org.adempiere.webui.apps.ProcessDialog;
-import org.adempiere.webui.apps.WReport;
+import org.adempiere.webui.component.Anchorchildren;
+import org.adempiere.webui.component.Anchorlayout;
 import org.adempiere.webui.component.Tab;
 import org.adempiere.webui.component.Tabpanel;
 import org.adempiere.webui.component.ToolBar;
 import org.adempiere.webui.component.ToolBarButton;
 import org.adempiere.webui.component.Window;
-import org.adempiere.webui.event.DrillEvent;
+import org.adempiere.webui.dashboard.DashboardPanel;
 import org.adempiere.webui.event.MenuListener;
 import org.adempiere.webui.event.ZKBroadCastManager;
-import org.adempiere.webui.event.ZoomEvent;
 import org.adempiere.webui.panel.ADForm;
 import org.adempiere.webui.panel.BroadcastMessageWindow;
 import org.adempiere.webui.panel.HeaderPanel;
 import org.adempiere.webui.panel.HelpController;
+import org.adempiere.webui.panel.InfoPanel;
 import org.adempiere.webui.panel.TimeoutPanel;
+import org.adempiere.webui.part.ITabOnSelectHandler;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ThemeManager;
+import org.adempiere.webui.util.Icon;
 import org.adempiere.webui.util.UserPreference;
 import org.adempiere.webui.util.ZKUpdateUtil;
-import org.adempiere.webui.window.FDialog;
 import org.compiere.model.GridField;
 import org.compiere.model.GridTab;
 import org.compiere.model.I_AD_Preference;
 import org.compiere.model.MMenu;
 import org.compiere.model.MPreference;
-import org.compiere.model.MQuery;
 import org.compiere.model.MRole;
 import org.compiere.model.MTable;
+import org.compiere.model.MTreeFavorite;
 import org.compiere.model.Query;
 import org.compiere.model.SystemIDs;
 import org.compiere.model.X_AD_CtxHelp;
@@ -94,8 +96,6 @@ import org.zkoss.zk.ui.event.SwipeEvent;
 import org.zkoss.zk.ui.metainfo.PageDefinition;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zk.ui.util.DesktopCleanup;
-import org.zkoss.zul.Anchorchildren;
-import org.zkoss.zul.Anchorlayout;
 import org.zkoss.zul.Borderlayout;
 import org.zkoss.zul.Center;
 import org.zkoss.zul.East;
@@ -104,24 +104,18 @@ import org.zkoss.zul.Popup;
 import org.zkoss.zul.West;
 
 /**
- *
- * Default desktop implementation.
+ * Default {@link IDesktop} implementation.
  * @author <a href="mailto:agramdass@gmail.com">Ashley G Ramdass</a>
  * @author <a href="mailto:hengsin@gmail.com">Low Heng Sin</a>
  * @date Mar 2, 2007
- * @version $Revision: 0.10 $
  * @author Deepak Pansheriya/Vivek - Adding support for message broadcasting
  */
 public class DefaultDesktop extends TabbedDesktop implements MenuListener, Serializable, EventListener<Event>, EventHandler, DesktopCleanup
-{
-	private static final String POPUP_OPEN_ATTR = "popup.open";
-
-	private static final String HOME_TAB_RENDER_ATTR = "homeTab.render";
-
-	/**
-	 * 
+{		
+    /**
+	 * generated serial id
 	 */
-	private static final long serialVersionUID = 7189914859100400758L;
+	private static final long serialVersionUID = 1019213060161640026L;
 
 	private static final String IMAGES_UPARROW_PNG = "images/collapse-header.png";
 
@@ -131,49 +125,73 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 	
 	private static final String IMAGES_THREELINE_MENU_PNG = "images/threelines.png";
 
+	private static final String POPUP_OPEN_ATTR = "popup.open";
+
+	private static final String HOME_TAB_RENDER_ATTR = "homeTab.render";
+
+	private static final String HELP_CONTROLLER_WIDTH_PREFERENCE = "HelpController.Width";
+
+	private static final String SIDE_CONTROLLER_WIDTH_PREFERENCE = "SideController.Width";
+	
 	@SuppressWarnings("unused")
 	private static final CLogger logger = CLogger.getCLogger(DefaultDesktop.class);
 
+	/** Main layout. With id "layout" in desktop.zul */
 	private Borderlayout layout;
 
-	private int noOfNotice;
+	private int noCount;
 
-	private int noOfRequest;
-
-	private int noOfWorkflow;
-
-	private int noOfUnprocessed;
-
+	/** Panel of home tab */
 	private Tabpanel homeTab;
 
 	private DashboardController dashboardController, sideController;
 	
+	/** HeaderPanel of {@link #headerContainer}. With id "header" in desktop.zul */
 	private HeaderPanel pnlHead;
 	
 	private Desktop m_desktop = null;
 	
+	/** Renderer and controller for help and quick info panel */
 	private HelpController helpController;
 
+	/** Button to hide or show North desktop header. Visible for mobile client. */
 	private ToolBarButton max;
 	
+	/** Button to hide or show help and quick info panels */
 	private ToolBarButton contextHelp;
 	
+	/** Button to open north header popup. Visible when {@link #max} is true. */
 	private ToolBarButton showHeader;
 
+	/** Body component of north header. With id "northBody" in desktop.zul */
 	private Component headerContainer;
 
+	/** Popup open by {@link #showHeader} */
 	private Window headerPopup;
 
 	private Image logo;
 
+	/** true if client browser is a mobile browser */
 	private boolean mobile;
 
+	/** Help and quick info popup for mobile client */
 	private Popup eastPopup;
 	
+	/** West panel popup for mobile client */
 	private Popup westPopup;
 	
+	/** Button to show {@link #westPopup}. Visible for mobile client. */
 	private ToolBarButton westBtn;
+	
+    // For quick info optimization
+    private GridTab    gridTab;
 
+    /** True if Right side Quick info is visible */
+    private boolean    isQuickInfoOpen    = true;
+
+    /**
+     * Default constructor
+     */
     public DefaultDesktop()
     {
     	super();
@@ -195,7 +213,9 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
     	queue.subscribe(this);
     }
 
-    @SuppressWarnings("serial")
+    /**
+     * Create desktop layout from "zul/desktop/desktop.zul".
+     */
 	protected Component doCreatePart(Component parent)
     {
     	PageDefinition pagedef = Executions.getCurrent().getPageDefinition(ThemeManager.getThemeResource("zul/desktop/desktop.zul"));
@@ -204,9 +224,6 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
     	headerContainer = page.getFellow("northBody");
     	pnlHead = (HeaderPanel) headerContainer.getFellow("header");
         
-        layout.addEventListener("onZoom", this);
-        layout.addEventListener(DrillEvent.ON_DRILL_DOWN, this);
-
         West w = layout.getWest();
         w.addEventListener(Events.ON_OPEN, new EventListener<Event>() {
 			@Override
@@ -258,6 +275,7 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 			@Override
 			public void onEvent(Event event) throws Exception {
 				OpenEvent oe = (OpenEvent) event;
+                isQuickInfoOpen = oe.isOpen();
 				updateHelpCollapsedPreference(!oe.isOpen());
 				HtmlBasedComponent comp = windowContainer.getComponent();
 				if (comp != null) {
@@ -298,7 +316,7 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
         //Set preference width
         if( westWidth != null || eastWidth != null ){
         	
-        	//If both panels have prefered size check that the sum is not bigger than the browser
+        	//If both panels have preferred size check that the sum is not bigger than the browser
         	if( westWidth != null && eastWidth != null ){
             	ClientInfo browserInfo = getClientInfo();
         		int browserWidth = browserInfo.desktopWidth;
@@ -329,8 +347,11 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
         	Component content = e.getFirstChild();
         	eastPopup = new Popup();
         	ToolBarButton btn = new ToolBarButton();
-        	btn.setIconSclass("z-icon-remove");
-        	btn.addEventListener(Events.ON_CLICK, evt -> eastPopup.close());
+        	btn.setIconSclass(Icon.getIconSclass(Icon.REMOVE));
+        	btn.addEventListener(Events.ON_CLICK, evt -> {
+				eastPopup.close();
+				isQuickInfoOpen = false;
+			});
         	eastPopup.appendChild(btn);
         	btn.setStyle("position: absolute; top: 20px; right: 0px; padding: 2px 0px;");
         	eastPopup.setStyle("padding-top: 20px;");
@@ -338,6 +359,9 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
         	eastPopup.setPage(getComponent().getPage());
         	eastPopup.setHeight("100%");        	
         	helpController.setupFieldTooltip();
+        	eastPopup.addEventListener(Events.ON_OPEN, (OpenEvent oe) -> {
+				isQuickInfoOpen = oe.isOpen();
+			});
         	
         	westPopup = new Popup();        	
         	westPopup.setStyle("padding-top: 10px;");
@@ -395,14 +419,20 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 	        	
 	        };
 	        toolbar.appendChild(showHeader);
-	        showHeader.setImage(ThemeManager.getThemeResource(IMAGES_THREELINE_MENU_PNG));
+	        if (ThemeManager.isUseFontIconForImage())
+	        	showHeader.setIconSclass(Icon.getIconSclass(Icon.THREE_LINE_MENU));
+			else
+				showHeader.setImage(ThemeManager.getThemeResource(IMAGES_THREELINE_MENU_PNG));
 	        showHeader.addEventListener(Events.ON_CLICK, this);
 	        showHeader.setSclass("window-container-toolbar-btn");
 	        showHeader.setVisible(false);
 	        
 	        max = new ToolBarButton();
 	        toolbar.appendChild(max);
-	        max.setImage(ThemeManager.getThemeResource(IMAGES_UPARROW_PNG));
+	        if (ThemeManager.isUseFontIconForImage())
+	        	max.setIconSclass(Icon.getIconSclass(Icon.COLLAPSING));
+			else
+				max.setImage(ThemeManager.getThemeResource(IMAGES_UPARROW_PNG));
 	        max.addEventListener(Events.ON_CLICK, this);
 	        max.setSclass("window-container-toolbar-btn");
 		}
@@ -410,13 +440,14 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
         contextHelp = new ToolBarButton();
         toolbar.appendChild(contextHelp);
         if (ThemeManager.isUseFontIconForImage())
-        	contextHelp.setIconSclass("z-icon-Help");
+        	contextHelp.setIconSclass(Icon.getIconSclass(Icon.HELP));
         else
         	contextHelp.setImage(ThemeManager.getThemeResource(IMAGES_CONTEXT_HELP_PNG));
         contextHelp.addEventListener(Events.ON_CLICK, this);
         contextHelp.setSclass("window-container-toolbar-btn context-help-btn");
         contextHelp.setTooltiptext(Util.cleanAmp(Msg.getElement(Env.getCtx(), "AD_CtxHelp_ID")));
         contextHelp.setVisible(!e.isVisible());
+        isQuickInfoOpen = e.isVisible();
         
         if (!mobile) {
 	        boolean headerCollapsed= pref.isPropertyBool(UserPreference.P_HEADER_COLLAPSED);
@@ -427,7 +458,10 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
         
         if (mobile) {
 	        westBtn = new ToolBarButton();
-	        westBtn.setImage(ThemeManager.getThemeResource(IMAGES_THREELINE_MENU_PNG));
+	        if (ThemeManager.isUseFontIconForImage())
+	        	westBtn.setIconSclass(Icon.getIconSclass(Icon.THREE_LINE_MENU));
+			else
+				westBtn.setImage(ThemeManager.getThemeResource(IMAGES_THREELINE_MENU_PNG));
 	        westBtn.addEventListener(Events.ON_CLICK, this);
 	        westBtn.setSclass("window-container-toolbar-btn");
 	        westBtn.setStyle("cursor: pointer; padding: 0px; margin: 0px;");
@@ -436,9 +470,11 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
         return layout;
     }
 
-    private String getWestWidthPreference() {
-    	
-    	String width = Env.getPreference(Env.getCtx(), 0, "SideController.Width", false);
+    /**
+     * @return saved width for west panel. null if there's no saved width.
+     */
+    private String getWestWidthPreference() {    	
+    	String width = Env.getPreference(Env.getCtx(), 0, SIDE_CONTROLLER_WIDTH_PREFERENCE, false);
     	
     	if( (! Util.isEmpty(width)) ){
         	ClientInfo browserInfo = getClientInfo();
@@ -452,8 +488,11 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 		return null;
 	}
 
+    /**
+     * Save width of west panel as user preference
+     * @param width
+     */
 	protected void updateSideControllerWidthPreference(String width) {
-
     	if( width != null ){
         	Query query = new Query(Env.getCtx(), 
         			MTable.get(Env.getCtx(), I_AD_Preference.Table_ID), 
@@ -464,14 +503,13 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
         	MPreference preference = query.setOnlyActiveRecords(true)
         			.setApplyAccessFilter(true)
         			.setClient_ID()
-        			.setParameters("SideController.Width", userId)
+        			.setParameters(SIDE_CONTROLLER_WIDTH_PREFERENCE, userId)
         			.first();
         	
-        	if ( preference == null || preference.getAD_Preference_ID() <= 0 ) {
-        		
+        	if ( preference == null || preference.getAD_Preference_ID() <= 0 ) {        		
         		preference = new MPreference(Env.getCtx(), 0, null);
-        		preference.setAD_User_ID(userId); // allow System
-        		preference.setAttribute("SideController.Width");
+        		preference.setAD_User_ID(userId);
+        		preference.setAttribute(SIDE_CONTROLLER_WIDTH_PREFERENCE);
         	}
         	preference.setValue(width);
         	preference.saveEx();
@@ -480,9 +518,11 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 		
 	}
 
-	private String getEastWidthPreference() {
-    	
-    	String width = Env.getPreference(Env.getCtx(), 0, "HelpController.Width", false);
+	/**
+	 * @return saved width of east/help panel. null if there's no saved width.
+	 */
+	private String getEastWidthPreference() {    	
+    	String width = Env.getPreference(Env.getCtx(), 0, HELP_CONTROLLER_WIDTH_PREFERENCE, false);
     	
     	if( (! Util.isEmpty(width)) ){
         	ClientInfo browserInfo = getClientInfo();
@@ -496,8 +536,11 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 		return null;
 	}
 
-	protected void updateHelpWidthPreference(String width) {
-    	
+	/**
+	 * Save width of east/help panel as user preference
+	 * @param width
+	 */
+	protected void updateHelpWidthPreference(String width) {    	
     	if( width != null ){
         	Query query = new Query(Env.getCtx(), 
         			MTable.get(Env.getCtx(), I_AD_Preference.Table_ID), 
@@ -508,14 +551,13 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
         	MPreference preference = query.setOnlyActiveRecords(true)
         			.setApplyAccessFilter(true)
         			.setClient_ID()
-        			.setParameters("HelpController.Width", userId)
+        			.setParameters(HELP_CONTROLLER_WIDTH_PREFERENCE, userId)
         			.first();
         	
-        	if ( preference == null || preference.getAD_Preference_ID() <= 0 ) {
-        		
+        	if ( preference == null || preference.getAD_Preference_ID() <= 0 ) {        		
         		preference = new MPreference(Env.getCtx(), 0, null);
-        		preference.setAD_User_ID(userId); // allow System
-        		preference.setAttribute("HelpController.Width");
+        		preference.setAD_User_ID(userId);
+        		preference.setAttribute(HELP_CONTROLLER_WIDTH_PREFERENCE);
         	}
         	preference.setValue(width);
         	preference.saveEx();
@@ -523,30 +565,53 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 
     }
 
+	/**
+	 * Save west/menu panel collapsed state as user preference
+	 * @param collapsed
+	 */
 	private void updateMenuCollapsedPreference(boolean collapsed) {
 		UserPreference pref = SessionManager.getSessionApplication().getUserPreference();
 		pref.setProperty(UserPreference.P_MENU_COLLAPSED, collapsed);
 		pref.savePreference();
 	}
     
+	/**
+	 * Save east/help panel collapsed state as user preference
+	 * @param collapsed
+	 */
 	private void updateHelpCollapsedPreference(boolean collapsed) {
 		UserPreference pref = SessionManager.getSessionApplication().getUserPreference();
 		pref.setProperty(UserPreference.P_HELP_COLLAPSED, collapsed);
 		pref.savePreference();
 	}
 	
+	/**
+	 * Save page/desktop header collapsed state as user preference
+	 * @param collapsed
+	 */
 	private void updateHeaderCollapsedPreference(boolean collapsed) {
 		UserPreference pref = SessionManager.getSessionApplication().getUserPreference();
 		pref.setProperty(UserPreference.P_HEADER_COLLAPSED, collapsed);
 		pref.savePreference();
 	}
 
+	/**
+	 * Render content of home tab.<br/>
+	 * Delegate to {@link DashboardController#render(Component, IDesktop, boolean)}
+	 */
 	public void renderHomeTab()
 	{		
 		homeTab.getChildren().clear();		
 
 		dashboardController.render(homeTab, this, true);
 		
+		if (homeTab.getFirstChild() != null) {
+			ITabOnSelectHandler handler = () -> {
+				invalidateDashboardPanel(homeTab.getFirstChild().getChildren());
+			};
+			homeTab.getFirstChild().setAttribute(ITabOnSelectHandler.ATTRIBUTE_KEY, handler);
+		}
+						
 		homeTab.setAttribute(HOME_TAB_RENDER_ATTR, Boolean.TRUE);
 	
 		West w = layout.getWest();
@@ -573,7 +638,7 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 		if (mobile)
 		{
 			ToolBarButton btn = new ToolBarButton();
-        	btn.setIconSclass("z-icon-remove");
+        	btn.setIconSclass(Icon.getIconSclass(Icon.REMOVE));
         	btn.addEventListener(Events.ON_CLICK, evt -> {
         		westPopup.close();
         		westPopup.removeAttribute(POPUP_OPEN_ATTR);
@@ -595,8 +660,28 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 		{
 			pnlHead.invalidate();
 		}
+		
+		homeTab.invalidate();	
 	}
 
+	/**
+	 * Redraw dashboard panel after switching back to home tab
+	 * @param childrens
+	 */
+	private void invalidateDashboardPanel(List<Component> childrens) {
+		for (Component children : childrens) {
+			if (children instanceof DashboardPanel) {
+				children.invalidate();
+			} else {
+				invalidateDashboardPanel(children.getChildren());
+			}
+		}
+	}
+
+	/**
+	 * Set width of popup for side panel
+	 * @param popup
+	 */
 	protected void setSidePopupWidth(Popup popup) {
 		if (ClientInfo.minWidth(ClientInfo.LARGE_WIDTH))
 			popup.setWidth("30%");
@@ -612,6 +697,7 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 			popup.setWidth("80%");
 	}
 
+	@Override
 	public void onEvent(Event event)
     {
         Component comp = event.getTarget();
@@ -642,6 +728,8 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
         		if (mobile && eastPopup != null)
         		{
         			eastPopup.open(layout.getCenter(), "overlap_end");
+        			isQuickInfoOpen = true;
+            		updateHelpQuickInfo(gridTab);
         		}
         		else
         		{
@@ -650,6 +738,8 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 	        		LayoutUtils.removeSclass("slide", layout.getEast());
 	        		contextHelp.setVisible(false);
 	        		updateHelpCollapsedPreference(false);
+	        		isQuickInfoOpen = true;
+	        		updateHelpQuickInfo(gridTab);
         		}
         	}
         	else if (comp == westBtn)
@@ -670,55 +760,26 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
         }
         else if (eventName.equals(ON_ACTIVITIES_CHANGED_EVENT))
         {
-        	@SuppressWarnings("unchecked")
-			Map<String, Object> map = (Map<String, Object>) event.getData();
-        	Integer notice = (Integer) map.get("notice");
-        	Integer request = (Integer) map.get("request");
-        	Integer workflow = (Integer) map.get("workflow");
-        	Integer unprocessed = (Integer) map.get("unprocessed");
+        	Integer count = (Integer) event.getData();
         	boolean change = false;
-        	if (notice != null && notice.intValue() != noOfNotice) 
+        	if (count != null && count.intValue() != noCount) 
         	{
-        		noOfNotice = notice.intValue(); change = true;
-        	}
-        	if (request != null && request.intValue() != noOfRequest) 
-        	{
-        		noOfRequest = request.intValue(); change = true;
-        	}		
-        	if (workflow != null && workflow.intValue() != noOfWorkflow) 
-        	{
-        		noOfWorkflow = workflow.intValue(); change = true;
-        	}
-        	if (unprocessed != null && unprocessed.intValue() != noOfUnprocessed) 
-        	{
-        		noOfUnprocessed = unprocessed.intValue(); change = true;
+        		noCount = count.intValue(); change = true;
         	}
         	if (change)
         		updateUI();
         }
-        else if (event instanceof ZoomEvent) 
-		{
-        	Clients.clearBusy();
-			ZoomEvent ze = (ZoomEvent) event;
-			if (ze.getData() != null && ze.getData() instanceof MQuery) {
-				AEnv.zoom((MQuery) ze.getData());
-			}
-		}
-		
-        else if (event instanceof DrillEvent)
-		{
-        	Clients.clearBusy();
-			DrillEvent de = (DrillEvent) event;
-			if (de.getData() != null && de.getData() instanceof MQuery) {
-				MQuery query = (MQuery) de.getData();
-				executeDrill(query);
-			}
-		}
     }
 
+	/**
+	 * Make page/desktop header visible again
+	 */
 	protected void restoreHeader() {
 		layout.getNorth().setVisible(true);
-		max.setImage(ThemeManager.getThemeResource(IMAGES_UPARROW_PNG));
+		if (ThemeManager.isUseFontIconForImage())
+        	max.setIconSclass(Icon.getIconSclass(Icon.COLLAPSING));
+		else
+			max.setImage(ThemeManager.getThemeResource(IMAGES_UPARROW_PNG));
 		showHeader.setVisible(false);
 		pnlHead.detach();
 		headerContainer.appendChild(pnlHead);
@@ -726,9 +787,15 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 		updateHeaderCollapsedPreference(false);
 	}
 
+	/**
+	 * Hide page/desktop header
+	 */
 	protected void collapseHeader() {
 		layout.getNorth().setVisible(false);
-		max.setImage(ThemeManager.getThemeResource(IMAGES_DOWNARROW_PNG));
+		if (ThemeManager.isUseFontIconForImage())
+        	max.setIconSclass(Icon.getIconSclass(Icon.EXPANDING));
+		else
+			max.setImage(ThemeManager.getThemeResource(IMAGES_DOWNARROW_PNG));
 		showHeader.setVisible(true);
 		pnlHead.detach();
 		if (headerPopup == null) 
@@ -752,25 +819,9 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 	}
 
 	/**
-	 * 	Execute Drill to Query
-	 * 	@param query query
-	 */
-   	private void executeDrill (MQuery query)
-	{
-		int AD_Table_ID = MTable.getTable_ID(query.getTableName());
-		if (!MRole.getDefault().isCanReport(AD_Table_ID))
-		{
-			FDialog.error(0, null, "AccessCannotReport", query.getTableName());
-			return;
-		}
-		if (AD_Table_ID != 0)
-			new WReport(AD_Table_ID, query);		
-	}	//	executeDrill
-   	
-	/**
-	 *
 	 * @param page
 	 */
+	@Override
 	public void setPage(Page page) {
 		if (this.page != page) {
 			layout.setPage(page);
@@ -790,11 +841,41 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 	 * Get the root component
 	 * @return Component
 	 */
+	@Override
 	public Component getComponent() {
 		return layout;
 	}
 
+	@Override
 	public void logout() {
+		logout(null);
+	}
+	
+	@Override
+	public void logout(Callback<Boolean> callback) {
+		if (layout != null && layout.getDesktop() != null 
+			&& Executions.getCurrent() != null && Executions.getCurrent().getNativeRequest() != null) {
+			//close all tabs
+			List<Component> tabs = windowContainer.getComponent().getTabs().getChildren();
+	    	int end = tabs.size() - 1;
+	    	for (int i = end; i >= 0; i--) {
+	    		((Tab)tabs.get( i )).close();
+	    	}
+	    	AEnv.detachInputElement(layout);
+	    	layout.setVisible(false);
+	    	//schedule async logout
+			Executions.schedule(layout.getDesktop(), e -> asyncLogout(callback), new Event("onAsyncLogout"));
+		} else {
+			asyncLogout(callback);
+		}
+	}
+	
+	/**
+	 * Asynchronous logout. Call by {@link #logout(Callback)}.<br/>
+	 * This is to workaround client side detached element leak.
+	 * @param callback
+	 */
+	private void asyncLogout(Callback<Boolean> callback) {
 		unbindEventManager();
 		if (dashboardController != null) {
 			dashboardController.onLogOut();
@@ -805,28 +886,38 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 			sideController.onLogOut();
 			sideController = null;
 		}
-		layout.detach();
-		layout = null;
+		
+		if (callback != null) {
+			if (layout != null && layout.getDesktop() != null 
+					&& Executions.getCurrent() != null && Executions.getCurrent().getNativeRequest() != null) {
+				Executions.schedule(layout.getDesktop(), e -> callback.onCallback(Boolean.TRUE), new Event("onAsyncLogoutCallback"));
+			} else {
+				callback.onCallback(Boolean.TRUE);
+			}
+		}
+		
+		layout = null;		
 		pnlHead = null;
 		max = null;
 		m_desktop = null;
 	}
 
+	/**
+	 * Update home tab title after {@link #ON_ACTIVITIES_CHANGED_EVENT}
+	 */
 	public void updateUI() {
-		int total = noOfNotice + noOfRequest + noOfWorkflow + noOfUnprocessed;
-		windowContainer.setTabTitle(0, Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Home"))
-				+ " (" + total + ")",
-				Msg.translate(Env.getCtx(), "AD_Note_ID") + " : " + noOfNotice
-				+ ", " + Msg.translate(Env.getCtx(), "R_Request_ID") + " : " + noOfRequest
-				+ ", " + Util.cleanAmp(Msg.getMsg (Env.getCtx(), "WorkflowActivities")) + " : " + noOfWorkflow
-				+ (noOfUnprocessed>0 ? ", " + Msg.getMsg (Env.getCtx(), "UnprocessedDocs") + " : " + noOfUnprocessed : "")
-				);
+		windowContainer.setTabTitle(0, Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Home")) + " (" + noCount + ")", null);
 	}
 
-	//use _docClick undocumented api. need verification after major zk release update
-	private final static String autoHideMenuScript = "try{var w=zk.Widget.$('#{0}');var t=zk.Widget.$('#{1}');" +
-			"var e=new Object;e.target=t;w._docClick(e);}catch(error){}";
+	/**
+	 * use _docClick undocumented api. need verification after major zk release update
+	 */
+	private final static String autoHideMenuScript = "(function(){try{let w=zk.Widget.$('#{0}');let t=zk.Widget.$('#{1}');" +
+			"let e=new Object;e.target=t;w._docClick(e);}catch(error){}})()";
 	
+	/**
+	 * Auto hide west panel or popup
+	 */
 	private void autoHideMenu() {
 		if (mobile) {
 			if (westPopup.getAttribute(POPUP_OPEN_ATTR) != null) {
@@ -855,21 +946,23 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 		autoHideMenu();
 	}
 
-	//Implementation for Broadcast message
 	/**
-	 * @param eventManager
+	 * Implementation for Broadcast message
 	 */
 	public void bindEventManager() {
 		EventManager.getInstance().register(IEventTopics.BROADCAST_MESSAGE, this);
 	}
 
 	/**
-	 * @param eventManager
+	 * Clean up for Broadcast message
 	 */
 	public void unbindEventManager() {
 		EventManager.getInstance().unregister(this);
 	}
 	
+	/**
+	 * Handle OSGi event for Broadcast message
+	 */
 	@Override
 	public void handleEvent(final org.osgi.service.event.Event event) {
 		String eventName = event.getTopic();
@@ -879,50 +972,44 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 				@Override
 				public void onEvent(Event event) throws Exception {
 					BroadCastMsg msg = (BroadCastMsg) event.getData();
-					
 
+					MBroadcastMessage mbMessage = null;
 					switch (msg.getEventId()) {
 					case BroadCastUtil.EVENT_TEST_BROADCAST_MESSAGE:
-						MBroadcastMessage mbMessage = MBroadcastMessage.get(
-								Env.getCtx(), msg.getIntData());
-						String currSession = Integer
-								.toString(Env.getContextAsInt(Env.getCtx(),
-										"AD_Session_ID"));
+						mbMessage = MBroadcastMessage.get(Env.getCtx(), msg.getIntData());
+						if (mbMessage == null)
+							return;
+						String currSession = Integer.toString(Env.getContextAsInt(Env.getCtx(), "AD_Session_ID"));
 						if (currSession.equals(msg.getTarget())) {
 							BroadcastMessageWindow testMessageWindow = new BroadcastMessageWindow(
 										pnlHead);
 							testMessageWindow.appendMessage(mbMessage, true);
 							testMessageWindow = null;
-
 						}
 						break;
 					case BroadCastUtil.EVENT_BROADCAST_MESSAGE:
-						mbMessage = MBroadcastMessage.get(
-								Env.getCtx(), msg.getIntData());
+						mbMessage = MBroadcastMessage.get(Env.getCtx(), msg.getIntData());
+						if (mbMessage == null)
+							return;
 						if (mbMessage.isValidUserforMessage()) {
-							
 							BroadcastMessageWindow messageWindow = new BroadcastMessageWindow(
 										pnlHead);
 							messageWindow.appendMessage(mbMessage, false);
 						}
 						break;
 					case BroadCastUtil.EVENT_SESSION_TIMEOUT:
-
 						currSession = Integer.toString(Env.getContextAsInt(
 								Env.getCtx(), "AD_Session_ID"));
 						if (currSession.equalsIgnoreCase(msg.getTarget())) {
 							new TimeoutPanel(pnlHead, msg.getIntData());
 						}
-
 						break;
 					case BroadCastUtil.EVENT_SESSION_ONNODE_TIMEOUT:
-
 						currSession = WebUtil.getServerName();
-
 						if (currSession.equalsIgnoreCase(msg.getTarget())) {
 							new TimeoutPanel(pnlHead, msg.getIntData());
 						}
-
+						break;
 					}
 
 				}
@@ -942,6 +1029,11 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 
 	@Override
 	public void updateHelpContext(String ctxType, int recordId) {
+		this.updateHelpContext(ctxType, recordId, null);
+	}
+	
+	@Override
+	public void updateHelpContext(String ctxType, int recordId, InfoPanel infoPanel) {
 		// don't show context for SetupWizard Form, is managed internally using wf and node ctxhelp
 		if (recordId == SystemIDs.FORM_SETUP_WIZARD && X_AD_CtxHelp.CTXTYPE_Form.equals(ctxType))
 			return;
@@ -953,9 +1045,12 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 		Component window = getActiveWindow();
 		ADWindow adwindow = ADWindow.findADWindow(window);
 		if (adwindow != null) {
-			gridTab = adwindow.getADWindowContent().getActiveGridTab();
+            gridTab = adwindow.getADWindowContent().getActiveGridTab();
 		}
-		updateHelpQuickInfo(gridTab);
+		if(X_AD_CtxHelp.CTXTYPE_Info.equals(ctxType))
+			updateHelpQuickInfo(infoPanel);
+		else
+			updateHelpQuickInfo(gridTab);
 	}
 
 	@Override
@@ -964,13 +1059,21 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 	}
 
 	@Override
-	public void updateHelpTooltip(String hdr, String  desc, String help, String otherContent) {		
-		helpController.renderToolTip(hdr, desc, help, otherContent);
+	public void updateHelpTooltip(String hdr, String  desc, String help, String otherContent,String entityType) {		
+		helpController.renderToolTip(hdr, desc, help, otherContent, entityType);
 	}
 
 	@Override
+	public void updateHelpQuickInfo(InfoPanel infoPanel) {
+		if (isQuickInfoOpen)
+            helpController.renderQuickInfo(infoPanel);
+	}
+	
+	@Override
 	public void updateHelpQuickInfo(GridTab gridTab) {
-		helpController.renderQuickInfo(gridTab);
+        this.gridTab = gridTab;
+        if (isQuickInfoOpen)
+            helpController.renderQuickInfo(gridTab);
 	}
 
 	@Override
@@ -988,12 +1091,6 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 	}
 
 	@Override
-	public void openInfo(int infoId) {
-		super.openInfo(infoId);
-		updateHelpContext(X_AD_CtxHelp.CTXTYPE_Info, infoId);
-	}
-
-	@Override
 	public void openWorkflow(int workflow_ID) {
 		super.openWorkflow(workflow_ID);
 		updateHelpContext(X_AD_CtxHelp.CTXTYPE_Workflow, workflow_ID);
@@ -1005,6 +1102,7 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 		updateHelpContext(X_AD_CtxHelp.CTXTYPE_Task, taskId);
 	}
 
+	@Override
     public boolean isPendingWindow() {
         List<Object> windows = getWindows();
         if (windows != null) {
@@ -1025,13 +1123,16 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 		super.onMenuSelected(menuId);
 		if (showHeader != null && showHeader.isVisible()) {
 			//ensure header popup is close
-			String script = "var w=zk.Widget.$('#" + layout.getUuid()+"'); " +
-					"zWatch.fire('onFloatUp', w);";
+			String script = "(function(){let w=zk.Widget.$('#" + layout.getUuid()+"'); " +
+					"zWatch.fire('onFloatUp', w);})()";
 			Clients.response(new AuScript(script));
 		} 
 	}
 
-	int getMenuID()
+	/**
+	 * @return Menu tree ID for login role
+	 */
+	protected int getMenuID()
 	{
 		int AD_Role_ID = Env.getAD_Role_ID(Env.getCtx());
 		int AD_Tree_ID = DB.getSQLValue(null,
@@ -1044,17 +1145,22 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 
 		return AD_Tree_ID;
 	}
+	
+	/**
+	 * Process auto launch configuration after login (store in AD_Tree_Favorite_Node)
+	 * @param ctx
+	 */
 	private void automaticOpen(Properties ctx) {
 		if (isActionURL())  // IDEMPIERE-2334 vs IDEMPIERE-3000 - do not open windows when coming from an action URL
 			return;
 
-		StringBuilder sql = new StringBuilder("SELECT m.Action, COALESCE(m.AD_Window_ID, m.AD_Process_ID, m.AD_Form_ID, m.AD_Workflow_ID, m.AD_Task_ID, AD_InfoWindow_ID) ")
-		.append(" FROM AD_TreeBar tb")
-		.append(" INNER JOIN AD_Menu m ON (tb.Node_ID = m.AD_Menu_ID)")
-		.append(" WHERE tb.AD_Tree_ID = ").append(getMenuID())
-		.append(" AND tb.AD_User_ID = ").append(Env.getAD_User_ID(ctx))
-		.append(" AND tb.IsActive = 'Y' AND tb.LoginOpenSeqNo > 0")
-		.append(" ORDER BY tb.LoginOpenSeqNo");
+		StringBuilder sql = new StringBuilder("SELECT m.Action, COALESCE(m.AD_Window_ID, m.AD_Process_ID, m.AD_Form_ID, m.AD_Workflow_ID, m.AD_Task_ID, m.AD_InfoWindow_ID), m.AD_Menu_ID ")
+		.append(" FROM AD_Tree_Favorite_Node tfn ")
+		.append(" INNER JOIN AD_Menu m ON (tfn.AD_Menu_ID = m.AD_Menu_ID) ")
+		.append(" WHERE tfn.AD_Tree_Favorite_ID = ")
+		.append(MTreeFavorite.getFavoriteTreeID(Env.getAD_User_ID(Env.getCtx())))
+		.append(" AND tfn.IsActive = 'Y' AND tfn.LoginOpenSeqNo >= 0 ")
+		.append(" ORDER BY tfn.LoginOpenSeqNo ");
 
 		List<List<Object>> rows = DB.getSQLArrayObjectsEx(null, sql.toString());
 		if (rows != null && rows.size() > 0) {
@@ -1062,6 +1168,7 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 
 				String action = (String) row.get(0);
 				int recordID = ((BigDecimal) row.get(1)).intValue();
+				int menuID = ((BigDecimal) row.get(2)).intValue();
 
 				if (action.equals(MMenu.ACTION_Form)) {
 					Boolean access = MRole.getDefault().getFormAccess(recordID);
@@ -1076,7 +1183,7 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 				else if (action.equals(MMenu.ACTION_Process) || action.equals(MMenu.ACTION_Report)) {
 					Boolean access = MRole.getDefault().getProcessAccess(recordID);
 					if (access != null && access)
-						SessionManager.getAppDesktop().openProcessDialog(recordID, DB.getSQLValueStringEx(null, "SELECT IsSOTrx FROM AD_Menu WHERE AD_Menu_ID = ?", recordID).equals("Y"));
+						SessionManager.getAppDesktop().openProcessDialog(recordID, DB.getSQLValueStringEx(null, "SELECT IsSOTrx FROM AD_Menu WHERE AD_Menu_ID = ?", menuID).equals("Y"));
 				}
 				else if (action.equals(MMenu.ACTION_Task)) {
 					Boolean access = MRole.getDefault().getTaskAccess(recordID);
@@ -1108,6 +1215,9 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 		}
 	}
 
+	/**
+	 * Update width of side panel
+	 */
 	private void updateSideLayout() {
 		if (westPopup != null && westPopup.getChildren().size() > 1)
 			setSidePopupWidth(westPopup);
@@ -1115,6 +1225,9 @@ public class DefaultDesktop extends TabbedDesktop implements MenuListener, Seria
 			setSidePopupWidth(eastPopup);
 	}  
 
+	/**
+	 * @return true if there's Action parameter in URL
+	 */
     private boolean isActionURL() {
 		ConcurrentMap<String, String[]> parameters = new ConcurrentHashMap<String, String[]>(Executions.getCurrent().getParameterMap());
     	String action = "";

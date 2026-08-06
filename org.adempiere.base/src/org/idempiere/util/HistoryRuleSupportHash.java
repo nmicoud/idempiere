@@ -15,13 +15,14 @@
 package org.idempiere.util;
 
 import org.adempiere.exceptions.AdempiereException;
+import org.compiere.model.MSysConfig;
 import org.compiere.util.SecureEngine;
 import org.passay.HistoryRule;
 import org.passay.PasswordData.HistoricalReference;
 import org.passay.PasswordData.Reference;
 
 /**
- * implement history password rule support hash password
+ * Implement history password rule support for hash password
  * @author hieplq
  *
  */
@@ -34,7 +35,7 @@ public class HistoryRuleSupportHash extends HistoryRule {
 		if (reference instanceof HistoricalReference){
 			String salt = ((HistoricalReference) reference).getLabel();
 			if (salt != null){
-				return SecureEngine.isMatchHash (reference.getPassword(), ((HistoricalReference) reference).getLabel(), password);
+				return SecureEngine.isMatchHash (MSysConfig.getValue(MSysConfig.USER_PASSWORD_HASH_ALGORITHM), reference.getPassword(), ((HistoricalReference) reference).getLabel(), password);
 			}else{
 				return reference.getPassword().equals(password);
 			}

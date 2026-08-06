@@ -17,6 +17,9 @@
 
 package org.adempiere.webui.panel;
 
+import static org.compiere.model.SystemIDs.COLUMN_S_RESOURCEASSIGNMENT_S_RESOURCE_ID;
+import static org.compiere.model.SystemIDs.COLUMN_S_RESOURCE_S_RESOURCETYPE_ID;
+
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -42,22 +45,22 @@ import org.compiere.minigrid.ColumnInfo;
 import org.compiere.minigrid.IDColumn;
 import org.compiere.model.MLookupFactory;
 import org.compiere.model.MQuery;
-
-import static org.compiere.model.SystemIDs.*;
-
+import org.compiere.model.MResourceAssignment;
+import org.compiere.model.SystemIDs;
 import org.compiere.util.DB;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.idempiere.db.util.SQLFragment;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.Borderlayout;
 import org.zkoss.zul.Center;
-import org.zkoss.zul.North;
-import org.zkoss.zul.South;
 import org.zkoss.zul.Div;
+import org.zkoss.zul.North;
 import org.zkoss.zul.Separator;
+import org.zkoss.zul.South;
 import org.zkoss.zul.Vbox;
 
 /**
@@ -71,7 +74,7 @@ import org.zkoss.zul.Vbox;
 * @version	InfoAssignment.java Adempiere Swing UI 3.4.1
 */
 
-@Deprecated // replaced with InfoAssignmentWindow IDEMPIERE-325
+@Deprecated (since="13", forRemoval=true) // replaced with InfoAssignmentWindow IDEMPIERE-325
 public class InfoAssignmentPanel extends InfoPanel implements EventListener<Event>, ValueChangeListener
 {
 	/**
@@ -125,19 +128,26 @@ public class InfoAssignmentPanel extends InfoPanel implements EventListener<Even
 		this(WindowNo, value, multiSelection, whereClause, true);
 	}
 	
+	public InfoAssignmentPanel (int WindowNo,
+			String value, boolean multiSelection, String whereClause, boolean lookup)
+	{
+		this(WindowNo, value, multiSelection, lookup, whereClause != null ? new SQLFragment(whereClause) : null);
+	}
+	
 	/**
 	 *  Constructor
 	 *
 	 *  @param WindowNo WindowNo
 	 *  @param  value   Query value Name or Value if contains numbers
 	 *  @param multiSelection multiple selection
-	 *  @param whereClause where clause
+	 *  @param lookup true if lookup
+	 *  @param sqlFilter sql filter
 	 */
 	public InfoAssignmentPanel (int WindowNo,
-		String value, boolean multiSelection, String whereClause, boolean lookup)
+		String value, boolean multiSelection, boolean lookup, SQLFragment sqlFilter)
 	{
 		super (WindowNo, "ra", "S_ResourceAssignment_ID",
-			multiSelection, whereClause, lookup);
+			multiSelection, lookup, sqlFilter);
 		log.info(value);
 		setTitle(Msg.getMsg(Env.getCtx(), "InfoAssignment"));
 
@@ -145,7 +155,7 @@ public class InfoAssignmentPanel extends InfoPanel implements EventListener<Even
 			return;
 		
 		statInit();
-		initInfo (value, whereClause);
+		initInfo (value, sqlFilter);
 
 		int no = contentPanel.getRowCount();
 		setStatusLine(Integer.toString(no) + " " + Msg.getMsg(Env.getCtx(), "SearchRows_EnterQuery"), false);
@@ -267,10 +277,10 @@ public class InfoAssignmentPanel extends InfoPanel implements EventListener<Even
 	/**
 	 *	Dynamic Init
 	 *  @param value value
-	 *  @param whereClause where clause
+	 *  @param sqlFilter where clause
 	 */
 	
-	private void initInfo(String value, String whereClause)
+	private void initInfo(String value, SQLFragment sqlFilter)
 	{
 		//  C_BPartner bp, AD_User c, C_BPartner_Location l, C_Location a
 
@@ -278,11 +288,11 @@ public class InfoAssignmentPanel extends InfoPanel implements EventListener<Even
 		
 		StringBuilder where = new StringBuilder(s_assignmentWHERE);
 		
-		if (whereClause != null && whereClause.length() > 0)
-			where.append(" AND ").append(whereClause);
+		if (sqlFilter != null && sqlFilter.sqlClause().length() > 0)
+			where.append(" AND ").append(sqlFilter.sqlClause());
 		
 		prepareTable(s_assignmentLayout, s_assignmentFROM,
-			where.toString(), "rt.Name,r.Name,ra.AssignDateFrom");
+			"rt.Name,r.Name,ra.AssignDateFrom", new SQLFragment(where.toString(), sqlFilter != null ? sqlFilter.parameters() : null));
 	} // initInfo
 	
 	/*************************************************************************/
@@ -396,18 +406,19 @@ public class InfoAssignmentPanel extends InfoPanel implements EventListener<Even
 	
 	public void zoom()
 	{
-		if (getSelectedRowKey() != null && getSelectedRowKey() > 0)
+		int id = getIntSelectedRowKey(MResourceAssignment.Table_ID);
+		if (id > 0)
 		{
 			MQuery zoomQuery = new MQuery();   //  ColumnName might be changed in MTab.validateQuery
 	        String column = getKeyColumn();
 	        //strip off table name, fully qualify name doesn't work when zoom into detail tab
 	        if (column.indexOf(".") > 0)
 	        	column = column.substring(column.indexOf(".")+1);
-	        zoomQuery.addRestriction(column, MQuery.EQUAL, getSelectedRowKey());
+	        zoomQuery.addRestriction(column, MQuery.EQUAL, id);
 	        zoomQuery.setRecordCount(1);
 	        zoomQuery.setTableName(column.substring(0, column.length() - 3));
 	        
-	        AEnv.zoom(236, zoomQuery);
+	        AEnv.zoom(SystemIDs.WINDOW_RESOURCE, zoomQuery);
 		}
 	}
 

@@ -28,10 +28,10 @@ import java.util.logging.Level;
 import org.compiere.util.CLogger;
 
 /**
- *	Covert OFX 1XX (SQGML) into valid XML
- *
+ *	Covert OFX 1XX (SQGML) into valid XML.
+ *  <p>
  *  SGML BASED OFX 1 compliant data is read from the BufferedReader
- *  passed to init. This class extends InputSream, allowing the
+ *  passed to init. This class extends InputStream, allowing the
  *  XML compliant output data to be read from it.
  *
  *  @author Maarten Klinker
@@ -45,6 +45,8 @@ public final class OFX1ToXML extends InputStream implements Runnable
 	private BufferedWriter m_writer;
 	/**	Temp String					*/
 	private String m_ofx = "";
+	/** Exception */
+	private volatile IOException m_runException;
 
 	/**	Logger			*/
 	private static final CLogger	log = CLogger.getCLogger(OFX1ToXML.class);
@@ -86,7 +88,7 @@ public final class OFX1ToXML extends InputStream implements Runnable
 		{
 			if (line.length() > 0) 
 			{
-				write(line.replaceAll(":", "=\"") + "\" ");
+				write(line.replace(":", "=\"") + "\" ");
 			}
 			line = br.readLine();
 		}
@@ -106,6 +108,7 @@ public final class OFX1ToXML extends InputStream implements Runnable
 	 * Method run
 	 * @see java.lang.Runnable#run()
 	 */
+	@Override
 	public void run()
 	{
 		boolean addCloseTag;
@@ -164,7 +167,22 @@ public final class OFX1ToXML extends InputStream implements Runnable
 		}
 		catch (IOException e)
 		{
+			m_runException = e;
 			log.log(Level.SEVERE, "Ofx1To2Convertor: IO Exception", e);
+		}
+		finally
+		{
+			if (m_writer != null)
+			{
+				try
+				{
+					m_writer.close();
+				}
+				catch (IOException e)
+				{
+					log.log(Level.SEVERE, "Error closing writer", e);
+				}
+			}
 		}
 	}	//	run
 
@@ -183,9 +201,17 @@ public final class OFX1ToXML extends InputStream implements Runnable
 	 * @return int
 	 * @throws IOException
 	 */
+	@Override
 	public int read() throws IOException
 	{
-		return m_reader.read();
+		if (m_runException != null)
+		{
+			throw m_runException;
+		}
+
+		int ch = m_reader.read();
+
+		return ch;
 	}	//	read
 
 	/**
@@ -198,11 +224,14 @@ public final class OFX1ToXML extends InputStream implements Runnable
 	 */
 	public int read(char[] cbuf, int off, int len) throws IOException
 	{
-		return m_reader.read(cbuf, off, len);
+		if (m_runException != null) {
+			throw m_runException;
+		}
+
+		int result = m_reader.read(cbuf, off, len);
+
+		return result;
 	}	//	read
-	
-	
-	
 	
 	/**
 	 *	Encodes strings for XML

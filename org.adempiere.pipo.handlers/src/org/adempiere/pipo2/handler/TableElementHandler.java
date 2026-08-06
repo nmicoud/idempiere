@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.logging.Level;
 
 import javax.xml.transform.sax.TransformerHandler;
+import org.adempiere.pipo2.IPackSerializer;
 
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.pipo2.AbstractElementHandler;
@@ -34,9 +35,12 @@ import org.adempiere.pipo2.PoFiller;
 import org.adempiere.pipo2.exception.DatabaseAccessException;
 import org.adempiere.pipo2.exception.POSaveFailedException;
 import org.compiere.model.I_AD_Table;
+import org.compiere.model.I_AD_TableAttribute;
 import org.compiere.model.MColumn;
+import org.compiere.model.MPackageImpDetail;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MTable;
+import org.compiere.model.MTableAttributeSet;
 import org.compiere.model.MTableIndex;
 import org.compiere.model.MViewComponent;
 import org.compiere.model.Query;
@@ -45,8 +49,10 @@ import org.compiere.model.X_AD_Package_Exp_Detail;
 import org.compiere.model.X_AD_Package_Imp_Detail;
 import org.compiere.model.X_AD_Table;
 import org.compiere.process.DatabaseViewValidate;
+import org.compiere.util.CacheMgt;
 import org.compiere.util.Env;
 import org.compiere.util.Trx;
+import org.compiere.util.TrxEventListener;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
 
@@ -54,6 +60,8 @@ public class TableElementHandler extends AbstractElementHandler {
 	private ColumnElementHandler columnHandler = new ColumnElementHandler();
 	private TableIndexElementHandler tableIndexHandler = new TableIndexElementHandler();
 	private ViewComponentElementHandler viewComponentHandler = new ViewComponentElementHandler();
+	private TableAttributeSetElementHandler tableAttributeSetElementHandler = new TableAttributeSetElementHandler();
+
 
 	private List<Integer>tables = new ArrayList<Integer>();
 
@@ -83,10 +91,10 @@ public class TableElementHandler extends AbstractElementHandler {
 				String action = null;
 				if (!mTable.is_new()){
 					backupRecord(ctx, impDetail.getAD_Package_Imp_Detail_ID(),X_AD_Table.Table_Name,mTable);
-					action = "Update";
+					action = MPackageImpDetail.ACTION_UPDATE;
 				}
 				else{
-					action = "New";				
+					action = MPackageImpDetail.ACTION_INSERT;				
 				}
 				if (mTable.save(getTrxName(ctx)) == true){
 					logImportDetail (ctx, impDetail, 1, mTable.getName(),mTable.get_ID(),action);
@@ -117,11 +125,32 @@ public class TableElementHandler extends AbstractElementHandler {
 			int success = validateDatabaseView(ctx, mTable);
 			X_AD_Package_Imp_Detail dbDetail = createImportDetail(ctx, "dbView", MTable.Table_Name, MTable.Table_ID);
 			if (success == 1) {
-				logImportDetail(ctx, dbDetail, 1, mTable.getName(), mTable.get_ID(), "Validate");
+				logImportDetail(ctx, dbDetail, 1, mTable.getName(), mTable.get_ID(), MPackageImpDetail.ACTION_VALIDATE);
 			} else {
-				logImportDetail(ctx, dbDetail, 0, mTable.getName(), mTable.get_ID(), "Validate");
+				logImportDetail(ctx, dbDetail, 0, mTable.getName(), mTable.get_ID(), MPackageImpDetail.ACTION_VALIDATE);
 				throw new DatabaseAccessException("Failed to validate view for " + mTable.getName());
 			}
+		}
+		
+		Trx trx = Trx.get(getTrxName(ctx), false);
+		if (trx != null && !mTable.isView()) {
+			trx.addTrxEventListener(new TrxEventListener() {
+				
+				@Override
+				public void afterRollback(Trx trx, boolean success) {
+				}
+				
+				@Override
+				public void afterCommit(Trx trx, boolean success) {
+					if (success) {
+						CacheMgt.get().reset(MTable.Table_Name, mTable.get_ID());
+					}
+				}
+				
+				@Override
+				public void afterClose(Trx trx) {
+				}
+			});
 		}
 	}
 	
@@ -147,8 +176,8 @@ public class TableElementHandler extends AbstractElementHandler {
 		return 1;
 	}
 
-	public void create(PIPOContext ctx, TransformerHandler document)
-			throws SAXException {
+	public void create(PIPOContext ctx, IPackSerializer document)
+			throws Exception {
 
 		int AD_Table_ID = Env.getContextAsInt(ctx.ctx, X_AD_Package_Exp_Detail.COLUMNNAME_AD_Table_ID);
 		if (ctx.packOut.isExported(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Table_ID+"|"+AD_Table_ID))
@@ -160,8 +189,20 @@ public class TableElementHandler extends AbstractElementHandler {
 		if (createElement) {
 			verifyPackOutRequirement(m_Table);
 			addTypeName(atts, "table");
-			document.startElement("","",I_AD_Table.Table_Name,atts);
+			document.startElement(I_AD_Table.Table_Name,atts);
 			createTableBinding(ctx,document,m_Table);
+		}
+		
+		packOut.getCtx().ctx.put("Table_Name", I_AD_Table.Table_Name);
+		try
+		{
+			ElementHandler handler = packOut.getHandler(I_AD_TableAttribute.Table_Name);
+			handler.packOut(packOut, document, null, m_Table.get_ID());
+		}
+		catch (Exception e)
+		{
+			if (log.isLoggable(Level.INFO))
+				log.info(e.toString());
 		}
 
 		try {
@@ -189,6 +230,12 @@ public class TableElementHandler extends AbstractElementHandler {
 				{
 					handler = packOut.getHandler("AD_Process");
 					handler.packOut(packOut,document,null,col.getAD_Process_ID());
+				}
+				
+				if (col.getAD_InfoWindow_ID()>0)
+				{
+					handler = packOut.getHandler("AD_InfoWindow");
+					handler.packOut(packOut,document,null,col.getAD_InfoWindow_ID());
 				}
 
 				if (col.getAD_Val_Rule_ID()>0)
@@ -227,30 +274,47 @@ public class TableElementHandler extends AbstractElementHandler {
 			throw new AdempiereException(e);
 		}
 		
+		List<MTableAttributeSet> mTableAttributeSets = new Query(ctx.ctx, MTableAttributeSet.Table_Name, "AD_Table_ID=?", getTrxName(ctx))
+						.setParameters(AD_Table_ID)
+						.list();
+		try
+		{
+			for (MTableAttributeSet attributeSet : mTableAttributeSets)
+			{
+				Env.setContext(ctx.ctx, MTableAttributeSet.COLUMNNAME_AD_TableAttributeSet_UU, attributeSet.getAD_TableAttributeSet_UU());
+				tableAttributeSetElementHandler.packOut(ctx.packOut, document, null, 0, attributeSet.getAD_TableAttributeSet_UU());
+				ctx.ctx.remove(MTableAttributeSet.COLUMNNAME_AD_TableAttributeSet_UU);
+			}
+		}
+		catch (Exception e)
+		{
+			throw new AdempiereException(e);
+		}
+		
 		if (createElement) {
-			document.endElement("","",X_AD_Table.Table_Name);
+			document.endElement(X_AD_Table.Table_Name);
 		}
 	}
 
-	private void createColumn(PIPOContext ctx, TransformerHandler document, int AD_Column_ID) throws SAXException {
+	private void createColumn(PIPOContext ctx, IPackSerializer document, int AD_Column_ID) throws Exception {
 		Env.setContext(ctx.ctx, X_AD_Column.COLUMNNAME_AD_Column_ID, AD_Column_ID);
 		columnHandler.create(ctx, document);
 		ctx.ctx.remove(X_AD_Column.COLUMNNAME_AD_Column_ID);
 	}
 	
-	private void createTableIndex(PIPOContext ctx, TransformerHandler document, int AD_TableIndex_ID) throws SAXException {
+	private void createTableIndex(PIPOContext ctx, IPackSerializer document, int AD_TableIndex_ID) throws Exception {
 		Env.setContext(ctx.ctx, MTableIndex.COLUMNNAME_AD_TableIndex_ID, AD_TableIndex_ID);
 		tableIndexHandler.create(ctx, document);
 		ctx.ctx.remove(MTableIndex.COLUMNNAME_AD_TableIndex_ID);
 	}
 	
-	private void createViewComponent(PIPOContext ctx, TransformerHandler document, int AD_ViewComponent_ID) throws SAXException {
+	private void createViewComponent(PIPOContext ctx, IPackSerializer document, int AD_ViewComponent_ID) throws Exception {
 		Env.setContext(ctx.ctx, MViewComponent.COLUMNNAME_AD_ViewComponent_ID, AD_ViewComponent_ID);
 		viewComponentHandler.create(ctx, document);
 		ctx.ctx.remove(MViewComponent.COLUMNNAME_AD_ViewComponent_ID);
 	}
 
-	private void createTableBinding(PIPOContext ctx, TransformerHandler document, X_AD_Table m_Table)
+	private void createTableBinding(PIPOContext ctx, IPackSerializer document, X_AD_Table m_Table)
 	{
 		PoExporter filler = new PoExporter(ctx, document, m_Table);
 		if (m_Table.getAD_Table_ID() <= PackOut.MAX_OFFICIAL_ID)
@@ -262,10 +326,10 @@ public class TableElementHandler extends AbstractElementHandler {
 		filler.export(excludes);
 	}
 
-	public void packOut(PackOut packout, TransformerHandler packoutHandler, TransformerHandler docHandler,int recordId) throws Exception
+	public void packOut(PackOut packout, IPackSerializer packoutSerializer, TransformerHandler docHandler,int recordId) throws Exception
 	{
 		Env.setContext(packout.getCtx().ctx, X_AD_Package_Exp_Detail.COLUMNNAME_AD_Table_ID, recordId);
-		this.create(packout.getCtx(), packoutHandler);
+		this.create(packout.getCtx(), packoutSerializer);
 		packout.getCtx().ctx.remove(X_AD_Package_Exp_Detail.COLUMNNAME_AD_Table_ID);
 	}
 }

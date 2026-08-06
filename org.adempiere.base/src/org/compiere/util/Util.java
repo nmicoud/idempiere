@@ -16,18 +16,27 @@
  *****************************************************************************/
 package org.compiere.util;
 
-import java.awt.Color;
-import java.awt.font.TextAttribute;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.SecureRandom;
 import java.sql.Timestamp;
 import java.text.AttributedCharacterIterator;
 import java.text.AttributedString;
 import java.text.Normalizer;
+import java.text.Normalizer.Form;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.regex.Pattern;
 
@@ -37,8 +46,25 @@ import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
 
+import org.adempiere.base.Generated;
+import org.adempiere.exceptions.AdempiereException;
+import org.compiere.Adempiere;
+import org.compiere.model.SystemProperties;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
+import com.lowagie.text.Document;
+import com.lowagie.text.DocumentException;
+import com.lowagie.text.pdf.PdfContentByte;
+import com.lowagie.text.pdf.PdfImportedPage;
+import com.lowagie.text.pdf.PdfReader;
+import com.lowagie.text.pdf.PdfWriter;
+
 /**
- *  General Utilities
+ *  General Utility methods
  *
  *  @author     Jorg Janke
  *  @version    $Id: Util.java,v 1.3 2006/07/30 00:52:23 jjanke Exp $
@@ -76,7 +102,6 @@ public class Util
 			pos = oldValue.indexOf(oldPart);
 		}
 		retValue.append(oldValue);
-	//	log.fine( "Env.replace - " + value + " - Old=" + oldPart + ", New=" + newPart + ", Result=" + retValue.toString());
 		return retValue.toString();
 	}	//	replace
 
@@ -100,10 +125,9 @@ public class Util
 		return out.toString();
 	}	//	removeCRLF
 
-
 	/**
 	 * Clean - Remove all white spaces
-	 * @param in in
+	 * @param in
 	 * @return cleaned string
 	 */
 	public static String cleanWhitespace (String in)
@@ -129,11 +153,10 @@ public class Util
 		return out.toString();
 	}	//	cleanWhitespace
 
-
 	/**
-	 * Mask HTML content.
-	 * i.e. replace characters with &values;
-	 * CR is not masked
+	 * Mask HTML content.<br/>
+	 * i.e. replace characters with &values;<br/>
+	 * CR is not masked.
 	 * @param content content
 	 * @return masked content
 	 * @see #maskHTML(String, boolean)
@@ -144,7 +167,7 @@ public class Util
 	}	//	maskHTML
 	
 	/**
-	 * Mask HTML content.
+	 * Mask HTML content.<br/>
 	 * i.e. replace characters with &values;
 	 * @param content content
 	 * @param maskCR convert CR into <br>
@@ -181,6 +204,7 @@ public class Util
 				case '\n':
 					if (maskCR)
 						out.append ("<br>");
+					break;
 				//
 				default:
 					int ii =  (int)c;
@@ -195,10 +219,10 @@ public class Util
 	}	//	maskHTML
 
 	/**
-	 * Get the number of occurances of countChar in string.
+	 * Get the number of occurrences of countChar in string.
 	 * @param string String to be searched
 	 * @param countChar to be counted character
-	 * @return number of occurances
+	 * @return number of occurrences
 	 */
 	public static int getCount (String string, char countChar)
 	{
@@ -215,9 +239,9 @@ public class Util
 	}	//	getCount
 
 	/**
-	 * Is String Empty
+	 * Is String Empty or null
 	 * @param str string
-	 * @return true if >= 1 char
+	 * @return true if str is empty or null
 	 */
 	public static boolean isEmpty (String str)
 	{
@@ -225,10 +249,10 @@ public class Util
 	}	//	isEmpty
 	
 	/**
-	 * Is String Empty
+	 * Is String Empty or null
 	 * @param str string
 	 * @param trimWhitespaces trim whitespaces
-	 * @return true if >= 1 char
+	 * @return true if str is empty or null
 	 */
 	public static boolean isEmpty (String str, boolean trimWhitespaces)
 	{
@@ -242,7 +266,7 @@ public class Util
 
 	/**
 	 * Remove accents from string
-	 * @param str string
+	 * @param text string
 	 * @return Unaccented String
 	 */
 	public static String deleteAccents(String text) {
@@ -252,9 +276,9 @@ public class Util
 		return text;
 	}
 
-	/**************************************************************************
-	 * Find index of search character in str.
-	 * This ignores content in () and 'texts'
+	/**
+	 * Find index of search character in str.<br/>
+	 * This ignores content in () and quoted text ('texts').
 	 * @param str string
 	 * @param search search character
 	 * @return index or -1 if not found
@@ -265,8 +289,8 @@ public class Util
 	}   //  findIndexOf
 
 	/**
-	 *  Find index of search characters in str.
-	 *  This ignores content in () and 'texts'
+	 *  Find index of search characters in str.<br/>
+	 *  This ignores content in () and quoted text ('texts').
 	 *  @param str string
 	 *  @param search1 first search character
 	 *  @param search2 second search character (or)
@@ -300,10 +324,10 @@ public class Util
 	}   //  findIndexOf
 
 	/**
-	 *  Find index of search character in str.
-	 *  This ignores content in () and 'texts'
+	 *  Find index of search string in str.<br/>
+	 *  This ignores content in () and quoted text ('texts')
 	 *  @param str string
-	 *  @param search search character
+	 *  @param search search string
 	 *  @return index or -1 if not found
 	 */
 	public static int findIndexOf (String str, String search)
@@ -336,8 +360,7 @@ public class Util
 		return -1;
 	}   //  findIndexOf
 
-	
-	/**************************************************************************
+	/**
 	 *  Return Hex String representation of byte b
 	 *  @param b byte
 	 *  @return Hex
@@ -363,12 +386,11 @@ public class Util
 		byte lo = (byte) (c & 0xff);
 		return toHex(hi) + toHex(lo);
 	}   //  toHex
-
 	
-	/**************************************************************************
-	 * Init Cap Words With Spaces
+	/**
+	 * Capitalize first character of a word
 	 * @param in string
-	 * @return init cap
+	 * @return Capitalize string
 	 */
 	public static String initCap (String in)
 	{
@@ -391,21 +413,20 @@ public class Util
 		}
 		return new String (data);
 	}	//	initCap
-
 	
-	/**************************************************************************
-	 * Return a Iterator with only the relevant attributes.
-	 * Fixes implementation in AttributedString, which returns everything
+	/**
+	 * Return a Iterator with only the relevant attributes.<br/>
+	 * Fixes implementation in AttributedString, which returns everything.
 	 * @param aString attributed string
 	 * @param relevantAttributes relevant attributes
 	 * @return iterator
 	 */
+	@Generated
 	static public AttributedCharacterIterator getIterator (AttributedString aString, 
 		AttributedCharacterIterator.Attribute[] relevantAttributes)
 	{
 		AttributedCharacterIterator iter = aString.getIterator();
 		Set<?> set = iter.getAllAttributeKeys();
-	//	System.out.println("AllAttributeKeys=" + set);
 		if (set.size() == 0)
 			return iter;
 		//	Check, if there are unwanted attributes
@@ -441,17 +462,15 @@ public class Util
 					}
 				}
 			}
-		//	else
-		//		System.out.println("Unwanted: " + att);
 		}
 		return aString.getIterator();
 	}	//	getIterator
 
-
 	/**
-	 * Dump a Map (key=value) to out
+	 * Dump a Map (key=value) to standard out
 	 * @param map Map
 	 */
+	@Generated
 	static public void dump (Map<Object,Object> map)
 	{
 		System.out.println("Dump Map - size=" + map.size());
@@ -467,7 +486,10 @@ public class Util
 	/**
 	 * Print Action and Input Map for component
 	 * @param comp  Component with ActionMap
+	 * @deprecated Swing client have been deprecated
 	 */
+	@Deprecated (since="13", forRemoval=true)
+	@Generated
 	public static void printActionInputMap (JComponent comp)
 	{
 		//	Action Map
@@ -544,9 +566,9 @@ public class Util
 	}   //  printActionInputMap
 
 	/**
-	 * Is 8 Bit
+	 * Is str a 8 Bit string
 	 * @param str string
-	 * @return true if string contains chars > 255
+	 * @return true if str doesn't contains chars &gt; 255
 	 */
 	public static boolean is8Bit (String str)
 	{
@@ -557,7 +579,6 @@ public class Util
 		{
 			if (cc[i] > 255)
 			{
-			//	System.out.println("Not 8 Bit - " + str);
 				return false;
 			}
 		}
@@ -565,7 +586,7 @@ public class Util
 	}	//	is8Bit
 	
 	/**
-	 * Clean Ampersand (used to indicate shortcut) 
+	 * Remove all Ampersand character (used to indicate shortcut in Swing client) 
 	 * @param in input
 	 * @return cleaned string
 	 */
@@ -585,8 +606,8 @@ public class Util
 	/**
 	 * Trim to max character length
 	 * @param str string
-	 * @param length max (incl) character length
-	 * @return string
+	 * @param length max (inclusive) character length
+	 * @return trim string
 	 */
 	public static String trimLength (String str, int length)
 	{
@@ -616,6 +637,7 @@ public class Util
 		}
 		catch (UnsupportedEncodingException e)
 		{
+			//should never happen
 			log.log(Level.SEVERE, str, e);
 		}
 		return size;
@@ -649,55 +671,29 @@ public class Util
 		}
 		catch (UnsupportedEncodingException e)
 		{
+			//should never happen
 			log.log(Level.SEVERE, str, e);
 		}
 		return str;
 	}	//	trimSize
 
-
-	/**************************************************************************
-	 * Test
-	 * @param args args
-	 */
-	public static void main (String[] args)
-	{
-		String str = "a�b�c?d?e?f?g?";
-		System.out.println(str + " = " + str.length() + " - " + size(str));
-		String str1 = trimLength(str, 10);
-		System.out.println(str1 + " = " + str1.length() + " - " + size(str1));
-		String str2 = trimSize(str, 10);
-		System.out.println(str2 + " = " + str2.length() + " - " + size(str2));
-		//
-		AttributedString aString = new AttributedString ("test test");
-		aString.addAttribute(TextAttribute.FOREGROUND, Color.blue);
-		aString.addAttribute(TextAttribute.UNDERLINE, TextAttribute.UNDERLINE_ON, 2, 4);
-		getIterator (aString, new AttributedCharacterIterator.Attribute[] {TextAttribute.UNDERLINE});
-	}	//	main
-
 	/**
-	 * String diacritics from given string
+	 * Strip diacritics from given string
 	 * @param s	original string
 	 * @return string without diacritics
+	 * @deprecated dummy method, not doing anything
 	 */
+	@Deprecated(forRemoval = true, since = "12")
+	@Generated
 	public static String stripDiacritics(String s) {
-		/* JAVA5 behaviour */
 		return s;
-		/* JAVA6 behaviour *
-		if (s == null) {
-			return s;
-		}
-		String normStr = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD);
-		
-		StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < normStr.length(); i++) {
-			char ch = normStr.charAt(i);
-			if (ch < 255)
-				sb.append(ch);
-		}
-		return sb.toString();
-		/* */
 	}
 
+	/**
+	 * Set time portion to zero.
+	 * @param ts
+	 * @return truncated timestamp
+	 */
 	public static Timestamp removeTime(Timestamp ts) {
         Calendar cal = Calendar.getInstance();
         cal.setTime(ts);
@@ -707,4 +703,172 @@ public class Util
         cal.set(Calendar.MILLISECOND, 0);
         return new Timestamp(cal.getTimeInMillis());
     }
+	
+	/**
+     * Merge pdf files
+     * @param pdfList list of pdf file to merge
+     * @param outFile merged output file
+     * @throws IOException
+     * @throws DocumentException
+     * @throws FileNotFoundException
+     */
+	public static void mergePdf(List<File> pdfList, File outFile) throws IOException,
+			DocumentException, FileNotFoundException {
+		Document document = null;
+		PdfWriter copy = null;
+		
+		List<PdfReader> pdfReaders = new ArrayList<PdfReader>();
+		
+		try
+		{		
+			for (File f : pdfList)
+			{
+				PdfReader reader = new PdfReader(f.getAbsolutePath());
+				
+				pdfReaders.add(reader);
+				
+				if (document == null)
+				{
+					document = new Document(reader.getPageSizeWithRotation(1));
+					copy = PdfWriter.getInstance(document, new FileOutputStream(outFile));
+					document.open();
+				}
+				int pages = reader.getNumberOfPages();
+				PdfContentByte cb = copy.getDirectContent();
+				for (int i = 1; i <= pages; i++) {
+					document.newPage();
+					copy.newPage();
+					PdfImportedPage page = copy.getImportedPage(reader, i);
+					cb.addTemplate(page, 0, 0);
+					copy.releaseTemplate(page);
+				}
+			}			
+		}
+		finally
+		{
+			if(document != null)
+			{
+				document.close();
+			}
+			for(PdfReader reader:pdfReaders)
+			{
+				reader.close();
+			}
+		}
+	}
+
+	/**
+	 * Make filename safe (replace all unauthorized characters with safe ones)
+	 * @param input the filename to check
+	 * @returns the corrected filename
+	 */
+	public static String setFilenameCorrect(String input) {
+		String output = Normalizer.normalize(input, Form.NFD).replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+		output = output.replace("/" , "-");
+		output = output.replace(":" , "-");
+		output = output.replace("*" , "-");
+		output = output.replace("<" , "-");
+		output = output.replace(">" , "-");
+		output = output.replace("%" , "-");
+		return output.trim();
+	}
+
+	private final static String UUID_REGEX="[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}";
+
+	/**
+	 * Is value a valid UUID string
+	 * @param value
+	 * @return true if value is a UUID identifier
+	 */
+	public static boolean isUUID(String value)
+	{
+		return value == null ? false : value.matches(UUID_REGEX);
+	}
+
+	/**
+	 * Is running from Eclipse
+	 * @return true if there is a directory org.adempiere.base within AdempiereHome or if there is a System property org.idempiere.developermode set to Y 
+	 */
+	@Generated
+	public static boolean isDeveloperMode() {
+		return Files.isDirectory(Paths.get(Adempiere.getAdempiereHome() + File.separator + "org.adempiere.base")) || SystemProperties.isDeveloperMode();
+	}
+	
+	/**
+	 * Returns a string with a formatted JSON object  
+	 * @return string with a pretty JSON format 
+	 */
+	public static String prettifyJSONString(String value) {
+		Gson gson = new GsonBuilder().serializeNulls().setPrettyPrinting().create();
+		try {
+			JsonElement jsonElement = JsonParser.parseString(value);
+			return gson.toJson(jsonElement);
+	    } catch (JsonSyntaxException e) {
+	        throw new AdempiereException(Msg.getMsg(Env.getCtx(), "InvalidJSON"));
+	    }
+	}
+
+	private static final SecureRandom RANDOM = new SecureRandom();
+
+	/**
+	 * Generate a UUIDv7 based on current timestamp
+	 * @return
+	 */
+	public static UUID generateUUIDv7() {
+		return generateUUIDv7(new Timestamp(System.currentTimeMillis()));
+	}
+
+	/**
+	 * Generate a UUIDv7 based on given timestamp
+	 * @param timestamp
+	 * @return
+	 */
+	public static UUID generateUUIDv7(Timestamp timestamp) {
+		// Get timestamp in milliseconds since Unix epoch
+		long timestampMillis = timestamp.getTime();
+
+		// Generate random bytes for the rest of the UUID
+		byte[] randomBytes = new byte[10];
+		RANDOM.nextBytes(randomBytes);
+
+		// Build the most significant bits (MSB)
+		// 48 bits: timestamp in milliseconds
+		// 4 bits: version (0111 for v7)
+		// 12 bits: random data
+		long msb = (timestampMillis << 16) | 
+				((long) (randomBytes[0] & 0x0F) << 8) | 
+				(randomBytes[1] & 0xFFL);
+
+		// Set version to 7 (clear the version bits and set to 0111)
+		msb = (msb & 0xFFFFFFFFFFFF0FFFL) | 0x7000L;
+
+		// Build the least significant bits (LSB)
+		// 2 bits: variant (10)
+		// 62 bits: random data
+		long lsb = 0L;
+		for (int i = 2; i < 10; i++) {
+			lsb = (lsb << 8) | (randomBytes[i] & 0xFFL);
+		}
+
+		// Set variant to RFC 4122 (10xx xxxx)
+		lsb = (lsb & 0x3FFFFFFFFFFFFFFFL) | 0x8000000000000000L;
+
+		return new UUID(msb, lsb);
+	}
+
+	public static final String CSV_ESCAPE_FORMULA_CHARACTERS = "=+-@";
+	/**
+	 * Sanitize a single value to prevent CSV Injection attacks (OWASP).
+	 * Prefixes values starting with =+-@ with a space
+	 * @param value the value to sanitize
+	 * @return sanitized value
+	 */
+	public static String sanitizeCsvValue(String value) {
+		if (value == null || value.isEmpty()) 
+			return value;
+		if (CSV_ESCAPE_FORMULA_CHARACTERS.indexOf(value.charAt(0)) >= 0)
+			value = " " + value;
+		return value;
+	}
+
 }   //  Util

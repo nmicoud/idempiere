@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_UserDef_Info_Column
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_AD_UserDef_Info_Column 
 {
@@ -44,8 +44,8 @@ public interface I_AD_UserDef_Info_Column
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -62,6 +62,7 @@ public interface I_AD_UserDef_Info_Column
 	  */
 	public int getAD_FieldStyle_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Style getAD_FieldStyle() throws RuntimeException;
 
     /** Column name AD_InfoColumn_ID */
@@ -77,18 +78,19 @@ public interface I_AD_UserDef_Info_Column
 	  */
 	public int getAD_InfoColumn_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_InfoColumn getAD_InfoColumn() throws RuntimeException;
 
     /** Column name AD_Org_ID */
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -105,6 +107,7 @@ public interface I_AD_UserDef_Info_Column
 	  */
 	public int getAD_Reference_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Reference getAD_Reference() throws RuntimeException;
 
     /** Column name AD_Reference_Value_ID */
@@ -120,6 +123,7 @@ public interface I_AD_UserDef_Info_Column
 	  */
 	public int getAD_Reference_Value_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Reference getAD_Reference_Value() throws RuntimeException;
 
     /** Column name AD_UserDef_Info_Column_ID */
@@ -149,6 +153,7 @@ public interface I_AD_UserDef_Info_Column
 	/** Get User defined Info Window	  */
 	public int getAD_UserDef_Info_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_UserDef_Info getAD_UserDef_Info() throws RuntimeException;
 
     /** Column name AD_Val_Rule_ID */
@@ -164,6 +169,7 @@ public interface I_AD_UserDef_Info_Column
 	  */
 	public int getAD_Val_Rule_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Val_Rule getAD_Val_Rule() throws RuntimeException;
 
     /** Column name Created */
@@ -240,12 +246,12 @@ public interface I_AD_UserDef_Info_Column
     public static final String COLUMNNAME_InputFieldValidation = "InputFieldValidation";
 
 	/** Set Input field validation.
-	  * Input field validaton query
+	  * Input field validation query
 	  */
 	public void setInputFieldValidation (String InputFieldValidation);
 
 	/** Get Input field validation.
-	  * Input field validaton query
+	  * Input field validation query
 	  */
 	public String getInputFieldValidation();
 
@@ -265,13 +271,13 @@ public interface I_AD_UserDef_Info_Column
     /** Column name IsAutocomplete */
     public static final String COLUMNNAME_IsAutocomplete = "IsAutocomplete";
 
-	/** Set Autocomplete.
-	  * Automatic completion for textfields
+	/** Set Auto complete.
+	  * Automatic completion for text fields
 	  */
 	public void setIsAutocomplete (String IsAutocomplete);
 
-	/** Get Autocomplete.
-	  * Automatic completion for textfields
+	/** Get Auto complete.
+	  * Automatic completion for text fields
 	  */
 	public String getIsAutocomplete();
 
@@ -300,6 +306,19 @@ public interface I_AD_UserDef_Info_Column
 	  * Data entry is required in this column
 	  */
 	public String getIsMandatory();
+
+    /** Column name IsQueryAfterChange */
+    public static final String COLUMNNAME_IsQueryAfterChange = "IsQueryAfterChange";
+
+	/** Set Query After Change.
+	  * Issues a query request after the user has made changes to the field
+	  */
+	public void setIsQueryAfterChange (String IsQueryAfterChange);
+
+	/** Get Query After Change.
+	  * Issues a query request after the user has made changes to the field
+	  */
+	public String getIsQueryAfterChange();
 
     /** Column name IsQueryCriteria */
     public static final String COLUMNNAME_IsQueryCriteria = "IsQueryCriteria";

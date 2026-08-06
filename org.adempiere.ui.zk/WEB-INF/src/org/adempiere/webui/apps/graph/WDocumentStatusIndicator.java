@@ -31,15 +31,19 @@ package org.adempiere.webui.apps.graph;
 
 import org.adempiere.webui.apps.AEnv;
 import org.adempiere.webui.component.Label;
+import org.adempiere.webui.component.Messagebox;
 import org.adempiere.webui.component.Panel;
+import org.adempiere.webui.component.Tab.DecorateInfo;
 import org.adempiere.webui.component.Window;
 import org.adempiere.webui.component.ZkCssHelper;
 import org.adempiere.webui.panel.ADForm;
 import org.adempiere.webui.session.SessionManager;
 import org.compiere.model.MDocumentStatus;
+import org.compiere.model.MForm;
 import org.compiere.model.MQuery;
 import org.compiere.print.MPrintColor;
 import org.compiere.print.MPrintFont;
+import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
@@ -47,19 +51,29 @@ import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.Div;
 
 /**
- * 	Document Status Indicator
+ * 	Document Status ({@link MDocumentStatus}) Indicator
  */
 public class WDocumentStatusIndicator extends Panel implements EventListener<Event> {
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 794746556509546913L;
+	private static final long serialVersionUID = -8017313188530461577L;
 
 	/**
 	 * 	Constructor
-	 *	@param goal goal model
+	 *	@param documentStatus
 	 */
 	public WDocumentStatusIndicator(MDocumentStatus documentStatus)
+	{
+		this(documentStatus, false);
+	}
+	
+	/**
+	 * 	Constructor
+	 *	@param documentStatus
+	 *  @param lazy
+	 */
+	public WDocumentStatusIndicator(MDocumentStatus documentStatus, boolean lazy)
 	{
 		super();
 
@@ -68,12 +82,16 @@ public class WDocumentStatusIndicator extends Panel implements EventListener<Eve
 		init();
 		this.setSclass("activities-box");
 		
-		refresh();
-		updateUI();
+		if (!lazy) 
+		{
+			refresh();
+			updateUI();
+		}
 	}	//	WDocumentStatusIndicator
 
 	private MDocumentStatus		m_documentStatus = null;
 	private int statusCount;
+	private Label nameLabel;
 	private Label statusLabel;
 
 	/**
@@ -85,70 +103,91 @@ public class WDocumentStatusIndicator extends Panel implements EventListener<Eve
 		return m_documentStatus;
 	}	//	getGoal
 
-     /**
-	 * 	Init Graph Display
+    /**
+	 * 	Init Document Status Display
 	 */
 	private void init()
 	{
 		Div div = new Div();
 		appendChild(div);
-		Label nameLabel = new Label();
+		nameLabel = new Label();
 		nameLabel.setText(m_documentStatus.get_Translation(MDocumentStatus.COLUMNNAME_Name) + ": ");
-		String nameColorStyle = "";
-		int Name_PrintColor_ID = m_documentStatus.getName_PrintColor_ID();
-		if (Name_PrintColor_ID > 0) {
-			MPrintColor printColor = MPrintColor.get(Env.getCtx(), Name_PrintColor_ID);
-			String color = ZkCssHelper.createHexColorString(printColor.getColor());
-			nameColorStyle = "color:#"+color+";";
+		StringBuilder tooltip = new StringBuilder();
+		if (m_documentStatus.get_Translation(MDocumentStatus.COLUMNNAME_Description) != null)
+			tooltip.append(m_documentStatus.get_Translation(MDocumentStatus.COLUMNNAME_Description));
+		if (m_documentStatus.get_Translation(MDocumentStatus.COLUMNNAME_Help) != null) {
+			if (tooltip.length() > 0)
+				tooltip.append("\n\n");
+			tooltip.append(m_documentStatus.get_Translation(MDocumentStatus.COLUMNNAME_Help));
 		}
-		int AD_PrintFont_ID = m_documentStatus.getName_PrintFont_ID();
-		String nameFontStyle = "";
-		if (AD_PrintFont_ID > 0) {
-			MPrintFont printFont = MPrintFont.get(AD_PrintFont_ID);
-			String family = printFont.getFont().getFamily();
-			boolean bold = printFont.getFont().isBold();
-			boolean italic = printFont.getFont().isItalic();
-			int pointSize = printFont.getFont().getSize();
-			nameFontStyle = "font-family:'"+family+"';font-weight:"+(bold ? "bold" : "normal")+";font-style:"+(italic ? "italic" : "normal")+";font-size:"+pointSize+"pt";
-		}
-		nameLabel.setStyle(nameColorStyle+nameFontStyle);
+		nameLabel.setTooltiptext(tooltip.toString());
 		div.appendChild(nameLabel);
-
 		statusLabel = new Label();		
-		String numberColorStyle = "";
-		int Number_PrintColor_ID = m_documentStatus.getNumber_PrintColor_ID();
-		if (Number_PrintColor_ID > 0) {
-			MPrintColor printColor = MPrintColor.get(Env.getCtx(), Number_PrintColor_ID);
-			String color = ZkCssHelper.createHexColorString(printColor.getColor());
-			numberColorStyle = "color:#"+color+";";
-		}
-		String numberFontStyle = "";
-		int Number_PrintFont_ID = m_documentStatus.getNumber_PrintFont_ID();
-		if (Number_PrintFont_ID > 0) {
-			MPrintFont printFont = MPrintFont.get(Number_PrintFont_ID);
-			String family = printFont.getFont().getFamily();
-			boolean bold = printFont.getFont().isBold();
-			boolean italic = printFont.getFont().isItalic();
-			int pointSize = printFont.getFont().getSize();
-			numberFontStyle = "font-family:'"+family+"';font-weight:"+(bold ? "bold" : "normal")+";font-style:"+(italic ? "italic" : "normal")+";font-size:"+pointSize+"pt;";
-			int margin = pointSize;
-			numberFontStyle += "margin-top:"+margin+"pt;"+"margin-bottom:"+margin+"pt;";
-		}
-		statusLabel.setStyle(numberColorStyle+numberFontStyle);
 		div.appendChild(statusLabel);
+		decorateNameLabel();
+		decorateStatusLabel();
 
 		this.addEventListener(Events.ON_CLICK, this);
 	}
 
+	/**
+	 * Set font and color for Name Label
+	 */
+	public void decorateNameLabel() {
+		decorate(nameLabel, m_documentStatus.getName_PrintFont_ID(), m_documentStatus.getName_PrintColor_ID(), m_documentStatus.getName_PrintColorZero_ID(), true);
+	}
 
+	/**
+	 * Set font and color for Status label (number)
+	 */
+	public void decorateStatusLabel() {
+		decorate(statusLabel, m_documentStatus.getNumber_PrintFont_ID(), m_documentStatus.getNumber_PrintColor_ID(), 0, false);
+	}
+
+	/**
+	 * Set font and color for the label
+	 * @param label
+	 * @param printFontId
+	 * @param printColorId
+	 * @param printColorZeroId
+	 * @param isNameLabel
+	 */
+	private void decorate(Label label, int printFontId, int printColorId, int printColorZeroId, boolean isNameLabel) {
+		MPrintColor printColor = MPrintColor.get(Env.getCtx(), (printColorZeroId > 0 && statusCount == 0) ? printColorZeroId : printColorId);
+		String color = ZkCssHelper.createHexColorString(printColor.getColor());
+		StringBuilder colorStyle = new StringBuilder("color:#").append(color).append(";");
+		StringBuilder fontStyle = new StringBuilder();
+		if (printFontId > 0) {
+			MPrintFont printFont = MPrintFont.get(printFontId);
+			String family = printFont.getFont().getFamily();
+			boolean bold = printFont.getFont().isBold();
+			boolean italic = printFont.getFont().isItalic();
+			int pointSize = printFont.getFont().getSize();
+			fontStyle.append("font-family:'").append(family)
+				.append("';font-weight:").append(bold ? "bold" : "normal")
+				.append(";font-style:").append(italic ? "italic" : "normal")
+				.append(";font-size:").append(pointSize).append("pt;");
+			if (!isNameLabel) {
+				int margin = pointSize;
+				fontStyle.append("margin-top:").append(margin).append("pt;")
+					.append("margin-bottom:").append(margin).append("pt;");
+			}
+		}
+		StringBuilder style = new StringBuilder().append(colorStyle).append(fontStyle);
+		label.setStyle(style.toString());
+	}
+
+	@Override
 	public void onEvent(Event event) throws Exception
 	{
 		int AD_Window_ID = m_documentStatus.getAD_Window_ID();
 		int AD_Form_ID = m_documentStatus.getAD_Form_ID();
+		int AD_Process_ID = m_documentStatus.getAD_Process_ID();
+		int AD_InfoWindow_ID = m_documentStatus.getAD_InfoWindow_ID();
 		if (AD_Window_ID > 0)
 		{
 			MQuery query = new MQuery(m_documentStatus.getAD_Table_ID());
-			query.addRestriction(MDocumentStatus.getWhereClause(m_documentStatus));
+			query.addRestriction(MDocumentStatus.getSQLFilter(m_documentStatus));
 			AEnv.zoom(AD_Window_ID, query);
 		}
 		else if ( AD_Form_ID > 0 )
@@ -156,18 +195,50 @@ public class WDocumentStatusIndicator extends Panel implements EventListener<Eve
 			ADForm form = ADForm.openForm(AD_Form_ID);
 
 			form.setAttribute(Window.MODE_KEY, Window.MODE_EMBEDDED);
+			form.setAttribute(Window.DECORATE_INFO, DecorateInfo.get(MForm.get(AD_Form_ID)));
 			SessionManager.getAppDesktop().showWindow(form);
 		}
-		
+		else if (AD_Process_ID > 0)
+		{
+			SessionManager.getAppDesktop().openProcessDialog(AD_Process_ID,
+					"Y".equals(DB.getSQLValueStringEx(null, "SELECT IsSOTrx FROM AD_Menu WHERE AD_Process_ID=?", AD_Process_ID)));
+		}
+		else if (AD_InfoWindow_ID > 0)
+		{
+			SessionManager.getAppDesktop().openInfo(AD_InfoWindow_ID);
+		} else {
+			Messagebox.showDialog(m_documentStatus.get_Translation(MDocumentStatus.COLUMNNAME_Help),
+					m_documentStatus.get_Translation(MDocumentStatus.COLUMNNAME_Description),
+					Messagebox.OK,
+					Messagebox.INFORMATION);
+		}
+
 	}
 
+	/**
+	 * Load {@link #m_documentStatus}
+	 */
 	public void refresh() {
-		m_documentStatus.load(m_documentStatus.get_TrxName());
+		MDocumentStatus refresh_documentStatus = MDocumentStatus.get(Env.getCtx(), m_documentStatus.getPA_DocumentStatus_ID());
+		if(refresh_documentStatus != null) {
+			m_documentStatus = 	refresh_documentStatus;
+		}
 		statusCount = MDocumentStatus.evaluate(m_documentStatus);		
 	}
 
+	/**
+	 * Update UI with data loaded in {@link #refresh()}
+	 */
 	public void updateUI() {
 		statusLabel.setText(Integer.toString(statusCount));		
+	}
+
+	/**
+	 * Return the count for this indicator
+	 * @return status count
+	 */
+	public int getStatusCount() {
+		return statusCount;
 	}
 
 }

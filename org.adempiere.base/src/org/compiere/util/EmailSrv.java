@@ -54,16 +54,15 @@ import javax.mail.internet.ContentType;
 import javax.mail.internet.MimeUtility;
 
 import org.adempiere.exceptions.AdempiereException;
+import org.compiere.model.MAuthorizationAccount;
 
 /**
- * provide function for sent, receive email in imap protocol
- * current only support receive email, for sent email refer {@link org.compiere.util.EMail}
- * in case internet line is slow, handle error when analysis message by fetch message part when need can complicate.
- * consider to add flag fetch all message at one time (with retry when error).
- * after that, analysis offline message.
+ * Provide function for sent, receive email in imap protocol.<br/>
+ * Current only support receive email, for sent email, use {@link org.compiere.util.EMail} instead.<br/>
+ * In case internet line is slow, handling error during analysis of message by fetching message in part can have complication.<br/>
+ * Consider to add flag to fetch all message at one time (with retry when error) and after fetching, analysis fetched message offline.
  * http://www.oracle.com/technetwork/java/javamail/faq/index.html#imapserverbug    
  * @author hieplq base in RequestEMailProcessor
- *
  */
 public class EmailSrv {
 	protected transient static CLogger		log = CLogger.getCLogger (EmailSrv.class);
@@ -72,27 +71,54 @@ public class EmailSrv {
 	protected String imapUser;
 	protected String imapPass;
 	protected int imapPort = 143;
-	protected boolean isGmail = false;
+	protected boolean isSSL = false;
 	
 	protected Session mailSession;
 	protected Store mailStore;
 	
-	public EmailSrv (String imapHost, String  imapUser, String  imapPass, int imapPort){
+	/**
+	 * @param imapHost
+	 * @param imapUser
+	 * @param imapPass
+	 * @param imapPort
+	 * @param isSSL
+	 */
+	public EmailSrv (String imapHost, String  imapUser, String  imapPass, int imapPort, Boolean isSSL){
 		this.imapHost = imapHost;
 		this.imapUser = imapUser;
 		this.imapPass = imapPass;
-		isGmail = this.imapHost.toLowerCase().startsWith ("imap.gmail.com");
-		if (isGmail && imapPort != 993){
-			log.warning("because imap is gmail server, force port to 993");
-			imapPort = 993;
+		if(isSSL != null) {
+			this.isSSL = isSSL;
+		} else {
+			this.isSSL = this.imapHost.toLowerCase().startsWith ("imap.gmail.com");
+			if(!this.isSSL && imapPort == 993)
+				this.isSSL = true;	// Port is 993 set to SSL IMAPS
+			if (this.isSSL && imapPort != 993){
+				log.warning("because imap is gmail server, force port to 993");
+				imapPort = 993;
+			}
 		}
+
 		this.imapPort = imapPort;
 	}
 	
+	/**
+	 * @deprecated working only with gmail host.
+	 * @param imapHost
+	 * @param imapUser
+	 * @param imapPass
+	 */
+	@Deprecated (since="13", forRemoval=true)
 	public EmailSrv (String imapHost, String  imapUser, String  imapPass){
-		this (imapHost, imapUser, imapPass, (imapHost != null && imapHost.toLowerCase().startsWith ("imap.gmail.com"))? 993 : 143);
+		this (imapHost, imapUser, imapPass, (imapHost != null && imapHost.toLowerCase().startsWith ("imap.gmail.com"))? 993 : 143, (imapHost != null && imapHost.toLowerCase().startsWith ("imap.gmail.com"))? true : false);
 	}
 	
+	/**
+	 * Log msg info with INFO log level.
+	 * @param msg
+	 * @param log
+	 * @throws MessagingException
+	 */
 	public static void logMailPartInfo (Part msg, CLogger log) throws MessagingException{
 		StringBuilder emailPartLogInfo = new StringBuilder();
 		if (msg instanceof Message){
@@ -151,38 +177,58 @@ public class EmailSrv {
 		log.info(emailPartLogInfo.toString());
 	}
 	
+	/**
+	 * Get mail session
+	 * @return mail session
+	 * @throws Exception
+	 */
 	protected Session getMailSession() throws Exception
 	{
 		if (mailSession != null)
 			return mailSession;
 		
 		//	Session
-		Properties props = System.getProperties();
+		Properties props = new Properties();
+		props.putAll(System.getProperties());
 		String protocol = "imap";
-		if (isGmail){
+		if (isSSL){
 			protocol = "imaps";
 		}
 		props.put("mail.store.protocol", protocol);
 		props.put("mail.host", imapHost);
-		props.put("mail.imap.port", imapPort);
-		
-		EMailAuthenticator auth = new EMailAuthenticator(imapUser, imapPass);
-		mailSession = Session.getInstance(props, auth);
-		mailSession.setDebug(CLogMgt.isLevelAll());
+		props.put("mail."+protocol+".port", imapPort);
+
+		MAuthorizationAccount authAccount = MAuthorizationAccount.getEMailAccount(imapUser);
+		boolean isOAuth2 = (authAccount != null);
+		if (isOAuth2) {
+			props.put("mail."+protocol+".ssl.enable", "true");
+			props.put("mail."+protocol+".auth.mechanisms", "XOAUTH2");
+			imapPass = authAccount.refreshAndGetAccessToken();
+		}
+		mailSession = Session.getInstance(props);
+		mailSession.setDebug(CLogMgt.isLevelFinest());
 		
 		return mailSession;
 	}	//	getSession
 	
+	/**
+	 * Get mail store
+	 * @return mail store
+	 * @throws Exception
+	 */
 	public Store getMailStore() throws Exception
 	{
 		if (mailStore != null)
 			return mailStore;
 		
 		mailStore = getMailSession().getStore();
-		mailStore.connect();
+		mailStore.connect(imapHost, imapUser, imapPass);
 		return mailStore;
 	}	//	getStore
 	
+	/**
+	 * Close mail store
+	 */
 	public void clearResource (){
 		if (mailStore != null && mailStore.isConnected()){
 			try {
@@ -194,7 +240,7 @@ public class EmailSrv {
 	}
 	
 	/**
-	 * open a folder in read/write mode.
+	 * Open a mail store folder in read/write mode.
 	 * @param mailStore
 	 * @param folderName open nest folder by use format folder1/folder2/folder3
 	 * @param isNestInbox in case true, open folder start from default inbox, other open from root folder
@@ -244,14 +290,14 @@ public class EmailSrv {
 	}
 	
 	/**
-	 * read an email folder, with each email inject object processEmail to processing
-	 * in case error close folder or close session (by disconnect) with retry 3 times
-	 * when error with 5 continue message, with stop process
+	 * Read an email folder, with each email inject object processEmail for processing.<br/>
+	 * In case error, close folder or close session (by disconnect) with retry of 3 times.<br/>
+	 * When error with 5 continue message, stop process.
 	 * @param emailSrv
 	 * @param folderName folder name can hierarchy by use "\"
 	 * @param isNestInbox true in case start folder from inbox
 	 * @param processEmailHandle
-	 * @return
+	 * @return true if success
 	 */
 	public static boolean readEmailFolder (EmailSrv emailSrv, String folderName, Boolean isNestInbox, ProcessEmailHandle processEmailHandle){
 		Message [] lsMsg = null;
@@ -363,7 +409,7 @@ public class EmailSrv {
 	}
 	
 	/**
-	 * 
+	 * Process message
 	 * @param msg
 	 * @param evaluateEmailHead
 	 * @return return EmailInfo contain info of email, in case evaluateEmailHead make cancel, return null
@@ -419,9 +465,9 @@ public class EmailSrv {
 	}
 				
 	/**
-	 * Analysis {@link Part} object
-	 * get content in plan or html text.
-	 * detect type of attach file and put in to {@link EmailContent} for late process
+	 * Analysis {@link Part} object.<br/>
+	 * Get content in plan or html text.<br/>
+	 * Detect type of attached file and put it in to {@link EmailContent} for later processing.
 	 * @param msg mime part to analysis
 	 * @param emailContent object contain result analysis
 	 * @param isRoot true when part is {@link Message}
@@ -429,8 +475,7 @@ public class EmailSrv {
 	 * @throws IOException 
 	 */
 	public static void analysisEmailStructure (Part msg, EmailContent emailContent, boolean isRoot) throws MessagingException, IOException
-	{
-	
+	{	
 		logMailPartInfo (msg, log);
 		
 		boolean isUnknowPart = false;
@@ -472,7 +517,7 @@ public class EmailSrv {
 				BodyPart part = mp.getBodyPart(i);
 				EmailSrv.analysisEmailStructure(part, emailContent);
 			}
-		} else if (isBinaryPart (msg)) // attach part
+		} else if (isBinaryPart (msg)) // attachment part
 		{
 			if (msg instanceof BodyPart){
 				BodyPart attachPart = (BodyPart)msg;
@@ -500,10 +545,10 @@ public class EmailSrv {
 	
 	/**
 	 * http://www.oracle.com/technetwork/java/javamail/faq/index.html#unsupen
-	 * @param msg
+	 * @param txtPart
 	 * @return
-	 * @throws IOException 
-	 * @throws MessagingException 
+	 * @throws MessagingException
+	 * @throws IOException
 	 */
 	public static String getTextFromMailPart (Part txtPart) throws MessagingException, IOException{
 		String text = null;
@@ -555,7 +600,7 @@ public class EmailSrv {
 	}
 	
 	/**
-	 * read binary from a multi-part
+	 * Read binary attachment from a multi-part
 	 * @param binaryPart
 	 * @return
 	 * @throws IOException
@@ -584,9 +629,9 @@ public class EmailSrv {
 	}
 			
 	/**
-	 * download attach file and convert to base64 encoding
+	 * Download attached file and convert to base64 encoding
 	 * @param mailPart
-	 * @return
+	 * @return base64 encoded content
 	 * @throws IOException
 	 * @throws MessagingException
 	 */
@@ -608,11 +653,11 @@ public class EmailSrv {
 	}
 	
 	/**
-	 * find in mailContent every pattern of embed image
-	 * with each replace cid by base64 data.
-	 * preview in cfEditor pattern is "\\s+src\\s*=\\s*\"cid:(.*?)\""
-	 * with embed image in gmail, pattern is "\\s+src\\s*=\\s*3D\\s*\"cid:(.*?)\""
-	 * with embed image in other server (nmicoud), pattern is "\\s+src\\s*=\\s*\"cid:(.*?)\""
+	 * Find in mailContent pattern of embedded image.<br/>
+	 * For each of them, replace cid by base64 data.<br/>
+	 * Preview in cfEditor pattern is "\\s+src\\s*=\\s*\"cid:(.*?)\"" <br/>
+	 * With embedded image in gmail, pattern is "\\s+src\\s*=\\s*3D\\s*\"cid:(.*?)\"" <br/>
+	 * with embedded image in other server (nmicoud), pattern is "\\s+src\\s*=\\s*\"cid:(.*?)\"" <br/>
 	 * REMEMBER:cid:(.*?) must in group 1
 	 * @param mailContent
 	 * @param provideBase64Data
@@ -670,7 +715,7 @@ public class EmailSrv {
 			if (i == 0)
 				reconstructSign.append(lsPart.get(0));
 			
-			String imageBase64 = provideBase64Data.getBase64Data(lsImgSrc.get(i));;
+			String imageBase64 = provideBase64Data.getBase64Data(lsImgSrc.get(i));
 			
 			if (imageBase64 == null){
 				// no attach map with this src value 
@@ -689,14 +734,68 @@ public class EmailSrv {
 		
 		return reconstructSign.toString();
 	}
+	
+	/**
+	 * Get embedded images
+	 * @param mailContent
+	 * @param provideBase64Data
+	 * @param embedPattern
+	 * @return list of embedded image part
+	 * @throws MessagingException
+	 * @throws IOException
+	 */
+	public static ArrayList<BodyPart> getEmbededImages(String mailContent, ProvideBase64Data provideBase64Data, String embedPattern)  throws MessagingException, IOException {
+		ArrayList<BodyPart> bodyPartImagesList = new ArrayList<BodyPart>();
 		
+		String origonSign = mailContent;
+		
+		// pattern to get src value of attach image.
+		Pattern imgPattern = Pattern.compile(embedPattern);
+		// matcher object to anlysic image tab in sign
+		Matcher imgMatcher = imgPattern.matcher(origonSign);
+		// list image name in sign
+		List<String> lsImgSrc = new ArrayList<String> ();
+		
+		while (imgMatcher.find()){
+			// get image name
+			lsImgSrc.add(imgMatcher.group(1).trim());
+		}
+		// end string not include "cid:imageName"
+		
+		// no image in sign return origon
+		if (lsImgSrc.size() == 0){
+			return bodyPartImagesList;
+		}
+		
+		// reconstruct with image source convert to embed image by base64 encode
+		for (int i = 0; i < lsImgSrc.size(); i++){
+			
+			BodyPart image = provideBase64Data.getBodyPart(lsImgSrc.get(i));
+			
+			if (image == null){
+				log.warning("miss data of image has id is:" + lsImgSrc.get(i));
+			}else{
+				// convert image to base64 encode and embed to img tag
+				bodyPartImagesList.add(image);
+			}
+		}
+		
+		return bodyPartImagesList;
+	}
+	
+	/**
+	 * Is binaryPart a binary Part
+	 * @param binaryPart
+	 * @return true if it is a binary part
+	 * @throws MessagingException
+	 */
 	public static boolean isBinaryPart (Part binaryPart) throws MessagingException{
 		return binaryPart.isMimeType("application/*") || binaryPart.isMimeType ("image/*");
 	}
 	
 	/**
-	 * get contentID from header, with each inline attach, will have a contentID value
-	 * in case value at contentID difference value at X-Attachment-Id, must manual recheck to add process 
+	 * Get contentID from header, with each inline attachment, will have a contentID value.
+	 * In case value at contentID difference from value at X-Attachment-Id, must manual recheck to add process. 
 	 * @param attachPart
 	 * @return
 	 * @throws MessagingException
@@ -742,6 +841,13 @@ public class EmailSrv {
 		return contentID;
 	}
 	
+	/**
+	 * Get part headers
+	 * @param msg
+	 * @param headerName
+	 * @return
+	 * @throws MessagingException
+	 */
 	public static String []  getPartHeader (Part msg, String headerName) throws MessagingException{
 		String [] headers = msg.getHeader(headerName);
 		if (headers != null){
@@ -759,17 +865,19 @@ public class EmailSrv {
 //============helper class===========	
 	
 	/**
-	 * when process an email content sometimes we wish embed image as base64 string to mail.
-	 * source of image can go from many where. this interface for abstract source.
+	 * When process an email content, sometimes we wish to embed image as base64 string to mail. <br/>
+	 * Source of image can come from many where. this interface for abstract source.
 	 * @author hieplq
 	 *
 	 */
 	public static interface ProvideBase64Data {
 		public String getBase64Data (String dataId) throws MessagingException, IOException;
+		
+		public BodyPart getBodyPart (String dataId) throws MessagingException, IOException;
 	}
 	
 	/**
-	 * this class inject to email reading process of function {@link EmailSrv#processMessage(Message, ProcessEmailHandle, Store, Folder)}
+	 * This class inject to email reading process ({@link EmailSrv#processMessage(Message, ProcessEmailHandle, Store, Folder)})
 	 * @author hieplq
 	 *
 	 */
@@ -790,7 +898,6 @@ public class EmailSrv {
 		 * @param emailRaw
 		 * @param mailStore
 		 * @param mailFolder
-		 * @return
 		 * @throws MessagingException
 		 */
 		public void processEmailError (EmailContent emailHeader, Message emailRaw, Store mailStore, Folder mailFolder) throws MessagingException;
@@ -813,7 +920,7 @@ public class EmailSrv {
 	
 	/**
 	 * {@docRoot}
-	 * this class implement source of image from attach of email 
+	 * this class implement source of image from attachment of email 
 	 * @author hieplq
 	 *
 	 */
@@ -842,11 +949,25 @@ public class EmailSrv {
 			
 			return null;
 		}
+
+		@Override
+		public BodyPart getBodyPart(String contentId) throws MessagingException, IOException {
+			if (contentId == null)
+				return null;
+			
+			for (BodyPart imageEmbed : emailContent.lsEmbedPart){
+				if (contentId.equalsIgnoreCase(EmailSrv.getContentID(imageEmbed))){
+					return imageEmbed;
+				}
+			}
+			
+			return null;
+		}
 	}
 	
 	/**
-	 * manipulate from {@link Message}
-	 * separate attach file to embed, attach, un-know list  
+	 * Manipulate from {@link Message} <br/>
+	 * Separate attached file to embed, attach, un-know list.  
 	 * @author hieplq
 	 *
 	 */
@@ -882,12 +1003,12 @@ public class EmailSrv {
 		 */
 		public List<BodyPart> lsEmbedPart = new ArrayList<BodyPart>();
 		/**
-		 * list part unknow to process
+		 * list part unknown to process
 		 */
 		public List<Part> lsUnknowPart = new ArrayList<Part>();
 		
 		/**
-		 * get html content, when withEmbedImg = true, read embed image to base64 and embed to html content
+		 * Get html content, when withEmbedImg = true, convert embedded image to base64 and embed to html content.
 		 * @param withEmbedImg
 		 * @return return null when has empty content
 		 * @throws Exception
@@ -900,9 +1021,24 @@ public class EmailSrv {
 			
 			return EmailSrv.embedImgToEmail(htmlContentBuild.toString(), provideBase64Data, "\\s+src\\s*=\\s*(?:3D)?\\s*\"cid:(.*?)\"");
 		}
+		
+		/**
+		 * Get embedded image parts
+		 * @return
+		 * @throws MessagingException
+		 * @throws IOException
+		 */
+		public ArrayList<BodyPart> getHTMLImageBodyParts() throws MessagingException, IOException{
+			if (htmlContentBuild == null || htmlContentBuild.length() == 0)
+				return null;
+			
+			EmailEmbedProvideBase64Data provideBase64Data = new EmailEmbedProvideBase64Data(this);
+			
+			return EmailSrv.getEmbededImages(htmlContentBuild.toString(), provideBase64Data, "\\s+src\\s*=\\s*(?:3D)?\\s*\"cid:(.*?)\"");
+		}
 	
 		/**
-		 * get text content
+		 * Get text content
 		 * @return return null when has no content
 		 */
 		public String getTextContent (){

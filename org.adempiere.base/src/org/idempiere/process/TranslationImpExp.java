@@ -34,6 +34,7 @@ import java.io.OutputStream;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.file.Files;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.logging.Level;
@@ -45,6 +46,7 @@ import org.apache.tools.ant.Project;
 import org.apache.tools.ant.Target;
 import org.apache.tools.ant.taskdefs.Zip;
 import org.compiere.install.Translation;
+import org.compiere.model.MProcessPara;
 import org.compiere.model.MTable;
 import org.compiere.model.Query;
 import org.compiere.process.ProcessInfoParameter;
@@ -55,11 +57,14 @@ import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
 
+/**
+ * Process to import or export translations
+ */
+@org.adempiere.base.annotation.Process
 public class TranslationImpExp extends SvrProcess {
-
-	// Process to import or export translations
+	
 	private String p_ImportOrExport;
-	private int p_AD_Client_ID;    // Client
+	private int p_AD_Client_ID = -1;    // Client
 	private String p_AD_Language;
 	private int p_AD_Table_ID;
 	private boolean p_IsOnlyCentralizedData;
@@ -73,7 +78,8 @@ public class TranslationImpExp extends SvrProcess {
 			if ("ImportOrExport".equals(name)) {
 				p_ImportOrExport = para.getParameterAsString();
 			} else if ("AD_AllClients_V_ID".equals(name)) {
-				p_AD_Client_ID  = para.getParameterAsInt();
+				if (para.getParameter() != null)
+					p_AD_Client_ID  = para.getParameterAsInt();
 			} else if ("AD_Language".equals(name)) {
 				p_AD_Language = para.getParameterAsString();
 			} else if ("AD_Table_ID".equals(name)) {
@@ -85,7 +91,7 @@ public class TranslationImpExp extends SvrProcess {
 			} else if ("FileName".equals(name)) {
 				p_FileName = para.getParameterAsString();
 			} else {
-				if (log.isLoggable(Level.INFO)) log.log(Level.INFO, "Custom Parameter: " + name + "=" + para.getInfo());
+				MProcessPara.validateUnknownParameter(getProcessInfo().getAD_Process_ID(), para);
 			}
 		}
 	}
@@ -100,7 +106,7 @@ public class TranslationImpExp extends SvrProcess {
 
 		File tempFolder = null;
 		try {
-			if (! Util.isEmpty(p_FileName, true)) {
+			if (! Util.isEmpty(p_FileName, true) && "import".equals(p_ImportOrExport)) {
 				if (p_FileName.startsWith("http://") || p_FileName.startsWith("https://")) {
 					String tmpZip = null;
 					FileOutputStream fos = null;
@@ -132,7 +138,7 @@ public class TranslationImpExp extends SvrProcess {
 			}
 
 			Translation translation = new Translation(Env.getCtx());
-			String msg = translation.validateLanguage(p_AD_Language);
+			String msg = translation.validateLanguage(p_AD_Language, get_TrxName());
 			if (msg.length() > 0)
 				throw new AdempiereSystemError(msg);
 
@@ -151,7 +157,7 @@ public class TranslationImpExp extends SvrProcess {
 				String tableName = table.getTableName();
 				if ("import".equals(p_ImportOrExport)) {
 					statusUpdate(Msg.parseTranslation(getCtx(), "@Import@ " + tableName + " ..."));
-					msgProc = translation.importTrl(p_Folder, p_AD_Client_ID, p_AD_Language, tableName);
+					msgProc = translation.importTrl(p_Folder, p_AD_Client_ID, p_AD_Language, tableName, get_TrxName());
 				} else {
 					statusUpdate(Msg.parseTranslation(getCtx(), "@Export@ " + tableName + " ..."));
 					msgProc = translation.exportTrl(p_Folder, p_AD_Client_ID, p_AD_Language, tableName, p_IsOnlyCentralizedData);
@@ -199,9 +205,7 @@ public class TranslationImpExp extends SvrProcess {
 		// create temp folder
 		File tmpFolder;
 		try {
-			tmpFolder = File.createTempFile(language, ".trl");
-			tmpFolder.delete();
-			tmpFolder.mkdir();
+			tmpFolder = Files.createTempDirectory(language).toFile();			
 		} catch (IOException e1) {
 			throw new AdempiereException("Problem creating temp folder", e1);
 		}

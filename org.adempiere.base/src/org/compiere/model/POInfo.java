@@ -23,9 +23,12 @@ import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.logging.Level;
 
@@ -37,24 +40,23 @@ import org.compiere.util.Env;
 
 /**
  *  Persistent Object Info.
- *  Provides structural information
+ *  Provides structural information.
  *
  *  @author Jorg Janke
  *  @version $Id: POInfo.java,v 1.2 2006/07/30 00:58:37 jjanke Exp $
  *  @author Victor Perez, e-Evolution SC
  *			<li>[ 2195894 ] Improve performance in PO engine
- *			<li>http://sourceforge.net/tracker/index.php?func=detail&aid=2195894&group_id=176962&atid=879335
+ *			<li>https://sourceforge.net/p/adempiere/feature-requests/555/
  */
 public class POInfo implements Serializable
 {
-	/**
+    /**
 	 * 
 	 */
-	private static final long serialVersionUID = -6346988499971159874L;
+	private static final long serialVersionUID = -8631166243023103892L;
 
-	/** Used by Remote FinReport			*/
 	/**
-	 *  POInfo Factory
+	 *  POInfo Factory Method
 	 *  @param ctx context
 	 *  @param AD_Table_ID AD_Table_ID
 	 *  @return POInfo
@@ -65,11 +67,11 @@ public class POInfo implements Serializable
 	}
 	
 	/**
-	 *  POInfo Factory
+	 *  POInfo Factory Method
 	 *  @param ctx context
 	 *  @param AD_Table_ID AD_Table_ID
 	 *  @param trxName Transaction name
-	 *  @return POInfo
+	 *  @return POInfo instance
 	 */
 	public static synchronized POInfo getPOInfo (Properties ctx, int AD_Table_ID, String trxName)
 	{
@@ -90,7 +92,7 @@ public class POInfo implements Serializable
 	/** Cache of POInfo     */
 	private static CCache<Integer,POInfo>  s_cache = new CCache<Integer,POInfo>(I_AD_Table.Table_Name, "POInfo", 200, 0, false, 0);
 	
-	/**************************************************************************
+	/**
 	 *  Create Persistent Info
 	 *  @param ctx context
 	 *  @param AD_Table_ID AD_ Table_ID
@@ -101,7 +103,7 @@ public class POInfo implements Serializable
 		this(ctx, AD_Table_ID, baseLanguageOnly, null);
 	}
 	
-	/**************************************************************************
+	/**
 	 *  Create Persistent Info
 	 *  @param ctx context
 	 *  @param AD_Table_ID AD_ Table_ID
@@ -137,8 +139,8 @@ public class POInfo implements Serializable
 	private Boolean m_IsTranslated = null;
 
 	/**
-	 *  Load Table/Column Info
-	 * 	@param baseLanguage in English
+	 *  Load Table and Column Info
+	 * 	@param baseLanguage true to load data in base language
 	 *  @param trxName
 	 */
 	private void loadInfo (boolean baseLanguage, String trxName)
@@ -201,7 +203,7 @@ public class POInfo implements Serializable
 				//
 				m_AccessLevel = rs.getString(18);
 				String ColumnSQL = rs.getString(19);
-				if (ColumnSQL != null && ColumnSQL.length() > 0 && (ColumnSQL.startsWith("@SQL=") || ColumnSQL.startsWith("@SQLFIND=")))
+				if (ColumnSQL != null && ColumnSQL.length() > 0 && (ColumnSQL.startsWith(MColumn.VIRTUAL_UI_COLUMN_PREFIX) || ColumnSQL.startsWith(MColumn.VIRTUAL_SEARCH_COLUMN_PREFIX)))
 					ColumnSQL = "NULL";
 				if (ColumnSQL != null && ColumnSQL.contains("@"))
 					ColumnSQL = Env.parseContext(Env.getCtx(), -1, ColumnSQL, false, true);
@@ -242,13 +244,14 @@ public class POInfo implements Serializable
 	 *  String representation
 	 *  @return String Representation
 	 */
+	@Override
 	public String toString()
 	{
 		return "POInfo[" + getTableName() + ",AD_Table_ID=" + getAD_Table_ID() + "]";
 	}   //  toString
 
 	/**
-	 *  String representation for index
+	 *  String representation for column
 	 * 	@param index column index
 	 *  @return String Representation
 	 */
@@ -279,7 +282,7 @@ public class POInfo implements Serializable
 
 	/**
 	 * 	Table has a Key Column
-	 *	@return true if has a key column
+	 *	@return true if table has a key column
 	 */
 	public boolean hasKeyColumn()
 	{
@@ -295,7 +298,7 @@ public class POInfo implements Serializable
 		return m_AccessLevel;
 	}	//	getAccessLevel
 	
-	/**************************************************************************
+	/**
 	 *  Get ColumnCount
 	 *  @return column count
 	 */
@@ -321,7 +324,7 @@ public class POInfo implements Serializable
 	/**
 	 *  Get Column Index
 	 *  @param AD_Column_ID column
-	 *  @return index of column with ColumnName or -1 if not found
+	 *  @return index of column with AD_Column_ID or -1 if not found
 	 */
 	public int getColumnIndex (int AD_Column_ID)
 	{
@@ -333,6 +336,7 @@ public class POInfo implements Serializable
 	}   //  getColumnIndex
 	
 	/**
+	 * Get AD_Column_ID
 	 * @param columnName
 	 * @return AD_Column_ID if found, -1 if not found
 	 */
@@ -347,9 +351,9 @@ public class POInfo implements Serializable
 	}
 
 	/**
-	 *  Get Column
-	 *  @param index index
-	 *  @return column
+	 *  Get Column Info
+	 *  @param index column index
+	 *  @return column info
 	 */
 	protected POInfoColumn getColumn (int index)
 	{
@@ -360,8 +364,8 @@ public class POInfo implements Serializable
 
 	/**
 	 *  Get Column Name
-	 *  @param index index
-	 *  @return ColumnName column name
+	 *  @param index column index
+	 *  @return column name
 	 */
 	public String getColumnName (int index)
 	{
@@ -372,15 +376,15 @@ public class POInfo implements Serializable
 
 	/**
 	 *  Get Column SQL or Column Name
-	 *  @param index index
-	 *  @return ColumnSQL column sql or name
+	 *  @param index column index
+	 *  @return column sql or column name
 	 */
 	public String getColumnSQL (int index)
 	{
 		if (index < 0 || index >= m_columns.length)
 			return null;
 		if (m_columns[index].ColumnSQL != null && m_columns[index].ColumnSQL.length() > 0) {
-			if (m_columns[index].ColumnSQL.startsWith("@SQL=") || m_columns[index].ColumnSQL.startsWith("@SQLFIND="))
+			if (m_columns[index].ColumnSQL.startsWith(MColumn.VIRTUAL_UI_COLUMN_PREFIX) || m_columns[index].ColumnSQL.startsWith(MColumn.VIRTUAL_SEARCH_COLUMN_PREFIX))
 				return "NULL AS " + m_columns[index].ColumnName;
 			return m_columns[index].ColumnSQL + " AS " + m_columns[index].ColumnName;
 		}
@@ -389,7 +393,7 @@ public class POInfo implements Serializable
 
 	/**
 	 *  Is Column Virtual?
-	 *  @param index index
+	 *  @param index column index
 	 *  @return true if column is virtual
 	 */
 	public boolean isVirtualColumn (int index)
@@ -402,16 +406,18 @@ public class POInfo implements Serializable
 
 	/**
 	 *  Is Column Virtual DB?
-	 *  @param index index
+	 *  @param index column index
 	 *  @return true if column is virtual DB
 	 */
 	public boolean isVirtualDBColumn (int index)
 	{
 		if (index < 0 || index >= m_columns.length)
 			return true;
-		return m_columns[index].ColumnSQL != null 
-			&& m_columns[index].ColumnSQL.length() > 0
-			&& !m_columns[index].ColumnSQL.startsWith("@SQL=");
+		String originalColumnSQL = MColumn.get(m_columns[index].AD_Column_ID).getColumnSQL();
+		return originalColumnSQL != null 
+			&& !originalColumnSQL.isEmpty()
+			&& !originalColumnSQL.startsWith(MColumn.VIRTUAL_UI_COLUMN_PREFIX)
+			&& !originalColumnSQL.startsWith(MColumn.VIRTUAL_SEARCH_COLUMN_PREFIX);
 	}   //  isVirtualDBColumn
 
 	/**
@@ -423,9 +429,10 @@ public class POInfo implements Serializable
 	{
 		if (index < 0 || index >= m_columns.length)
 			return true;
-		return m_columns[index].ColumnSQL != null 
-			&& m_columns[index].ColumnSQL.length() > 0
-			&& m_columns[index].ColumnSQL.startsWith("@SQL=");
+		String originalColumnSQL = MColumn.get(m_columns[index].AD_Column_ID).getColumnSQL();
+		return originalColumnSQL != null 
+			&& !originalColumnSQL.isEmpty()
+			&& originalColumnSQL.startsWith(MColumn.VIRTUAL_UI_COLUMN_PREFIX);
 	}   //  isVirtualUIColumn
 	
 	/**
@@ -437,14 +444,15 @@ public class POInfo implements Serializable
 	{
 		if (index < 0 || index >= m_columns.length)
 			return true;
-		return m_columns[index].ColumnSQL != null 
-			&& m_columns[index].ColumnSQL.length() > 0
-			&& m_columns[index].ColumnSQL.startsWith("@SQLFIND=");
+		String originalColumnSQL = MColumn.get(m_columns[index].AD_Column_ID).getColumnSQL();
+		return originalColumnSQL != null 
+			&& !originalColumnSQL.isEmpty()
+			&& originalColumnSQL.startsWith(MColumn.VIRTUAL_SEARCH_COLUMN_PREFIX);
 	}   //  isVirtualSearchColumn
 
 	/**
 	 *  Get Column Label
-	 *  @param index index
+	 *  @param index column index
 	 *  @return column label
 	 */
 	public String getColumnLabel (int index)
@@ -456,7 +464,7 @@ public class POInfo implements Serializable
 
 	/**
 	 *  Get Column Description
-	 *  @param index index
+	 *  @param index column index
 	 *  @return column description
 	 */
 	public String getColumnDescription (int index)
@@ -468,7 +476,7 @@ public class POInfo implements Serializable
 
 	/**
 	 *  Get Column Class
-	 *  @param index index
+	 *  @param index column index
 	 *  @return Class
 	 */
 	public Class<?> getColumnClass (int index)
@@ -480,7 +488,7 @@ public class POInfo implements Serializable
 
 	/**
 	 *  Get Column Display Type
-	 *  @param index index
+	 *  @param index column index
 	 *  @return DisplayType
 	 */
 	public int getColumnDisplayType (int index)
@@ -492,7 +500,7 @@ public class POInfo implements Serializable
 
 	/**
 	 *  Get Column Default Logic
-	 *  @param index index
+	 *  @param index column index
 	 *  @return Default Logic
 	 */
 	public String getDefaultLogic (int index)
@@ -504,8 +512,8 @@ public class POInfo implements Serializable
 
 	/**
 	 *  Is Column Mandatory
-	 *  @param index index
-	 *  @return true if column mandatory
+	 *  @param index column index
+	 *  @return true if column is mandatory
 	 */
 	public boolean isColumnMandatory (int index)
 	{
@@ -516,8 +524,8 @@ public class POInfo implements Serializable
 
 	/**
 	 *  Is Column Updateable
-	 *  @param index index
-	 *  @return true if column updateable
+	 *  @param index column index
+	 *  @return true if column is updateable
 	 */
 	public boolean isColumnUpdateable (int index)
 	{
@@ -528,8 +536,8 @@ public class POInfo implements Serializable
 
 	/**
 	 *  Set Column Updateable
-	 *  @param index index
-	 *  @param updateable column updateable
+	 *  @param index column index
+	 *  @param updateable
 	 */
 	public void setColumnUpdateable (int index, boolean updateable)
 	{
@@ -540,7 +548,7 @@ public class POInfo implements Serializable
 
 	/**
 	 * 	Set all columns updateable
-	 * 	@param updateable updateable
+	 * 	@param updateable
 	 */
 	public void setUpdateable (boolean updateable)
 	{
@@ -550,7 +558,7 @@ public class POInfo implements Serializable
 
 	/**
 	 *  Is Lookup Column
-	 *  @param index index
+	 *  @param index column index
 	 *  @return true if it is a lookup column
 	 */
 	public boolean isColumnLookup (int index)
@@ -562,8 +570,8 @@ public class POInfo implements Serializable
 
 	/**
 	 *  Get Lookup
-	 *  @param index index
-	 *  @return Lookup
+	 *  @param index column index
+	 *  @return Lookup or null
 	 */
 	public Lookup getColumnLookup (int index)
 	{
@@ -583,6 +591,7 @@ public class POInfo implements Serializable
 		}
 		catch (Exception e)
 		{
+			CLogger.get().log(Level.WARNING, "Cannot create Lookup for " + m_columns[index].ColumnName + "[" + m_columns[index].AD_Column_ID + "]", e);
 			lookup = null;          //  cannot create Lookup
 		}
 		return lookup;
@@ -591,8 +600,8 @@ public class POInfo implements Serializable
 
 	/**
 	 *  Is Column Key
-	 *  @param index index
-	 *  @return true if column is the key
+	 *  @param index column index
+	 *  @return true if column is a key column
 	 */
 	public boolean isKey (int index)
 	{
@@ -603,8 +612,8 @@ public class POInfo implements Serializable
 
 	/**
 	 *  Is Column Parent
-	 *  @param index index
-	 *  @return true if column is a Parent
+	 *  @param index column index
+	 *  @return true if column is a Parent column
 	 */
 	public boolean isColumnParent (int index)
 	{
@@ -615,7 +624,7 @@ public class POInfo implements Serializable
 
 	/**
 	 *  Is Column Translated
-	 *  @param index index
+	 *  @param index column index
 	 *  @return true if column is translated
 	 */
 	public boolean isColumnTranslated (int index)
@@ -646,7 +655,7 @@ public class POInfo implements Serializable
 
 	/**
 	 *  Is Column (data) Encrypted
-	 *  @param index index
+	 *  @param index column index
 	 *  @return true if column is encrypted
 	 */
 	public boolean isEncrypted (int index)
@@ -657,10 +666,21 @@ public class POInfo implements Serializable
 	}   //  isEncrypted
 
 	/**
+	 * Is column secure
+	 * @param index column index
+	 * @return true if column is secure
+	 */
+	public boolean isSecure(int index)
+	{
+		if (index < 0 || index >= m_columns.length)
+			return false;
+		return MColumn.get(m_columns[index].AD_Column_ID).isSecure();
+	}
+	
+	/**
 	 * Is allowed logging on this column
 	 * 
-	 * @param index
-	 *            index
+	 * @param index column index
 	 * @return true if column is allowed to be logged
 	 */
 	public boolean isAllowLogging(int index) {
@@ -672,8 +692,7 @@ public class POInfo implements Serializable
 	/**
 	 * Is allowed copying this column
 	 * 
-	 * @param index
-	 *            index
+	 * @param index column index
 	 * @return true if column is allowed to be copied
 	 */
 	public boolean isAllowCopy(int index) {
@@ -684,8 +703,8 @@ public class POInfo implements Serializable
 
 	/**
 	 *  Get Column FieldLength
-	 *  @param index index
-	 *  @return field length
+	 *  @param index column index
+	 *  @return field length or 0
 	 */
 	public int getFieldLength (int index)
 	{
@@ -709,10 +728,10 @@ public class POInfo implements Serializable
 	}
 	
 	/**
-	 *  Validate Content
-	 *  @param index index
-	 * 	@param value new Value
-	 *  @return null if all valid otherwise error message
+	 *  Validate value 
+	 *  @param index column index
+	 * 	@param value value to validate
+	 *  @return null if valid, otherwise error message
 	 */
 	public String validate (int index, Object value)
 	{
@@ -747,6 +766,13 @@ public class POInfo implements Serializable
 					return "LessThanMinValue"+";"+m_columns[index].ValueMin_BD.toPlainString();
 				}
 			}
+			else if (value instanceof Timestamp && m_columns[index].ValueMin_TS != null)    // Date
+			{
+				if (((Timestamp) value).before(m_columns[index].ValueMin_TS))
+				{
+					return "LessThanMinValue"+";"+m_columns[index].ValueMin;
+				}
+			}
 			else	//	String
 			{
 				int comp = m_columns[index].ValueMin.compareTo(value.toString());
@@ -774,6 +800,13 @@ public class POInfo implements Serializable
 					return "MoreThanMaxValue"+";"+m_columns[index].ValueMax_BD.toPlainString();
 				}
 			}
+			else if (value instanceof Timestamp && m_columns[index].ValueMax_TS != null)    // Date
+			{
+				if (((Timestamp) value).after(m_columns[index].ValueMax_TS))
+				{
+					return "MoreThanMaxValue"+";"+m_columns[index].ValueMax;
+				}
+			}
 			else	//	String
 			{
 				int comp = m_columns[index].ValueMax.compareTo(value.toString());
@@ -785,23 +818,36 @@ public class POInfo implements Serializable
 		}
 		return null;
 	}   //  validate
-	
+
 	/**
-	 * Build select clause
-	 * @return stringbuilder
+	 * Build SQL SELECT statement.
+	 * @return {@link StringBuilder} instance with the SQL statement.
 	 */
 	public StringBuilder buildSelect()
 	{
 		return buildSelect(false, false);
 	}
-	
+
 	/**
-	 * Build select clause
-	 * @param fullyQualified
-	 * @param noVirtualColumn
-	 * @return stringbuilder
+	 * Build SQL SELECT statement.
+	 * @param fullyQualified prefix column names with the table name
+	 * @param noVirtualColumn Include (<code>false</code> value) all declared virtual columns at once 
+	 *        or use lazy loading (<code>true</code> value).
+	 * @return {@link StringBuilder} instance with the SQL statement.
 	 */
-	public StringBuilder buildSelect(boolean fullyQualified, boolean noVirtualColumn)
+	public StringBuilder buildSelect(boolean fullyQualified, boolean noVirtualColumn) {
+		return buildSelect(fullyQualified, noVirtualColumn ? new String[] {} : null);
+	}
+
+	/**
+	 * Build SQL SELECT statement.
+	 * @param fullyQualified prefix column names with the table name
+	 * @param virtualColumns names of virtual columns to include along with the regular table columns.<br/> 
+	 *        - if virtualColumns is null then all declared virtual columns will be included.<br/>
+	 *        - if virtualColumns is an empty string array (new String[] {}), no declared virtual columns will be included.
+	 * @return {@link StringBuilder} instance with the SQL statement.
+	 */
+	public StringBuilder buildSelect(boolean fullyQualified, String ... virtualColumns)
 	{
 		StringBuilder sql = new StringBuilder("SELECT ");
 		int size = getColumnCount();
@@ -809,9 +855,21 @@ public class POInfo implements Serializable
 		for (int i = 0; i < size; i++)
 		{
 			boolean virtual = isVirtualColumn(i);
-			if (virtual && noVirtualColumn)
-				continue;
-			
+			if (virtual && virtualColumns != null)
+			{
+				boolean found = false;
+				for(String virtualColumn : virtualColumns)
+				{
+					if(m_columns[i].ColumnName.equalsIgnoreCase(virtualColumn))
+					{
+						found = true;
+						break;
+					}
+				}
+				if(!found)
+					continue;
+			}
+
 			count++;
 			if (count > 1)
 				sql.append(",");
@@ -829,14 +887,98 @@ public class POInfo implements Serializable
 	}
 
 	/**
-	 * 
-	 * @return if table save log
+	 * Is column should always be loaded for partial loading of PO
+	 * @param columnIndex
+	 * @return true if column should always be loaded for partial loading of PO
+	 */
+	protected boolean isColumnAlwaysLoadedForPartialPO(int columnIndex)
+	{
+		String columnName = getColumnName(columnIndex);
+		return isColumnAlwaysLoadedForPartialPO(columnIndex, columnName);
+	}
+
+	/**
+	 * Is column should always be loaded for partial loading of PO
+	 * @param columnName
+	 * @return true if column should always be loaded for partial loading of PO
+	 */
+	protected boolean isColumnAlwaysLoadedForPartialPO(String columnName)
+	{
+		int columnIndex = getColumnIndex(columnName);
+		return isColumnAlwaysLoadedForPartialPO(columnIndex, columnName);
+	}
+
+	/**
+	 * Is column should always be loaded for partial loading of PO
+	 * @param columnIndex
+	 * @param columnName
+	 * @return true if column should always be loaded for partial loading of PO
+	 */
+	protected boolean isColumnAlwaysLoadedForPartialPO(int columnIndex, String columnName)
+	{
+		boolean isKey = isKey(columnIndex);
+		boolean isUUID = columnName.equals(PO.getUUIDColumnName(m_TableName));
+		// Always load key, uuid and standard columns
+		if (isKey || isUUID || columnName.equalsIgnoreCase("ad_client_id") || columnName.equalsIgnoreCase("ad_org_id")
+				|| columnName.equalsIgnoreCase("isactive") || columnName.equalsIgnoreCase("created") || columnName.equalsIgnoreCase("createdby")
+				|| columnName.equalsIgnoreCase("updated") || columnName.equalsIgnoreCase("updatedby"))
+			return true;
+		else
+			return false;
+	}
+	
+	/**
+	 * Build SQL SELECT statement for columns.
+	 * @param fullyQualified prefix column names with the table name
+	 * @return {@link StringBuilder} instance with the SQL statement.
+	 */
+	public StringBuilder buildSelectForColumns(boolean fullyQualified, String[] columns)
+	{		
+		StringBuilder sql = new StringBuilder("SELECT ");
+		int size = getColumnCount();
+		int count = 0;
+		for (int i = 0; i < size; i++)
+		{
+			String columnName = getColumnName(i);
+			boolean virtual = isVirtualColumn(i);			
+			if (!isColumnAlwaysLoadedForPartialPO(i))
+			{
+				Optional<String> optional = Arrays.stream(columns).filter(e -> e.equalsIgnoreCase(columnName)).findFirst();
+				if (!optional.isPresent())
+					continue;
+			}
+
+			count++;
+			if (count > 1)
+				sql.append(",");
+			String columnSQL = getColumnSQL(i);
+			if (!virtual)
+				columnSQL = DB.getDatabase().quoteColumnName(columnSQL);
+			if (fullyQualified && !virtual)
+				sql.append(getTableName()).append(".");
+			sql.append(columnSQL);	//	Normal and Virtual Column
+			if (fullyQualified && !virtual)
+				sql.append(" AS ").append(m_columns[i].ColumnName);
+		}
+		sql.append(" FROM ").append(getTableName());
+		return sql;
+	}
+	
+	/**
+	 * Is save changes to change log table
+	 * @return if table save change log
 	 */
 	public boolean isChangeLog()
 	{
 		return m_IsChangeLog;
 	}
 	
+	/**
+	 * Read object from ois (for serialization)
+	 * @param ois
+	 * @throws ClassNotFoundException
+	 * @throws IOException
+	 */
 	private void readObject(ObjectInputStream ois)
 			throws ClassNotFoundException, IOException {
 	    // default deserialization

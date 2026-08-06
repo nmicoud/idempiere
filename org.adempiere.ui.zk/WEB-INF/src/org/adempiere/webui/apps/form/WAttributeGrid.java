@@ -38,7 +38,7 @@ import org.adempiere.webui.component.Tabpanels;
 import org.adempiere.webui.component.Tabs;
 import org.adempiere.webui.panel.ADForm;
 import org.adempiere.webui.util.ZKUpdateUtil;
-import org.adempiere.webui.window.FDialog;
+import org.adempiere.webui.window.Dialog;
 import org.compiere.model.MAttribute;
 import org.compiere.model.MAttributeValue;
 import org.compiere.model.MProduct;
@@ -55,7 +55,7 @@ import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.Div;
-import org.zkoss.zul.Vbox;
+import org.adempiere.webui.component.FlexVlayout;
 
 
 /**
@@ -63,8 +63,8 @@ import org.zkoss.zul.Vbox;
  *	Select one or two attributes for view/etc.
  *	
  *  @author Jorg Janke
- *  @version $Id: VAttributeGrid.java,v 1.2 2006/07/30 00:51:28 jjanke Exp $
  */
+@org.idempiere.ui.zk.annotation.Form(name = "org.compiere.apps.form.VAttributeGrid")
 public class WAttributeGrid extends ADForm implements EventListener<Event>
 {
 	/**
@@ -74,8 +74,6 @@ public class WAttributeGrid extends ADForm implements EventListener<Event>
 
 	/**
 	 * 	Init
-	 *	@param WindowNo
-	 *	@param frame
 	 */
 	protected void initForm()
     {
@@ -174,7 +172,7 @@ public class WAttributeGrid extends ADForm implements EventListener<Event>
 		div.appendChild(modeCombo);
 		modeCombo.addEventListener(Events.ON_CHANGE, this);
 		
-		Vbox vbAttributeGrid = new Vbox();
+		FlexVlayout vbAttributeGrid = new FlexVlayout();
 		vbAttributeGrid.appendChild(div);
 		vbAttributeGrid.appendChild(gridView);
 
@@ -377,7 +375,7 @@ public class WAttributeGrid extends ADForm implements EventListener<Event>
 		
 		if (attr1.equals(attr2))
 		{
-			FDialog.warn(m_WindowNo, "Same Attribute Selected", getTitle());
+			Dialog.warn(m_WindowNo, "Same Attribute Selected", getTitle());
 			log.warning("Same Attribute Selected");
 			tabbox.setSelectedIndex(0);
 			return;
@@ -456,7 +454,7 @@ public class WAttributeGrid extends ADForm implements EventListener<Event>
 				
 				if (rowIndex == 0 && colIndex == 0)
 				{
-					Vbox descr = new Vbox();
+					FlexVlayout descr = new FlexVlayout();
 					ZKUpdateUtil.setWidth(descr, "100%");
 					if (xValues != null)
 					{
@@ -582,7 +580,7 @@ public class WAttributeGrid extends ADForm implements EventListener<Event>
 	private void addProduct(Panel element, MProduct product)
 	{
 		int M_Product_ID = product.getM_Product_ID();
-		Vbox pe = new Vbox();
+		FlexVlayout pe = new FlexVlayout();
 		pe.setStyle("border-width: thin; border-color: blue;");
 		
 		//	Product Value - Price

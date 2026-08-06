@@ -36,7 +36,7 @@ import org.compiere.util.Msg;
 import org.compiere.util.TimeUtil;
 
 /**
- *	Scheduling Utilities.
+ *	Resource Scheduling Utilities.
  *
  * 	@author 	Jorg Janke
  * 	@version 	$Id: ScheduleUtil.java,v 1.2 2006/07/30 00:51:05 jjanke Exp $
@@ -80,10 +80,9 @@ public class ScheduleUtil
 
 	/**	Logger			*/
 	private static CLogger log = CLogger.getCLogger(ScheduleUtil.class);
-	
-	
-	/**************************************************************************
-	 * 	Get Assignments for timeframe.
+		
+	/**
+	 * 	Get Assignments for time frame.
 	 *  <pre>
 	 * 		- Resource is Active and Available
 	 * 		- Resource UnAvailability
@@ -93,7 +92,7 @@ public class ScheduleUtil
 	 *  @param S_Resource_ID resource
 	 *  @param start_Date start date
 	 *  @param end_Date optional end date, need to provide qty to calculate it
-	 *  @param qty optional qty in ResourceType UOM - ignored, if end date is not null
+	 *  @param qty optional qty in ResourceType UOM. Ignored if end date is not null
 	 *  @param getAll if true return all errors
 	 *	@param trxName transaction
 	 *  @return Array of existing Assignments or null - if free
@@ -124,9 +123,7 @@ public class ScheduleUtil
 			m_endDate = MUOMConversion.getEndDate(m_ctx, m_startDate, m_C_UOM_ID, qty);
 		if (log.isLoggable(Level.FINE)) log.fine( "- EndDate=" + m_endDate);
 
-
 		//	Resource Unavailability -------------------------------------------
-	//	log.fine( "- Unavailability -");
 		String sql = "SELECT Description, DateFrom, DateTo "
 		  + "FROM S_ResourceUnavailable "
 		  + "WHERE S_Resource_ID=?"					//	#1
@@ -137,7 +134,6 @@ public class ScheduleUtil
 		ResultSet rs = null;
 		try
 		{
-	//		log.fine( sql, "ID=" + S_Resource_ID + ", Start=" + m_startDate + ", End=" + m_endDate);
 			pstmt = DB.prepareStatement(sql, trxName);
 			pstmt.setInt(1, m_S_Resource_ID);
 			pstmt.setTimestamp(2, m_startDate);
@@ -149,7 +145,7 @@ public class ScheduleUtil
 					TimeUtil.getNextDay(rs.getTimestamp(3)),	//	user entered date need to convert to not including end time
 					Msg.getMsg (m_ctx, "ResourceUnAvailable"), rs.getString(1),
 					MAssignmentSlot.STATUS_UnAvailable);
-			//	log.fine( "- Unavailable", ma);
+
 				if (getAll)
 					createDaySlot (list, ma);
 				else
@@ -173,24 +169,21 @@ public class ScheduleUtil
 		if (ma != null && !getAll)
 			return new MAssignmentSlot[] {ma};
 
-
 		//	NonBusinessDay ----------------------------------------------------
-	//	log.fine( "- NonBusinessDay -");
 		//	"WHERE TRUNC(Date1) BETWEEN TRUNC(?) AND TRUNC(?)"   causes
 		//	ORA-00932: inconsistent datatypes: expected NUMBER got TIMESTAMP
 		sql = MRole.getDefault(m_ctx, false).addAccessSQL (
 			"SELECT Name, Date1 FROM C_NonBusinessDay "
-			+ "WHERE TRUNC(Date1) BETWEEN ? AND ? AND COALESCE(C_Country_ID) IN (0, ?)",
+			+ "WHERE TRUNC(Date1) BETWEEN ? AND ? AND COALESCE(C_Country_ID,0) IN (0, ?)",
 			"C_NonBusinessDay", false, false);	// not qualified - RO
 		try
 		{
 			Timestamp startDay = TimeUtil.getDay(m_startDate);
 			Timestamp endDay = TimeUtil.getDay(m_endDate);
-	//		log.fine( sql, "Start=" + startDay + ", End=" + endDay);
 			pstmt = DB.prepareStatement(sql, trxName);
 			pstmt.setTimestamp(1, startDay);
 			pstmt.setTimestamp(2, endDay);
-			pstmt.setInt(3, Env.getContextAsInt(m_ctx, "#C_Country_ID"));
+			pstmt.setInt(3, Env.getContextAsInt(m_ctx, Env.C_COUNTRY_ID));
 			rs = pstmt.executeQuery();
 			while (rs.next())
 			{
@@ -219,9 +212,7 @@ public class ScheduleUtil
 		if (ma != null && !getAll)
 			return new MAssignmentSlot[] {ma};
 
-
 		//	ResourceType Available --------------------------------------------
-	//	log.fine( "- ResourceTypeAvailability -");
 		sql = "SELECT Name, IsTimeSlot,TimeSlotStart,TimeSlotEnd, "	//	1..4
 			+ "IsDateSlot,OnMonday,OnTuesday,OnWednesday,"			//	5..8
 			+ "OnThursday,OnFriday,OnSaturday,OnSunday "			//	9..12
@@ -328,8 +319,6 @@ public class ScheduleUtil
 		if (ma != null && !getAll)
 			return new MAssignmentSlot[] {ma};
 
-		/*********************************************************************/
-
 		//	fill m_timeSlots (required for layout)
 		createTimeSlots();
 
@@ -342,7 +331,7 @@ public class ScheduleUtil
 					&& (mas.getEndTime().equals(m_endDate) || mas.getEndTime().before(m_endDate)))
 				clean.add(mas);
 		}
-		//	Delete Unavailability TimeSlots when all day assigments exist
+		//	Delete Unavailability TimeSlots when all day assignments exist
 		MAssignmentSlot[] sorted = new MAssignmentSlot[clean.size()];
 		clean.toArray(sorted);
 		Arrays.sort(sorted, new MAssignmentSlot());	//	sorted by start/end date
@@ -377,14 +366,14 @@ public class ScheduleUtil
 
 	/**
 	 * 	Copy valid Slots of a day from list to clear and layout
-	 * 	@param list list with slos of the day
+	 * 	@param list list with slots of the day
 	 * 	@param clean list with only valid slots
 	 */
 	@SuppressWarnings("unchecked")
 	private void layoutSlots (ArrayList<MAssignmentSlot> list, ArrayList<MAssignmentSlot> clean)
 	{
 		int size = list.size();
-	//	System.out.println("Start List=" + size + ", Clean=" + clean.size());
+
 		if (size == 0)
 			return;
 		else if (size == 1)
@@ -547,7 +536,7 @@ public class ScheduleUtil
 	}	//	layoutSlots
 
 	/**
-	 * 	Layout Y axis
+	 * 	Layout Y axis (time)
 	 * 	@param mas assignment slot
 	 */
 	private void layoutY (MAssignmentSlot mas)
@@ -561,8 +550,8 @@ public class ScheduleUtil
 	}	//	layoutY
 
 	/**
-	 * 	Return the Time Slot index for the time.
-	 *  Based on start time and not including end time
+	 * 	Get Time Slot index for the time. <br/>
+	 *  Based on start time and not including end time.
 	 * 	@param time time (day is ignored)
 	 *  @param endTime if true, the end time is included
 	 * 	@return slot index
@@ -582,16 +571,15 @@ public class ScheduleUtil
 		return 0;
 	}	//	getTimeSlotIndex
 
-
 	/**
-	 * 	Get Basic Info
+	 * 	Get Basic Info of resource
 	 *  @param S_Resource_ID resource
 	 */
 	private void getBaseInfo (int S_Resource_ID)
 	{
 		//	Resource is Active and Available
 		String sql = MRole.getDefault(m_ctx, false).addAccessSQL (
-			"SELECT r.IsActive,r.IsAvailable,null,"	//	r.IsSingleAssignment,"
+			"SELECT r.IsActive,r.IsAvailable,null,"	
 			+ "r.S_ResourceType_ID,rt.C_UOM_ID "
 			+ "FROM S_Resource r, S_ResourceType rt "
 			+ "WHERE r.S_Resource_ID=?"
@@ -615,7 +603,6 @@ public class ScheduleUtil
 				//
 				m_S_ResourceType_ID = rs.getInt(4);
 				m_C_UOM_ID = rs.getInt(5);
-			//	log.fine( "- Resource_ID=" + m_S_ResourceType_ID + ",IsAvailable=" + m_isAvailable);
 			}
 			else
 				m_isAvailable = false;
@@ -635,9 +622,9 @@ public class ScheduleUtil
 	}	//	getBaseInfo
 
 	/**
-	 * 	Create Unavailable Timeslots.
-	 *  For every day from startDay..endDay create unavailable slots
-	 *  for 00:00..startTime and endTime..24:00
+	 * 	Create Unavailable Timeslots.<br/>
+	 *  For every day from startDay..endDay, create unavailable slots
+	 *  for 00:00..startTime and endTime..24:00.
 	 *  @param list list to add time slots to
 	 *  @param startTime start time in day
 	 *  @param endTime end time in day
@@ -645,7 +632,6 @@ public class ScheduleUtil
 	private void createTimeSlot (ArrayList<MAssignmentSlot> list,
 		Timestamp startTime, Timestamp endTime)
 	{
-	//	log.fine( "MSchedule.createTimeSlot");
 		GregorianCalendar cal = new GregorianCalendar(Language.getLoginLanguage().getLocale());
 		cal.setTimeInMillis(m_startDate.getTime());
 		//	End Date for Comparison
@@ -694,8 +680,8 @@ public class ScheduleUtil
 	}	//	createTimeSlot
 
 	/**
-	 * 	Create Unavailable Dayslots.
-	 *  For every day from startDay..endDay create unavailable slots
+	 * 	Create Unavailable Day slots.<br/>
+	 *  For every day from startDay..endDay, create unavailable slots.
 	 *  @param list list to add Day slots to
 	 *  @param OnMonday true if OK to have appointments (i.e. blocked if false)
 	 *  @param OnTuesday true if OK
@@ -709,7 +695,6 @@ public class ScheduleUtil
 		boolean OnMonday, boolean OnTuesday, boolean OnWednesday,
 		boolean OnThursday, boolean OnFriday, boolean OnSaturday, boolean OnSunday)
 	{
-	//	log.fine( "MSchedule.createDaySlot");
 		GregorianCalendar cal = new GregorianCalendar(Language.getLoginLanguage().getLocale());
 		cal.setTimeInMillis(m_startDate.getTime());
 		//	End Date for Comparison
@@ -747,13 +732,12 @@ public class ScheduleUtil
 	}	//	createDaySlot
 
 	/**
-	 * 	Create a day slot for range
-	 * 	@param list list
-	 * 	@param ma assignment
+	 * 	Create day slots for a date range
+	 * 	@param list list to add slot to
+	 * 	@param ma assignment slot to get date range
 	 */
 	private void createDaySlot (ArrayList<MAssignmentSlot> list, MAssignmentSlot ma)
 	{
-	//	log.fine( "MSchedule.createDaySlot", ma);
 		//
 		Timestamp start = ma.getStartTime();
 		GregorianCalendar calStart = new GregorianCalendar();
@@ -781,11 +765,9 @@ public class ScheduleUtil
 		}
 	}	//	createDaySlot
 
-	/*************************************************************************/
-
 	/**
-	 * 	Get Day Time Slots for Date
-	 *  @return "heading" or null
+	 * 	Get Day Time Slots
+	 *  @return array of day time slot
 	 */
 	public MAssignmentSlot[] getDayTimeSlots ()
 	{
@@ -793,7 +775,7 @@ public class ScheduleUtil
 	}	//	getDayTimeSlots
 
 	/**
-	 * 	Create Time Slots
+	 * 	Create Time Slots for start date
 	 */
 	private void createTimeSlots()
 	{
@@ -842,8 +824,6 @@ public class ScheduleUtil
 				calEnd.set(Calendar.MILLISECOND, 0);
 				calEnd.add(Calendar.DAY_OF_YEAR, 1);
 			}
-//System.out.println("Start=" + new Timestamp(cal.getTimeInMillis()));
-//System.out.println("Endt=" + new Timestamp(calEnd.getTimeInMillis()));
 
 			//	Set end Slot Time
 			GregorianCalendar calEndSlot = new GregorianCalendar();
@@ -877,11 +857,9 @@ public class ScheduleUtil
 		list.toArray(m_timeSlots);
 	}	//	createTimeSlots
 
-	/*************************************************************************/
-
 	/**
-	 * 	Get Resource ID. Set by getAssignmentSlots
-	 * 	@return current resource
+	 * 	Get Resource ID. Set in getAssignmentSlots method.
+	 * 	@return current resource id
 	 */
 	public int getS_Resource_ID()
 	{
@@ -889,7 +867,7 @@ public class ScheduleUtil
 	}	//	getS_Resource_ID
 
 	/**
-	 * 	Return Start Date. Set by getAssignmentSlots
+	 * 	Get Start Date. Set in getAssignmentSlots method.
 	 * 	@return start date
 	 */
 	public Timestamp getStartDate ()
@@ -898,7 +876,7 @@ public class ScheduleUtil
 	}	//	getStartDate
 
 	/**
-	 * 	Return End Date. Set by getAssignmentSlots
+	 * 	Get End Date. Set in getAssignmentSlots method.
 	 * 	@return end date
 	 */
 	public Timestamp getEndDate ()

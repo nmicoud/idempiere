@@ -14,9 +14,8 @@
 package org.adempiere.base.event;
 
 /**
- *
+ * Event topic constants
  * @author hengsin
- *
  */
 public interface IEventTopics {
 
@@ -91,12 +90,15 @@ public interface IEventTopics {
 
 	public static final String PREF_AFTER_LOAD = "adempiere/pref/afterLoad";
 	
-	/** Called after next document actions are set */
+	/** Called during discovery of available and valid document actions */
 	public static final String DOCACTION = "adempiere/docAction";
 
 	public static final String BROADCAST_MESSAGE = "idempiere/broadcastMsg";
 	
 	public static final String REQUEST_SEND_EMAIL = "idempiere/requestSendEMail";
+
+	/** Called from dialog to send an email, to prefill dialog variables */
+	public static final String REPORT_SEND_EMAIL = "idempiere/reportSendEMail";
 
 	/** Called before starting a process, after prepared */
 	public static final String BEFORE_PROCESS = "idempiere/beforeProcess";
@@ -105,4 +107,11 @@ public interface IEventTopics {
 	/** Called after a process is committed */
 	public static final String POST_PROCESS = "idempiere/postProcess";
 
+	/** Called after final update AD_Package_Imp is committed */
+	public static final String POST_PACKIN_PACKAGE_IMP = "idempiere/postPackInPackageImp";
+
+	/** Called before the auto incremental pack in of bundle (META_INF/2Pack_*.zip) */
+	public static final String PRE_INCREMENTAL_PACK_IN = "idempiere/preIncrementalPackIn";
+	/** Called after the auto incremental pack in of bundle (META_INF/2Pack_*.zip) */
+	public static final String POST_INCREMENTAL_PACK_IN = "idempiere/postIncrementalPackIn";
 }

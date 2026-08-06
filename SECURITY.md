@@ -2,10 +2,10 @@
 
 ## Supported Versions
 
-| Version             | Supported          |
-| ------------------- | ------------------ |
-| release-8.2         | :white_check_mark: |
-| master a.k.a. 8.2z  | :white_check_mark: |
+| Version          | Supported          |
+| -----------------| ------------------ |
+| release-13       | :white_check_mark: |
+| master a.k.a. 14 | :white_check_mark: |
 
 ## Reporting a Vulnerability
 

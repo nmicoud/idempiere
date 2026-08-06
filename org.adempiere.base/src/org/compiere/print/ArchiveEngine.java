@@ -17,14 +17,10 @@
 package org.compiere.print;
 
 import java.awt.print.Pageable;
-import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.logging.Level;
 
+import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.pdf.Document;
 import org.compiere.model.MArchive;
 import org.compiere.model.MClient;
@@ -32,17 +28,16 @@ import org.compiere.model.PrintInfo;
 import org.compiere.print.layout.LayoutEngine;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
-import org.jfree.io.IOUtils;
-
 
 /**
- *	Archive Engine.
- *	Based on Settings on Client Level
- *	Keys set for
- *	- Menu Reports - AD_Report_ID
- *	- Win Report - AD_Table_ID
- *	- Documents - AD_Table_ID & Record_ID & C_Customer_ID 
- *	
+ *	Archive Engine.<br/>
+ *	Based on Settings on Client Level.
+ *  <pre>
+ *  Keys set for
+ *  - Menu Reports - AD_Report_ID
+ *  - Win Report - AD_Table_ID
+ *  - Documents - AD_Table_ID and Record_ID and C_Customer_ID 
+ *	</pre>
  *  @author Jorg Janke
  *  @version $Id: ArchiveEngine.java,v 1.3 2006/07/30 00:53:02 jjanke Exp $
  */
@@ -63,14 +58,6 @@ public class ArchiveEngine
 		String aa = aaClient;
 		if (aa == null)
 			aa = MClient.AUTOARCHIVE_None;
-		/* String aaRole = null; 	//	role.getAutoArchive();	//	TODO
-		if (aaRole != null)
-		{
-			if (aaRole.equals(MClient.AUTOARCHIVE_AllReportsDocuments))
-				aa = aaRole;
-			else if (aaRole.equals(MClient.AUTOARCHIVE_Documents) && !aaClient.equals(MClient.AUTOARCHIVE_AllReportsDocuments))
-				aa = aaRole;
-		}*/
 		//	Nothing to Archive
 		if (aa.equals(MClient.AUTOARCHIVE_None))
 			return null;
@@ -113,14 +100,6 @@ public class ArchiveEngine
 		String aa = aaClient;
 		if (aa == null)
 			aa = MClient.AUTOARCHIVE_None;
-		/* String aaRole = null; 	//	role.getAutoArchive();	//	TODO
-		if (aaRole != null)
-		{
-			if (aaRole.equals(MClient.AUTOARCHIVE_AllReportsDocuments))
-				aa = aaRole;
-			else if (aaRole.equals(MClient.AUTOARCHIVE_Documents) && !aaClient.equals(MClient.AUTOARCHIVE_AllReportsDocuments))
-				aa = aaRole;
-		}*/
 		//	Nothing to Archive
 		if (aa.equals(MClient.AUTOARCHIVE_None))
 			return;
@@ -137,30 +116,16 @@ public class ArchiveEngine
 				return;
 		}
 		
-		ByteArrayOutputStream bas = new ByteArrayOutputStream();
-		FileInputStream fis = null;
-		try {
-			fis = new FileInputStream(pdfFile);
-			BufferedInputStream bis = new BufferedInputStream(fis);
-			IOUtils.getInstance().copyStreams(bis, bas);
-		} catch (FileNotFoundException e) {
-			log.log(Level.SEVERE, e.getLocalizedMessage(), e);
-		} catch (IOException e) {
-			log.log(Level.SEVERE, e.getLocalizedMessage(), e);
-		} finally {
-			if (fis != null) {
-				try {
-					fis.close();
-				} catch (IOException e) {}
-			}
-		}
-		
-		byte[] data = bas.toByteArray();  
-				
-		//	TODO to be done async
 		MArchive archive = new MArchive (Env.getCtx(),info, null);
-		archive.setBinaryData(data);
-		archive.saveEx();
+		try (FileInputStream fis = new FileInputStream(pdfFile)){
+			archive.setInputStream(fis);
+			archive.saveEx();
+		} catch (Exception e) {
+			if (e instanceof RuntimeException)
+				throw (RuntimeException)e;
+			else
+				throw new AdempiereException("Could not archive file: " + pdfFile.getAbsolutePath(), e);
+		}		
 	}	//	archive
 	
 	/**
@@ -174,8 +139,7 @@ public class ArchiveEngine
 			&& Document.isValid((Pageable)layout)
 			&& layout.getNumberOfPages() > 0);
 	}	//	isValid
-	
-	
+		
 	/**
 	 * 	Get Archive Engine
 	 *	@return engine
@@ -193,12 +157,12 @@ public class ArchiveEngine
 	}
 	
 	/**	Logger			*/
+	@SuppressWarnings("unused")
 	private static CLogger log = CLogger.getCLogger(ArchiveEngine.class);
 	/** Singleton		*/
 	private volatile static ArchiveEngine s_engine = null;
-	
-	
-	/**************************************************************************
+		
+	/**
 	 * 	ArchiveEngine
 	 */
 	private ArchiveEngine ()
@@ -207,10 +171,4 @@ public class ArchiveEngine
 		if (s_engine == null)
 			s_engine = this;
 	}	//	ArchiveEngine
-
-	/** The base document			*/
-//	private PDFDocument m_document = Document.createBlank();
-	
-	
-	
 }	//	ArchiveEngine

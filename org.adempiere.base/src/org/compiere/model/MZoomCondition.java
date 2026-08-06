@@ -16,34 +16,47 @@
 package org.compiere.model;
 
 import java.sql.ResultSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
 import org.compiere.util.CCache;
 import org.compiere.util.DB;
+import org.compiere.util.DefaultEvaluatee;
 import org.compiere.util.Env;
 import org.compiere.util.Evaluatee;
 import org.compiere.util.Evaluator;
 import org.compiere.util.Util;
 import org.idempiere.cache.ImmutablePOSupport;
+import org.idempiere.db.util.SQLFragment;
 
 /**
  *  Zoom Condition model
  *	
- *  @author Nico
+ *  @author	Nicolas Micoud - TGI
  *  @version $Id: MZoomCondition.java
  */
 public class MZoomCondition extends X_AD_ZoomCondition implements ImmutablePOSupport
 {
-	/**
-	 * 
+    /**
+	 * generated serial id
 	 */
-	private static final long serialVersionUID = -2472970418557589702L;
+	private static final long serialVersionUID = 381986049328113973L;
 
-	/**************************************************************************
+	/**
+     * UUID based Constructor
+     * @param ctx  Context
+     * @param AD_ZoomCondition_UU  UUID key
+     * @param trxName Transaction
+     */
+    public MZoomCondition(Properties ctx, String AD_ZoomCondition_UU, String trxName) {
+        super(ctx, AD_ZoomCondition_UU, trxName);
+    }
+
+	/**
 	 * 	Standard Constructor
 	 *	@param ctx context
-	 *	@param XXA_PostIt_ID id
+	 *	@param AD_ZoomCondition_ID id
 	 *	@param trxName transaction
 	 */
 	public MZoomCondition (Properties ctx, int AD_ZoomCondition_ID, String trxName)
@@ -63,7 +76,7 @@ public class MZoomCondition extends X_AD_ZoomCondition implements ImmutablePOSup
 	}	//	MZoomCondition
 	
 	/**
-	 * 
+	 * Copy constructor
 	 * @param copy
 	 */
 	public MZoomCondition(MZoomCondition copy) 
@@ -72,7 +85,7 @@ public class MZoomCondition extends X_AD_ZoomCondition implements ImmutablePOSup
 	}
 
 	/**
-	 * 
+	 * Copy constructor
 	 * @param ctx
 	 * @param copy
 	 */
@@ -82,7 +95,7 @@ public class MZoomCondition extends X_AD_ZoomCondition implements ImmutablePOSup
 	}
 
 	/**
-	 * 
+	 * Copy constructor
 	 * @param ctx
 	 * @param copy
 	 * @param trxName
@@ -97,9 +110,9 @@ public class MZoomCondition extends X_AD_ZoomCondition implements ImmutablePOSup
 	private static CCache<Integer,MZoomCondition[]> s_conditions = new CCache<Integer,MZoomCondition[]>(Table_Name, 0);
 
 	/**
-	 * Retrieve zoom condition record by AD_Table_ID 	
+	 * Get zoom condition records by AD_Table_ID 	
 	 * @param AD_Table_ID
-	 * @return array of zoom condition record
+	 * @return array of zoom condition records
 	 */
 	public static MZoomCondition[] getConditions(int AD_Table_ID)
 	{
@@ -119,11 +132,24 @@ public class MZoomCondition extends X_AD_ZoomCondition implements ImmutablePOSup
 		return conditions;
 	}	//	getConditions
 
+	/**
+	 * Get zoom window id by table and query
+	 * @param AD_Table_ID
+	 * @param query
+	 * @return AD_Window_ID
+	 */
 	private static int findZoomWindowByTableId(int AD_Table_ID, MQuery query)
 	{
 		return findZoomWindowByTableId(AD_Table_ID, query, 0);
 	}
 
+	/**
+	 * Get zoom window id by table and query
+	 * @param AD_Table_ID
+	 * @param query
+	 * @param windowNo window number for context variable evaluation
+	 * @return AD_Window_ID
+	 */
 	private static int findZoomWindowByTableId(int AD_Table_ID, MQuery query, int windowNo)
 	{
 		final int winNo = windowNo;
@@ -133,12 +159,7 @@ public class MZoomCondition extends X_AD_ZoomCondition implements ImmutablePOSup
 		MZoomCondition[] conditions = MZoomCondition.getConditions(AD_Table_ID);
 		if (conditions.length > 0)
 		{
-			Evaluatee evaluatee = new Evaluatee() {
-				public String get_ValueAsString(String variableName) {
-					return Env.getContext(Env.getCtx(), winNo, variableName);
-				}
-			};
-
+			DefaultEvaluatee evaluatee = new DefaultEvaluatee(null, winNo, -1, false);
 			for (MZoomCondition condition : conditions)
 			{
 				if (! Util.isEmpty(condition.getZoomLogic())) {
@@ -147,7 +168,8 @@ public class MZoomCondition extends X_AD_ZoomCondition implements ImmutablePOSup
 					}
 				}
 
-				boolean evaluation = condition.evaluate(query.getWhereClause(true));
+				SQLFragment filter = query.getSQLFilter(true);
+				boolean evaluation = condition.evaluate(filter.sqlClause(), filter.parameters());
 				
 				if (evaluation)
 				{
@@ -159,7 +181,7 @@ public class MZoomCondition extends X_AD_ZoomCondition implements ImmutablePOSup
 	}
 	
 	/**
-	 * find first AD_Window_ID from matching zoom condition record 
+	 * Find first AD_Window_ID from matching zoom condition record 
 	 * @param query
 	 * @return AD_Window_ID
 	 */
@@ -174,13 +196,19 @@ public class MZoomCondition extends X_AD_ZoomCondition implements ImmutablePOSup
 		return findZoomWindowByTableId(table.getAD_Table_ID(), query);
 	}
 	
+	/**
+	 * Find zoom window id from query
+	 * @param AD_Window_ID
+	 * @param query
+	 * @return AD_Window_ID
+	 */
 	public static int findZoomWindowByWindowId(int AD_Window_ID, MQuery query)
 	{
 		return findZoomWindowByWindowId(AD_Window_ID, query, 0);
 	}
 
 	/**
-	 * find first AD_Window_ID from matching zoom condition record
+	 * Find zoom window id from AD_Window_ID and query
 	 * @param AD_Window_ID Zoom AD_Window_ID from MLookup
 	 * @param query
 	 * @return AD_Window_ID
@@ -202,8 +230,10 @@ public class MZoomCondition extends X_AD_ZoomCondition implements ImmutablePOSup
 		}
 
 		if (tableName != null && tableName.equals(query.getZoomTableName())) {
+			//zoom to header tab
 			return findZoomWindowByTableId(tableID, query, windowNo);
 		} else {
+			//zoom to detail tab
 			try {
 				GridWindow window = GridWindow.get(Env.getCtx(), -1, AD_Window_ID);
 				if (window == null || window.getTabCount() == 0)
@@ -223,19 +253,39 @@ public class MZoomCondition extends X_AD_ZoomCondition implements ImmutablePOSup
 				{
 					window.initTab(gTab.getTabNo());				
 					GridTab parentTab = gTab.getParentTab();
-					int parentId = -1;
-					if (!Util.isEmpty(gTab.getLinkColumnName()))
-						parentId = DB.getSQLValue(null, "SELECT " + gTab.getLinkColumnName() + " FROM " + gTab.getTableName() + " WHERE " + query.getWhereClause());
-					if (parentId <= 0) {
+					Object parentId = null;
+					if (!Util.isEmpty(gTab.getLinkColumnName())) {
+						SQLFragment filter = query.getSQLFilter();
+						StringBuilder sql = new StringBuilder("SELECT ").append(gTab.getLinkColumnName())
+								.append(" FROM ").append(gTab.getTableName())
+								.append(" WHERE ").append(filter.sqlClause());
+						if (gTab.getLinkColumnName().endsWith("_UU")) {
+							parentId = DB.getSQLValueString(null, sql.toString(), filter.parameters());
+						} else {
+							int tmpId = DB.getSQLValue(null, sql.toString(), filter.parameters());
+							if (tmpId > 0)
+								parentId = Integer.valueOf(tmpId);
+						}
+					}
+					if (parentId == null) {
 						if (Util.isEmpty(parentTab.getKeyColumnName()))
 							parentTab.initTab(false);
 						// no parent link -- search in context of window
 						String parentctxid = Env.getContext(Env.getCtx(), windowNo, parentTab.getKeyColumnName());
 						if (! Util.isEmpty(parentctxid)) {
-							parentId = DB.getSQLValue(null, "SELECT " + parentTab.getKeyColumnName() + " FROM " + parentTab.getTableName() 
-									+ " WHERE " + parentTab.getKeyColumnName() + "=" + parentctxid);
+							StringBuilder sql = new StringBuilder("SELECT ").append(parentTab.getKeyColumnName())
+									.append(" FROM ").append(parentTab.getTableName())
+									.append(" WHERE ").append(parentTab.getKeyColumnName()).append("=?");
+							if (parentTab.getKeyColumnName().endsWith("_UU")) {
+								parentId = DB.getSQLValueStringEx(null, sql.toString(), parentctxid);
+							} else {
+								if (parentTab.getKeyColumnName().endsWith("_ID"))
+									parentId = DB.getSQLValueEx(null, sql.toString(), Integer.valueOf(parentctxid));
+								else
+									parentId = DB.getSQLValueStringEx(null, sql.toString(), parentctxid);
+							}
 						}
-						if (parentId <= 0)
+						if (parentId == null)
 							return 0;
 					}
 					
@@ -244,16 +294,37 @@ public class MZoomCondition extends X_AD_ZoomCondition implements ImmutablePOSup
 						window.initTab(parentTab.getTabNo());					
 						if (parentTab.getParentTab() != null)
 						{
-							parentId = DB.getSQLValue(null, "SELECT " + parentTab.getLinkColumnName() + " FROM " + parentTab.getTableName() + " WHERE " 
-									+ parentTab.getTableName()+"_ID="+parentId);
-							if (parentId <= 0) return 0;
+							StringBuilder sql = new StringBuilder("SELECT ").append(parentTab.getLinkColumnName())
+									.append(" FROM ").append(parentTab.getTableName())
+									.append(" WHERE ");
+							MTable parentTable = MTable.get(Env.getCtx(), parentTab.getTableName());
+							Object id = null;
+							if (parentTable.isUUIDKeyTable()) {
+								sql.append(PO.getUUIDColumnName(parentTab.getTableName())).append("=?");
+								id = parentId.toString();
+							} else {
+								sql.append(parentTab.getTableName()).append("_ID=?");
+								id = Integer.valueOf(parentId.toString());
+							}
+							parentId = null;
+							if (parentTab.getLinkColumnName().endsWith("_UU")) {
+								parentId = DB.getSQLValueString(null, sql.toString(), id);
+							} else {
+								int tmpId = DB.getSQLValue(null, sql.toString(), id);
+								if (tmpId > 0)
+									parentId = Integer.valueOf(tmpId);
+							}
+							if (parentId == null) return 0;
 							parentTab = parentTab.getParentTab();
 						}
 						else
 						{
 							if (parentTab == window.getTab(0))
 							{
-								return findZoomWindowByTableId(parentTab.getAD_Table_ID(), parentId, windowNo);
+								if (parentId instanceof String)
+									return findZoomWindowByTableIdOrUU(parentTab.getAD_Table_ID(), -1, parentId.toString(), windowNo);
+								else
+									return findZoomWindowByTableIdOrUU(parentTab.getAD_Table_ID(), ((Integer)parentId).intValue(), null, windowNo);
 							}
 						}
 					}
@@ -265,31 +336,59 @@ public class MZoomCondition extends X_AD_ZoomCondition implements ImmutablePOSup
 		return 0;
 	}
 	
+	/**
+	 * Find zoom window id from table and record id
+	 * @param AD_Table_ID
+	 * @param recordID
+	 * @return AD_Window_ID
+	 */
 	public static int findZoomWindowByTableId(int AD_Table_ID, int recordID)
 	{
 		return findZoomWindowByTableId(AD_Table_ID, recordID, 0);
 	}
 
 	/**
-	 * find AD_Window_ID from matching zoom condition record
+	 * Find zoom window id from table and record id
 	 * @param AD_Table_ID
 	 * @param recordID
 	 * @return AD_Window_ID
 	 */
 	public static int findZoomWindowByTableId(int AD_Table_ID, int recordID, int windowNo)
 	{
+		return findZoomWindowByTableIdOrUU(AD_Table_ID, recordID, null, windowNo);
+	}
+
+	/**
+	 * Find AD_Window_ID from table id and record uuid
+	 * @param AD_Table_ID
+	 * @param recordUU record uuid
+	 * @return AD_Window_ID
+	 */
+	public static int findZoomWindowByTableUU(int AD_Table_ID, String recordUU, int windowNo)
+	{
+		return findZoomWindowByTableIdOrUU(AD_Table_ID, -1, recordUU, windowNo);
+	}
+
+	/**
+	 * Find AD_Window_ID from table id and record uuid/record id
+	 * @param AD_Table_ID
+	 * @param recordID use when table is using id as key
+	 * @param recordUU use when table is using uuid as key
+	 * @return AD_Window_ID
+	 */
+	public static int findZoomWindowByTableIdOrUU(int AD_Table_ID, int recordID, String recordUU, int windowNo)
+	{
 		final int winNo = windowNo;
 		MTable table = MTable.get(Env.getCtx(), AD_Table_ID);		
 		MZoomCondition[] conditions = MZoomCondition.getConditions(AD_Table_ID);
 		if (conditions.length > 0)
 		{
-			Evaluatee evaluatee = new Evaluatee() {
-				public String get_ValueAsString(String variableName) {
-					return Env.getContext(Env.getCtx(), winNo, variableName);
-				}
-			};
-
-			String whereClause = table.getTableName() + "_ID="+recordID;
+			Evaluatee evaluatee = new DefaultEvaluatee(null, winNo, -1, false);
+			String whereClause;
+			if (table.isUUIDKeyTable())
+				whereClause = PO.getUUIDColumnName(table.getTableName())+"="+DB.TO_STRING(recordUU);
+			else
+				whereClause = table.getTableName() + "_ID="+recordID;
 			for (MZoomCondition condition : conditions)
 			{
 				if (! Util.isEmpty(condition.getZoomLogic())) {
@@ -311,24 +410,37 @@ public class MZoomCondition extends X_AD_ZoomCondition implements ImmutablePOSup
 	}
 
 	/**
+	 * Evaluate a where clause 
 	 * @param whereClause filter to get record for evaluation
-	 * @return true if the condition is empty (applies for all records) or if the condition is true for the record   
+	 * @return true if the condition is empty (applies for all records) or if the condition is true for &gt;= 1 record   
 	 */
 	public boolean evaluate(String whereClause)
+	{
+		return evaluate(whereClause, List.of());
+	}
+	
+	/**
+	 * Evaluate a where clause 
+	 * @param whereClause filter to get record for evaluation
+	 * @return true if the condition is empty (applies for all records) or if the condition is true for &gt;= 1 record   
+	 */
+	public boolean evaluate(String whereClause, List<Object> parameters)
 	{
 		if (Util.isEmpty(getWhereClause()))
 			return true;
 		
+		List<Object> params = new ArrayList<Object>(parameters);
 		MTable table = MTable.get(Env.getCtx(), getAD_Table_ID());
 		String tableName = table.getTableName();
-		StringBuilder builder = new StringBuilder("SELECT Count(*) FROM ");
+		StringBuilder builder = new StringBuilder("SELECT 1 FROM ");
 		builder.append(tableName)
 			.append(" WHERE ")
 			.append(whereClause)
-			.append(" AND ")
-			.append(Env.parseContext(Env.getCtx(), 0, getWhereClause(), false, true));
+			.append(" AND (")
+			.append(Env.parseContextForSql(Env.getCtx(), 0, getWhereClause(), false, true, params))
+			.append(")");
 		
-		int no = DB.getSQLValue(null, builder.toString());		
+		int no = DB.getSQLValue(null, builder.toString(), params);		
 		return no == 1;
 	}
 	
@@ -339,6 +451,15 @@ public class MZoomCondition extends X_AD_ZoomCondition implements ImmutablePOSup
 
 		makeImmutable();
 		return this;
+	}
+
+	@Override
+	protected boolean beforeSave (boolean newRecord) {
+		// Set SeqNo
+		if (getSeqNo() == 0)
+			setSeqNo(DB.getSQLValueEx(get_TrxName(), "SELECT COALESCE(MAX(SeqNo), 0) + 10 FROM AD_ZoomCondition WHERE AD_Table_ID = ?", getAD_Table_ID()));
+
+		return true;
 	}
 
 }	//	MZoomCondition

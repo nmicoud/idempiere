@@ -18,9 +18,11 @@ import java.util.List;
 
 import org.adempiere.base.Core;
 import org.adempiere.base.event.EventManager;
+import org.adempiere.webui.component.FlexVlayout;
 import org.adempiere.webui.component.ToolBarButton;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ThemeManager;
+import org.adempiere.webui.util.Icon;
 import org.adempiere.webui.util.ServerPushTemplate;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.model.MQuery;
@@ -28,6 +30,7 @@ import org.compiere.model.MRecentItem;
 import org.compiere.model.MRole;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MTable;
+import org.compiere.model.PO;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
@@ -44,40 +47,45 @@ import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.util.DesktopCleanup;
 import org.zkoss.zul.A;
-import org.zkoss.zul.Box;
 import org.zkoss.zul.Image;
 import org.zkoss.zul.Label;
+import org.zkoss.zul.Layout;
 import org.zkoss.zul.Panel;
 import org.zkoss.zul.Panelchildren;
 import org.zkoss.zul.Toolbar;
-import org.zkoss.zul.Vbox;
 
 /**
- * Dashboard item: Recent Items
+ * Dashboard gadget: Recent Items
  * @author Carlos Ruiz / GlobalQSS
  * @date January 27, 2012
  */
 public class DPRecentItems extends DashboardPanel implements EventListener<Event>, EventHandler {
-
-	private static final String AD_RECENT_ITEM_ID_ATTR = "AD_RecentItem_ID";
-
 	/**
-	 * 
+	 * generated serial id 
 	 */
 	private static final long serialVersionUID = 662950038476166515L;
 
+	/** Recent item link ({@link A}) attribute to store AD_RecentItem_ID value */
+	private static final String AD_RECENT_ITEM_ID_ATTR = "AD_RecentItem_ID";
+	
+	/** Droppable identifier */
 	public static final String DELETE_RECENTITEMS_DROPPABLE = "deleteRecentItems";
 
 	private static TopicSubscriber topicSubscriber;
 
-	private Box bxRecentItems;
-
+	private Layout bxRecentItems;
+	
+	/** Login user id */
 	private int AD_User_ID;
 	
 	private WeakReference<Desktop> desktop;
-
+	
+	/** Desktop cleanup listener to call {@link #cleanup()} */
 	private DesktopCleanup listener;
 
+	/**
+	 * Default constructor
+	 */
 	public DPRecentItems()
 	{
 		super();
@@ -89,11 +97,10 @@ public class DPRecentItems extends DashboardPanel implements EventListener<Event
 
 		Panelchildren recentItemsContent = new Panelchildren();
 		panel.appendChild(recentItemsContent);
-		bxRecentItems = new Vbox();
+		bxRecentItems = new FlexVlayout();
 		ZKUpdateUtil.setHflex(bxRecentItems, "1");
 		this.setSclass("recentitems-box");
 		recentItemsContent.appendChild(bxRecentItems);
-		createRecentItemsPanel();
 		
 		Toolbar recentItemsToolbar = new Toolbar();
 		this.appendChild(recentItemsToolbar);
@@ -101,7 +108,7 @@ public class DPRecentItems extends DashboardPanel implements EventListener<Event
 		if (ThemeManager.isUseFontIconForImage())
 		{
 			ToolBarButton btn = new ToolBarButton();
-			btn.setIconSclass("z-icon-Refresh");
+			btn.setIconSclass(Icon.getIconSclass(Icon.REFRESH));
 			btn.setSclass("trash-toolbarbutton");
 			recentItemsToolbar.appendChild(btn);
 			btn.setTooltiptext(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Refresh")));
@@ -121,8 +128,8 @@ public class DPRecentItems extends DashboardPanel implements EventListener<Event
 		{
 			Label deleteLabel = new Label();
 			recentItemsToolbar.appendChild(deleteLabel);
-			deleteLabel.setSclass("z-icon-Trash trash-font-icon");
-			deleteLabel.setTooltiptext(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Delete")));
+			deleteLabel.setSclass(Icon.getIconSclass(Icon.TRASH)+" trash-font-icon");
+			deleteLabel.setTooltiptext(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "DeleteRecentItem")));
 			deleteLabel.setDroppable(DELETE_RECENTITEMS_DROPPABLE);		
 			deleteLabel.addEventListener(Events.ON_DROP, this);
 		}
@@ -146,11 +153,17 @@ public class DPRecentItems extends DashboardPanel implements EventListener<Event
 		};
 	}
 
+	/**
+	 * Perform clean up
+	 */
 	protected void cleanup() {
 		EventManager.getInstance().unregister(this);
 		desktop = null;
 	}
 
+	/**
+	 * Setup {@link #topicSubscriber}
+	 */
 	private static synchronized void createTopicSubscriber() {
 		if (topicSubscriber == null) {
 			topicSubscriber = new TopicSubscriber();
@@ -162,13 +175,8 @@ public class DPRecentItems extends DashboardPanel implements EventListener<Event
 		}
 	}
 
-	private void createRecentItemsPanel()
-	{
-		refresh();
-	}
-
     /**
-	 *	Make Recent Item remove persistent
+	 *	Remove recent item record from DB
 	 *  @param AD_RecentItem_ID Recent Item ID
 	 *  @return true if updated
 	 */
@@ -181,6 +189,7 @@ public class DPRecentItems extends DashboardPanel implements EventListener<Event
     	}
 	}
 
+    @Override
     public void onEvent(Event event)
     {
         Component comp = event.getTarget();
@@ -206,6 +215,10 @@ public class DPRecentItems extends DashboardPanel implements EventListener<Event
         }
 	}
 
+    /**
+     * Handle onClick event from recent item link/button
+     * @param comp Component
+     */
 	private void doOnClick(Component comp) {
 		if (comp instanceof A)
 		{
@@ -219,20 +232,27 @@ public class DPRecentItems extends DashboardPanel implements EventListener<Event
 			catch (Exception e) {
 			}
 
-			if (AD_RecentItem_ID > 0) {
+			if ( AD_RecentItem_ID > 0) {
 				MRecentItem ri = MRecentItem.get(Env.getCtx(), AD_RecentItem_ID);
-				String TableName = MTable.getTableName(Env.getCtx(), ri.getAD_Table_ID());
-				MQuery query = MQuery.getEqualQuery(TableName + "_ID", ri.getRecord_ID());
-
+				MTable table = MTable.get(ri.getAD_Table_ID());
+				String TableName = table.getTableName();
+				MQuery query;
+				if (ri.getRecord_UU() != null)
+					query = MQuery.getEqualQuery(PO.getUUIDColumnName(TableName), ri.getRecord_UU());
+				else
+					query = MQuery.getEqualQuery(table.getKeyColumns()[0], ri.getRecord_ID());
 				SessionManager.getAppDesktop().openWindow(ri.getAD_Window_ID(), query, null);
 			}
 		}
 		if (comp instanceof Image || comp instanceof ToolBarButton) // Refresh button
 		{
-			refresh();
+			refresh(new ServerPushTemplate(bxRecentItems.getDesktop()));
 		}
 	}
 
+	/**
+	 * Reload from DB
+	 */
 	private synchronized void refresh() {
 		// Please review here - is throwing NPE in some cases when user push repeatedly the refresh button
 		List<?> childs = bxRecentItems.getChildren();
@@ -255,7 +275,7 @@ public class DPRecentItems extends DashboardPanel implements EventListener<Event
 		for (MRecentItem ri : ris) {
 			if (ri.getAD_Window_ID() > 0 && MRole.getDefault().getWindowAccess(ri.getAD_Window_ID()) == null)
 				continue;
-			if (ri.getAD_Window_ID() > 0 && !MRole.getDefault().isRecordAccess(ri.getAD_Table_ID(), ri.getRecord_ID(), true))
+			if (ri.getAD_Window_ID() > 0 && ri.getRecord_ID() > 0 && !MRole.getDefault().isRecordAccess(ri.getAD_Table_ID(), ri.getRecord_ID(), true))
 				continue;
 				
 			String label = ri.getLabel();
@@ -282,6 +302,10 @@ public class DPRecentItems extends DashboardPanel implements EventListener<Event
 
 	}
 
+	/**
+	 * Remove recent item link from {@link #bxRecentItems} and DB
+	 * @param btn {@link A}
+	 */
 	private void removeLink(A btn) {
 		String value = (String) btn.getAttribute(AD_RECENT_ITEM_ID_ATTR);
 
@@ -291,12 +315,16 @@ public class DPRecentItems extends DashboardPanel implements EventListener<Event
 			riDBremove(AD_RecentItem_ID);
 			bxRecentItems.removeChild(btn);
 			bxRecentItems.invalidate();
+			refresh(new ServerPushTemplate(bxRecentItems.getDesktop()));
 		}
 	}
 
+	/**
+	 * @return icon font class or icon image url
+	 */
 	private String getIconFile() {
 		if (ThemeManager.isUseFontIconForImage())
-			return "z-icon-Window";
+			return Icon.getIconSclass(Icon.WINDOW);
 		else
 			return "images/mWindow.png";
 	}
@@ -310,13 +338,14 @@ public class DPRecentItems extends DashboardPanel implements EventListener<Event
 	@Override
 	public void updateUI() {
 		refresh();
-		bxRecentItems.invalidate();
+		if (bxRecentItems != null)
+			bxRecentItems.invalidate();
 		updateDesktopReference();
 		
 	}
 
 	/**
-	 * 
+	 * Update {@link #desktop} reference and setup {@link #listener}
 	 */
 	protected void updateDesktopReference() {
 		if ((desktop == null || desktop.get() == null) || (desktop.get() != null && desktop.get() != getDesktop())) {
@@ -324,7 +353,8 @@ public class DPRecentItems extends DashboardPanel implements EventListener<Event
 				desktop.get().removeListener(listener);
 			
 			desktop = new WeakReference<Desktop>(getDesktop());
-			desktop.get().addListener(listener);
+			if (desktop != null && desktop.get() != null)
+				desktop.get().addListener(listener);
 		}
 	}
 
@@ -363,7 +393,19 @@ public class DPRecentItems extends DashboardPanel implements EventListener<Event
 		cleanup();
 	}
 	
+	@Override
+	public boolean isLazy() {
+		return true;
+	}
+
+	/**
+	 * {@link ITopicSubscriber} for "onRecentItemChanged" topic. <br/>
+	 * Call {@link MRecentItem#postOnChangedEvent(int)}.
+	 */
 	static class TopicSubscriber implements ITopicSubscriber<Integer> {
+		/**
+		 * @param message AD_User_ID
+		 */
 		@Override
 		public void onMessage(Integer message) {
 			MRecentItem.postOnChangedEvent(message);

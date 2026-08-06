@@ -24,15 +24,16 @@ import org.compiere.model.*;
 import org.compiere.util.KeyNamePair;
 
 /** Generated Model for HR_ListVersion
- *  @author iDempiere (generated) 
- *  @version Release 8.2 - $Id$ */
-public class X_HR_ListVersion extends PO implements I_HR_ListVersion, I_Persistent 
+ *  @author iDempiere (generated)
+ *  @version Release 13 - $Id$ */
+@org.adempiere.base.Model(table="HR_ListVersion")
+public class X_HR_ListVersion extends PO implements I_HR_ListVersion, I_Persistent
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20201220L;
+	private static final long serialVersionUID = 20260309L;
 
     /** Standard Constructor */
     public X_HR_ListVersion (Properties ctx, int HR_ListVersion_ID, String trxName)
@@ -40,8 +41,50 @@ public class X_HR_ListVersion extends PO implements I_HR_ListVersion, I_Persiste
       super (ctx, HR_ListVersion_ID, trxName);
       /** if (HR_ListVersion_ID == 0)
         {
-			setHR_List_ID (0);
 			setHR_ListVersion_ID (0);
+			setHR_List_ID (0);
+			setName (null);
+			setValidFrom (new Timestamp( System.currentTimeMillis() ));
+			setValidTo (new Timestamp( System.currentTimeMillis() ));
+        } */
+    }
+
+    /** Standard Constructor */
+    public X_HR_ListVersion (Properties ctx, int HR_ListVersion_ID, String trxName, String ... virtualColumns)
+    {
+      super (ctx, HR_ListVersion_ID, trxName, virtualColumns);
+      /** if (HR_ListVersion_ID == 0)
+        {
+			setHR_ListVersion_ID (0);
+			setHR_List_ID (0);
+			setName (null);
+			setValidFrom (new Timestamp( System.currentTimeMillis() ));
+			setValidTo (new Timestamp( System.currentTimeMillis() ));
+        } */
+    }
+
+    /** Standard Constructor */
+    public X_HR_ListVersion (Properties ctx, String HR_ListVersion_UU, String trxName)
+    {
+      super (ctx, HR_ListVersion_UU, trxName);
+      /** if (HR_ListVersion_UU == null)
+        {
+			setHR_ListVersion_ID (0);
+			setHR_List_ID (0);
+			setName (null);
+			setValidFrom (new Timestamp( System.currentTimeMillis() ));
+			setValidTo (new Timestamp( System.currentTimeMillis() ));
+        } */
+    }
+
+    /** Standard Constructor */
+    public X_HR_ListVersion (Properties ctx, String HR_ListVersion_UU, String trxName, String ... virtualColumns)
+    {
+      super (ctx, HR_ListVersion_UU, trxName, virtualColumns);
+      /** if (HR_ListVersion_UU == null)
+        {
+			setHR_ListVersion_ID (0);
+			setHR_List_ID (0);
 			setName (null);
 			setValidFrom (new Timestamp( System.currentTimeMillis() ));
 			setValidTo (new Timestamp( System.currentTimeMillis() ));
@@ -55,7 +98,7 @@ public class X_HR_ListVersion extends PO implements I_HR_ListVersion, I_Persiste
     }
 
     /** AccessLevel
-      * @return 3 - Client - Org 
+      * @return 3 - Client - Org
       */
     protected int get_AccessLevel()
     {
@@ -77,9 +120,8 @@ public class X_HR_ListVersion extends PO implements I_HR_ListVersion, I_Persiste
     }
 
 	/** Set Description.
-		@param Description 
-		Optional short description of the record
-	  */
+		@param Description Optional short description of the record
+	*/
 	public void setDescription (String Description)
 	{
 		set_Value (COLUMNNAME_Description, Description);
@@ -88,29 +130,32 @@ public class X_HR_ListVersion extends PO implements I_HR_ListVersion, I_Persiste
 	/** Get Description.
 		@return Optional short description of the record
 	  */
-	public String getDescription () 
+	public String getDescription()
 	{
 		return (String)get_Value(COLUMNNAME_Description);
 	}
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.eevolution.model.I_HR_List getHR_ListBase() throws RuntimeException
-    {
-		return (org.eevolution.model.I_HR_List)MTable.get(getCtx(), org.eevolution.model.I_HR_List.Table_Name)
-			.getPO(getHR_ListBase_ID(), get_TrxName());	}
+	{
+		return (org.eevolution.model.I_HR_List)MTable.get(getCtx(), org.eevolution.model.I_HR_List.Table_ID)
+			.getPO(getHR_ListBase_ID(), get_TrxName());
+	}
 
 	/** Set Payroll List Base.
-		@param HR_ListBase_ID Payroll List Base	  */
+		@param HR_ListBase_ID Payroll List Base
+	*/
 	public void setHR_ListBase_ID (int HR_ListBase_ID)
 	{
-		if (HR_ListBase_ID < 1) 
+		if (HR_ListBase_ID < 1)
 			set_Value (COLUMNNAME_HR_ListBase_ID, null);
-		else 
+		else
 			set_Value (COLUMNNAME_HR_ListBase_ID, Integer.valueOf(HR_ListBase_ID));
 	}
 
 	/** Get Payroll List Base.
 		@return Payroll List Base	  */
-	public int getHR_ListBase_ID () 
+	public int getHR_ListBase_ID()
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_HR_ListBase_ID);
 		if (ii == null)
@@ -118,44 +163,20 @@ public class X_HR_ListVersion extends PO implements I_HR_ListVersion, I_Persiste
 		return ii.intValue();
 	}
 
-	public org.eevolution.model.I_HR_List getHR_List() throws RuntimeException
-    {
-		return (org.eevolution.model.I_HR_List)MTable.get(getCtx(), org.eevolution.model.I_HR_List.Table_Name)
-			.getPO(getHR_List_ID(), get_TrxName());	}
-
-	/** Set Payroll List.
-		@param HR_List_ID Payroll List	  */
-	public void setHR_List_ID (int HR_List_ID)
-	{
-		if (HR_List_ID < 1) 
-			set_ValueNoCheck (COLUMNNAME_HR_List_ID, null);
-		else 
-			set_ValueNoCheck (COLUMNNAME_HR_List_ID, Integer.valueOf(HR_List_ID));
-	}
-
-	/** Get Payroll List.
-		@return Payroll List	  */
-	public int getHR_List_ID () 
-	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_HR_List_ID);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
-	}
-
 	/** Set Payroll List Version.
-		@param HR_ListVersion_ID Payroll List Version	  */
+		@param HR_ListVersion_ID Payroll List Version
+	*/
 	public void setHR_ListVersion_ID (int HR_ListVersion_ID)
 	{
-		if (HR_ListVersion_ID < 1) 
+		if (HR_ListVersion_ID < 1)
 			set_ValueNoCheck (COLUMNNAME_HR_ListVersion_ID, null);
-		else 
+		else
 			set_ValueNoCheck (COLUMNNAME_HR_ListVersion_ID, Integer.valueOf(HR_ListVersion_ID));
 	}
 
 	/** Get Payroll List Version.
 		@return Payroll List Version	  */
-	public int getHR_ListVersion_ID () 
+	public int getHR_ListVersion_ID()
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_HR_ListVersion_ID);
 		if (ii == null)
@@ -164,7 +185,8 @@ public class X_HR_ListVersion extends PO implements I_HR_ListVersion, I_Persiste
 	}
 
 	/** Set HR_ListVersion_UU.
-		@param HR_ListVersion_UU HR_ListVersion_UU	  */
+		@param HR_ListVersion_UU HR_ListVersion_UU
+	*/
 	public void setHR_ListVersion_UU (String HR_ListVersion_UU)
 	{
 		set_Value (COLUMNNAME_HR_ListVersion_UU, HR_ListVersion_UU);
@@ -172,15 +194,42 @@ public class X_HR_ListVersion extends PO implements I_HR_ListVersion, I_Persiste
 
 	/** Get HR_ListVersion_UU.
 		@return HR_ListVersion_UU	  */
-	public String getHR_ListVersion_UU () 
+	public String getHR_ListVersion_UU()
 	{
 		return (String)get_Value(COLUMNNAME_HR_ListVersion_UU);
 	}
 
+	@Deprecated(since="13") // use better methods with cache
+	public org.eevolution.model.I_HR_List getHR_List() throws RuntimeException
+	{
+		return (org.eevolution.model.I_HR_List)MTable.get(getCtx(), org.eevolution.model.I_HR_List.Table_ID)
+			.getPO(getHR_List_ID(), get_TrxName());
+	}
+
+	/** Set Payroll List.
+		@param HR_List_ID Payroll List
+	*/
+	public void setHR_List_ID (int HR_List_ID)
+	{
+		if (HR_List_ID < 1)
+			set_ValueNoCheck (COLUMNNAME_HR_List_ID, null);
+		else
+			set_ValueNoCheck (COLUMNNAME_HR_List_ID, Integer.valueOf(HR_List_ID));
+	}
+
+	/** Get Payroll List.
+		@return Payroll List	  */
+	public int getHR_List_ID()
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_HR_List_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
 	/** Set Name.
-		@param Name 
-		Alphanumeric identifier of the entity
-	  */
+		@param Name Alphanumeric identifier of the entity
+	*/
 	public void setName (String Name)
 	{
 		set_Value (COLUMNNAME_Name, Name);
@@ -189,7 +238,7 @@ public class X_HR_ListVersion extends PO implements I_HR_ListVersion, I_Persiste
 	/** Get Name.
 		@return Alphanumeric identifier of the entity
 	  */
-	public String getName () 
+	public String getName()
 	{
 		return (String)get_Value(COLUMNNAME_Name);
 	}
@@ -197,15 +246,14 @@ public class X_HR_ListVersion extends PO implements I_HR_ListVersion, I_Persiste
     /** Get Record ID/ColumnName
         @return ID/ColumnName pair
       */
-    public KeyNamePair getKeyNamePair() 
+    public KeyNamePair getKeyNamePair()
     {
         return new KeyNamePair(get_ID(), getName());
     }
 
 	/** Set Valid from.
-		@param ValidFrom 
-		Valid from including this date (first day)
-	  */
+		@param ValidFrom Valid from including this date (first day)
+	*/
 	public void setValidFrom (Timestamp ValidFrom)
 	{
 		set_Value (COLUMNNAME_ValidFrom, ValidFrom);
@@ -214,15 +262,14 @@ public class X_HR_ListVersion extends PO implements I_HR_ListVersion, I_Persiste
 	/** Get Valid from.
 		@return Valid from including this date (first day)
 	  */
-	public Timestamp getValidFrom () 
+	public Timestamp getValidFrom()
 	{
 		return (Timestamp)get_Value(COLUMNNAME_ValidFrom);
 	}
 
 	/** Set Valid to.
-		@param ValidTo 
-		Valid to including this date (last day)
-	  */
+		@param ValidTo Valid to including this date (last day)
+	*/
 	public void setValidTo (Timestamp ValidTo)
 	{
 		set_Value (COLUMNNAME_ValidTo, ValidTo);
@@ -231,7 +278,7 @@ public class X_HR_ListVersion extends PO implements I_HR_ListVersion, I_Persiste
 	/** Get Valid to.
 		@return Valid to including this date (last day)
 	  */
-	public Timestamp getValidTo () 
+	public Timestamp getValidTo()
 	{
 		return (Timestamp)get_Value(COLUMNNAME_ValidTo);
 	}

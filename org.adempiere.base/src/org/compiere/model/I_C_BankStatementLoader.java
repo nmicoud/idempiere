@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for C_BankStatementLoader
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_C_BankStatementLoader 
 {
@@ -41,6 +41,27 @@ public interface I_C_BankStatementLoader
 
     /** Load Meta Data */
 
+    /** Column name AD_Client_ID */
+    public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
+
+	/** Get Tenant.
+	  * Tenant for this installation.
+	  */
+	public int getAD_Client_ID();
+
+    /** Column name AD_Org_ID */
+    public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
+
+	/** Set Organization.
+	  * Organizational entity within tenant
+	  */
+	public void setAD_Org_ID (int AD_Org_ID);
+
+	/** Get Organization.
+	  * Organizational entity within tenant
+	  */
+	public int getAD_Org_ID();
+
     /** Column name AccountNo */
     public static final String COLUMNNAME_AccountNo = "AccountNo";
 
@@ -53,27 +74,6 @@ public interface I_C_BankStatementLoader
 	  * Account Number
 	  */
 	public String getAccountNo();
-
-    /** Column name AD_Client_ID */
-    public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
-
-	/** Get Client.
-	  * Client/Tenant for this installation.
-	  */
-	public int getAD_Client_ID();
-
-    /** Column name AD_Org_ID */
-    public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
-
-	/** Set Organization.
-	  * Organizational entity within client
-	  */
-	public void setAD_Org_ID (int AD_Org_ID);
-
-	/** Get Organization.
-	  * Organizational entity within client
-	  */
-	public int getAD_Org_ID();
 
     /** Column name BranchID */
     public static final String COLUMNNAME_BranchID = "BranchID";
@@ -101,6 +101,7 @@ public interface I_C_BankStatementLoader
 	  */
 	public int getC_BankAccount_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_BankAccount getC_BankAccount() throws RuntimeException;
 
     /** Column name C_BankStatementLoader_ID */
@@ -157,12 +158,12 @@ public interface I_C_BankStatementLoader
     /** Column name DateLastRun */
     public static final String COLUMNNAME_DateLastRun = "DateLastRun";
 
-	/** Set Date last run.
+	/** Set Date Last Run.
 	  * Date the process was last run.
 	  */
 	public void setDateLastRun (Timestamp DateLastRun);
 
-	/** Get Date last run.
+	/** Get Date Last Run.
 	  * Date the process was last run.
 	  */
 	public Timestamp getDateLastRun();
@@ -258,19 +259,6 @@ public interface I_C_BankStatementLoader
 	  */
 	public String getName();
 
-    /** Column name Password */
-    public static final String COLUMNNAME_Password = "Password";
-
-	/** Set Password.
-	  * Password of any length (case sensitive)
-	  */
-	public void setPassword (String Password);
-
-	/** Get Password.
-	  * Password of any length (case sensitive)
-	  */
-	public String getPassword();
-
     /** Column name PIN */
     public static final String COLUMNNAME_PIN = "PIN";
 
@@ -283,6 +271,19 @@ public interface I_C_BankStatementLoader
 	  * Personal Identification Number
 	  */
 	public String getPIN();
+
+    /** Column name Password */
+    public static final String COLUMNNAME_Password = "Password";
+
+	/** Set Password.
+	  * Password of any length (case sensitive)
+	  */
+	public void setPassword (String Password);
+
+	/** Get Password.
+	  * Password of any length (case sensitive)
+	  */
+	public String getPassword();
 
     /** Column name ProxyAddress */
     public static final String COLUMNNAME_ProxyAddress = "ProxyAddress";

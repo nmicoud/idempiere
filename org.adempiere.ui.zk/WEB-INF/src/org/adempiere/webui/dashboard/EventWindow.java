@@ -13,6 +13,7 @@
  *****************************************************************************/
 package org.adempiere.webui.dashboard;
 
+import java.util.Date;
 import java.util.Properties;
 
 import org.adempiere.webui.apps.AEnv;
@@ -39,14 +40,12 @@ import org.zkoss.zul.Center;
 import org.zkoss.zul.South;
 
 /**
- * 
+ * Window for Request Event 
  * @author Elaine
- *
  */
 public class EventWindow extends Window implements EventListener<Event> {
-
 	/**
-	 * 
+	 * generated serial id
 	 */
 	private static final long serialVersionUID = 4758066526040260586L;
 	private DatetimeBox dtBeginDate, dtEndDate;
@@ -55,6 +54,9 @@ public class EventWindow extends Window implements EventListener<Event> {
 	
 	private int R_Request_ID = 0;
 	
+	/**
+	 * Default constructor
+	 */
 	public EventWindow() {
 		
 		super();
@@ -94,8 +96,7 @@ public class EventWindow extends Window implements EventListener<Event> {
 		
 		confirmPanel = new ConfirmPanel(false, false, false, false, false, true);
 		confirmPanel.addActionListener(this);
-		
-		
+				
 		Grid grid = GridFactory.newGridLayout();
 		
 		Columns columns = new Columns();
@@ -150,24 +151,29 @@ public class EventWindow extends Window implements EventListener<Event> {
 		south.appendChild(confirmPanel);
 	}
 	
+	/**
+	 * Update UI component with details from event
+	 * @param event {@link ADCalendarEvent}
+	 */
 	public void setData(ADCalendarEvent event) {
-		txtHeaderColor.setStyle("background-color: " + event.getHeaderColor());
-		txtContentColor.setStyle("background-color: " + event.getContentColor());
-		
-		dtBeginDate.setValue(event.getBeginDate());
-		dtEndDate.setValue(event.getEndDate());
+		txtHeaderColor.setStyle(event.getHeaderStyle());
+		txtContentColor.setStyle(event.getContentStyle());
+
+		dtBeginDate.setValue(event.getBegin() != null ? Date.from(event.getBegin()) : null);
+		dtEndDate.setValue(event.getEnd() != null ? Date.from(event.getEnd()) : null);
 		txtContent.setText(event.getContent());
 		
 		R_Request_ID = event.getR_Request_ID();
 		confirmPanel.getButton(ConfirmPanel.A_ZOOM).setEnabled(R_Request_ID > 0);
 	}
 	
+	@Override
 	public void onEvent(Event e) throws Exception {
 		if (e.getTarget() == confirmPanel.getButton(ConfirmPanel.A_OK))
 			setVisible(false);
 		else if (e.getTarget() == confirmPanel.getButton(ConfirmPanel.A_ZOOM)) {
 			if (R_Request_ID > 0)
-				AEnv.zoom(417, R_Request_ID);
+				AEnv.zoom(MRequest.Table_ID, R_Request_ID);
 		}
 	}
 }

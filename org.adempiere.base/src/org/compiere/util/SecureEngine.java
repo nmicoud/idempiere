@@ -17,27 +17,39 @@
 package org.compiere.util;
 
 import java.io.UnsupportedEncodingException;
+import java.security.DrbgParameters;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.SecureRandom;
+import java.security.spec.InvalidKeySpecException;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.adempiere.base.GeneratedCodeCoverageExclusion;
+import org.adempiere.base.IServiceHolder;
+import org.adempiere.base.Service;
+import org.adempiere.base.ServiceQuery;
+import org.compiere.model.SystemProperties;
+import org.osgi.framework.Constants;
+
 /**
- * 	Security Engine
+ *  Secure engine for encryption and decryption
  *	
  *  @author Jorg Janke
  *  @version $Id: SecureEngine.java,v 1.2 2006/07/30 00:52:23 jjanke Exp $
  */
 public class SecureEngine
 {
+	public static final String DEFAULT_SECURE_RANDOM_ALGORITHM = "DRBG";
 	/**
-	 * 	Initialize Security
-	 *	@param ctx context with ADEMPIERE_SECURE class name
+	 * 	Initialize SecureEngine with ADEMPIERE_SECURE class
+	 *	@param ctx ignore
 	 */
 	public static void init (Properties ctx)
 	{
 		if (s_engine == null)
 		{
-			String className = ctx.getProperty(SecureInterface.ADEMPIERE_SECURE);
+			String className = SystemProperties.getAdempiereSecure();
 			s_engine = new SecureEngine(className);
 		}
 	}	//	init
@@ -73,13 +85,15 @@ public class SecureEngine
 	}	//	getClassName
 	
 	/**
-	 *  Convert String and salt to SHA-512 hash with iterations
+	 *  Convert String and salt to SHA-512 hash with iterations<br/>
 	 *  https://www.owasp.org/index.php/Hashing_Java
 	 *
+	 *  @param iterations number of iterations
 	 *  @param value message
+	 *  @param salt salt
 	 *  @return HexString of message (length = 128 characters)
-	 * @throws UnsupportedEncodingException 
-	 * @throws NoSuchAlgorithmException 
+	 *  @throws UnsupportedEncodingException 
+	 *  @throws NoSuchAlgorithmException 
 	 */
 	public static String getSHA512Hash (int iterations, String value, byte[] salt) throws NoSuchAlgorithmException, UnsupportedEncodingException
 	{
@@ -87,14 +101,47 @@ public class SecureEngine
 			init(System.getProperties());
 		return s_engine.implementation.getSHA512Hash(iterations, value, salt);
 	}	//	getDigest	
+
+	/**
+	 * Hash the password with the given salt and algorithm
+	 * @param algorithm
+	 * @param value
+	 * @param salt
+	 * @return HexString of hashed password
+	 * @throws NoSuchAlgorithmException
+	 * @throws UnsupportedEncodingException
+	 * @throws NoSuchProviderException
+	 * @throws InvalidKeySpecException
+	 */
+	public static String getPasswordHash(String algorithm, String value, byte[] salt) throws NoSuchAlgorithmException, 
+		UnsupportedEncodingException, NoSuchProviderException, InvalidKeySpecException
+	{
+		if (s_engine == null)
+			init(System.getProperties());
+		return s_engine.implementation.getPasswordHash(value, salt, algorithm);
+	}	//	getHash
 	
 	/**
-	 *  Convert String to Digest.
+	 * Check if the given password hash algorithm is supported
+	 * @param hashAlgorithm
+	 * @return true if supported, false otherwise
+	 */
+	public static boolean isSupportedPaswordHashAlgorithm(String hashAlgorithm) {
+		if (s_engine == null)
+			init(System.getProperties());
+		return s_engine.implementation.isSupportedPaswordHashAlgorithm(hashAlgorithm);
+	}
+	
+	/**
+	 *  Perform MD5 Digest of value.<br/>
 	 *  JavaScript version see - http://pajhome.org.uk/crypt/md5/index.html
 	 *
 	 *  @param value message
-	 *  @return HexString of message (length = 32 characters)
+	 *  @return HexString of digested message (length = 32 characters)
 	 */
+	@Deprecated (since="13", forRemoval=true)
+	@SuppressWarnings("removal")
+	@GeneratedCodeCoverageExclusion
 	public static String getDigest (String value)
 	{
 		if (s_engine == null)
@@ -103,7 +150,19 @@ public class SecureEngine
 	}	//	getDigest
 	
 	/**
-	 *	Encryption.
+	 * Perform SHA-256 Digest of value.
+	 * @param value
+	 * @return HexString of digested message (length = 64 characters)
+	 */
+	public static String getSHA256Digest (String value)
+	{
+		if (s_engine == null)
+			init(System.getProperties());
+		return s_engine.implementation.getSHA256Digest(value);
+	}	//	getSHA256Digest
+	
+	/**
+	 *	Encryption.<br/>
 	 * 	The methods must recognize clear text values
 	 *  @param value clear value
 	 *  @param AD_Client_ID
@@ -125,10 +184,9 @@ public class SecureEngine
 			return "'" + retValue + "'";
 		return retValue;
 	}	//	encrypt
-
 	
 	/**
-	 *	Decryption.
+	 *	Decryption.<br/>
 	 * 	The methods must recognize clear text values
 	 *  @param value encrypted value
 	 *  @param AD_Client_ID
@@ -154,8 +212,7 @@ public class SecureEngine
 	}	//	decrypt
 	
 	/**
-	 *	Encryption.
-	 * 	The methods must recognize clear values
+	 *	Encrypt value (only implemented for String).
 	 *  @param value clear value
 	 *  @param AD_Client_ID
 	 *  @return encrypted String
@@ -168,8 +225,7 @@ public class SecureEngine
 	}	//	encrypt
 
 	/**
-	 *	Decryption.
-	 * 	The methods must recognize clear values
+	 *	Decrypt value (only implemented for String)
 	 *  @param value encrypted value
 	 *  @return decrypted String
 	 */
@@ -189,22 +245,41 @@ public class SecureEngine
 		String realClass = className;
 		if (realClass == null || realClass.length() == 0)
 			realClass = SecureInterface.ADEMPIERE_SECURE_DEFAULT;
+		
+		//try OSGi first
+		if (!SecureInterface.ADEMPIERE_SECURE_DEFAULT.equals(realClass)) 
+		{
+			ServiceQuery serviceQuery = new ServiceQuery();
+			serviceQuery.put(Constants.OBJECTCLASS, className);
+			IServiceHolder<SecureInterface> holder = Service.locator().locate(SecureInterface.class, serviceQuery);
+			if (holder != null) 
+			{
+				implementation = holder.getService();
+			}
+		}
+		
 		Exception cause = null;
-		try
-		{
-			Class<?> clazz = Class.forName(realClass);
-			implementation = (SecureInterface)clazz.getDeclaredConstructor().newInstance();
+		if (implementation == null)
+		{			
+			//fallback to Class.forName
+			try
+			{
+				Class<?> clazz = Class.forName(realClass);
+				implementation = (SecureInterface)clazz.getDeclaredConstructor().newInstance();
+			}
+			catch (Exception e)
+			{
+				cause = e;
+			}
 		}
-		catch (Exception e)
-		{
-			cause = e;
-		}
+		
 		if (implementation == null)
 		{
 			String msg = "Could not initialize: " + realClass + " - " + cause.toString()
 				+ "\nCheck start script parameter ADEMPIERE_SECURE"; 
 			log.severe(msg);
 			System.err.println(msg);
+			cause.printStackTrace();
 			System.exit(10);
 		}
 		//	See if it works
@@ -218,15 +293,28 @@ public class SecureEngine
 	}	//	SecureEngine
 
 	/**
-	 * use salt in hex form and text hashed compare with plan text
-	 * when has exception in hash, log to server
+	 * Use salt in hex form and text hashed compare with plan text.<br/>
+	 * If has exception in hash, log to server.
 	 * @param hashedText
 	 * @param hexSalt
 	 * @param planText
-	 * @param log
-	 * @return
+	 * @return true if valid
 	 */
-	public static boolean isMatchHash (String hashedText, String hexSalt, String planText){
+	@Deprecated (since="13", forRemoval=true)
+	public static boolean isMatchHash (String hashedText, String hexSalt, String planText) {
+		return isMatchHash(Secure.LEGACY_PASSWORD_HASH_ALGORITHM, hashedText, hexSalt, planText);
+	}
+	
+	/**
+	 * Use salt in hex form and text hashed compare with plan text.<br/>
+	 * If has exception in hash, log to server.
+	 * @param algorithm
+	 * @param hashedText
+	 * @param hexSalt
+	 * @param plainText
+	 * @return true if valid
+	 */
+	public static boolean isMatchHash (String algorithm, String hashedText, String hexSalt, String plainText){
 		boolean valid=false;
 
 		// always do calculation to prevent timing based attacks
@@ -236,14 +324,38 @@ public class SecureEngine
 			hexSalt = "0000000000000000";
 
 		try {
-			valid= SecureEngine.getSHA512Hash(1000, planText, Secure.convertHexString(hexSalt)).equals(hashedText);
-		} catch (NoSuchAlgorithmException ignored) {
-			log.log(Level.WARNING, "Password hashing not supported by JVM");
-		} catch (UnsupportedEncodingException ignored) {
+			String calculatedHash = SecureEngine.getPasswordHash(algorithm, plainText, Secure.convertHexString(hexSalt));
+			valid= calculatedHash.equals(hashedText);
+		} catch (NoSuchAlgorithmException | UnsupportedEncodingException | NoSuchProviderException | InvalidKeySpecException ignored) {
 			log.log(Level.WARNING, "Password hashing not supported by JVM");
 		}
 				
 	 	return valid;
+	}
+	
+	/**
+	 * Get a SecureRandom instance
+	 * @return SecureRandom instance
+	 * @throws NoSuchAlgorithmException
+	 */
+	public static SecureRandom getSecureRandom() throws NoSuchAlgorithmException {
+		try {
+			SecureRandom random = SecureRandom.getInstance(DEFAULT_SECURE_RANDOM_ALGORITHM,
+				    DrbgParameters.instantiation(256, // security strength
+				    DrbgParameters.Capability.PR_AND_RESEED, // prediction resistance
+				    null));
+			return random;
+		} catch (NoSuchAlgorithmException e) {
+			if (log.isLoggable(Level.INFO))
+				log.info(DEFAULT_SECURE_RANDOM_ALGORITHM + " SecureRandom not available, falling back to platform default strong SecureRandom");
+			try {
+				return SecureRandom.getInstanceStrong();
+			} catch (NoSuchAlgorithmException e2) {
+				if (log.isLoggable(Level.WARNING))
+					log.warning("Strong SecureRandom not available, falling back to default SecureRandom");
+				return new SecureRandom();
+			}
+		}
 	}
 	
 	/** Test String					*/
@@ -254,115 +366,6 @@ public class SecureEngine
 	/** The real Engine				*/
 	private	SecureInterface		implementation = null;
 	/**	Logger						*/
-	private static CLogger		log	= CLogger.getCLogger (SecureEngine.class.getName());
-	
-	
-	/**
-	 * 	Test output
-	 *	@param test test value
-	 *	@param should target value
-	 *	@return info
-	 */
-	private static String test (Object test, Object should)
-	{
-		StringBuilder sb = new StringBuilder ();
-		sb.append(test);
-		if (test == null)
-		{
-			if (should == null)
-				sb.append(" - ok");
-			else
-				sb.append(" [Should=").append(should).append("] - ERROR");
-		}
-		else
-		{
-			if (test.equals(should))
-				sb.append(" - ok");
-			else
-				sb.append(" [Should=").append(should).append("] - ERROR");
-		}
-		return sb.toString();
-	}	//	test
-	
-	/**************************************************************************
-	 * 	main
-	 *	@param args
-	 */
-	public static void main (String[] args)
-	{
-		init (System.getProperties());
-		//	Ini Test
-		//String ini1 = SecureInterface.CLEARVALUE_START + "test" + SecureInterface.CLEARVALUE_END;
-		if (log.isLoggable(Level.INFO)) {
-			/**
-			log.info("Decrypt clear test   =" + test(decrypt(ini1), "test"));
-			log.info("Decrypt clear 'test' =" + test(decrypt("'" + ini1 + "'"), "'test'"));
-			log.info("Decrypt ''   =" + test(decrypt("''"), "''"));
-			log.info("Decrypt      =" + test(decrypt(""), ""));
-			log.info("Decrypt null =" + test(decrypt(null), null));
-			log.info("Decrypt test =" + test(decrypt("test"), "test"));
-			**/
-			log.info("Decrypt {test} =" + test(decrypt("af2309f390afed74", 0), "test"));
-			log.info("Decrypt ~{test}~ =" + test(decrypt(SecureInterface.ENCRYPTEDVALUE_START + "af2309f390afed74" + SecureInterface.ENCRYPTEDVALUE_END, 0), "test"));
+	private static CLogger		log	= CLogger.getCLogger (SecureEngine.class.getName());	
 			
-			log.info("Encrypt test =" + test(encrypt("test", 0), "af2309f390afed74"));
-		}
-		
-		
-		
-		/**
-		
-		String[] testString = new String[] {"This is a test!", "",
-			"This is a verly long test string 1624$%"};
-		String[] digestResult = new String[] {
-			"702edca0b2181c15d457eacac39de39b",
-			"d41d8cd98f00b204e9800998ecf8427e",
-			"934e7c5c6f5508ff50bc425770a10f45"};
-		for (int i = 0; i < testString.length; i++)
-		{
-			String digestString = getDigest (testString[i]);
-			if (digestResult[i].equals (digestString))
-				log.info ("OK - digest");
-			else
-				log
-					.severe ("Digest=" + digestString + " <> "
-						+ digestResult[i]);
-		}
-		log.info ("IsDigest true=" + isDigest (digestResult[0]));
-		log.info ("IsDigest false="
-			+ isDigest ("702edca0b2181c15d457eacac39DE39J"));
-		log.info ("IsDigest false=" + isDigest ("702e"));
-		//	-----------------------------------------------------------------------
-		//	log.info(convertToHexString(new byte[]{Byte.MIN_VALUE, -1, 1, Byte.MAX_VALUE} ));
-		//
-		String in = "4115da655707807F00FF";
-		byte[] bb = convertHexString (in);
-		String out = convertToHexString (bb);
-		if (in.equalsIgnoreCase (out))
-			log.info ("OK - conversion");
-		else
-			log.severe ("Conversion Error " + in + " <> " + out);
-		//	-----------------------------------------------------------------------
-		String test = "This is a test!!";
-		String result = "28bd14203bcefba1c5eaef976e44f1746dc2facaa9e0623c";
-		//
-		String test_1 = decrypt (result);
-		if (test.equals (test_1))
-			log.info ("OK - dec_1");
-		else
-			log.info ("TestDec=" + test_1 + " <> " + test);
-		//	-----------------------------------------------------------------------
-		String testEnc = encrypt (test);
-		if (result.equals (testEnc))
-			log.info ("OK - enc");
-		else
-			log.severe ("TestEnc=" + testEnc + " <> " + result);
-		String testDec = decrypt (testEnc);
-		if (test.equals (testDec))
-			log.info ("OK - dec");
-		else
-			log.info ("TestDec=" + testDec + " <> " + test);
-		**/
-	} //	main
-	
 }	//	SecureEngine

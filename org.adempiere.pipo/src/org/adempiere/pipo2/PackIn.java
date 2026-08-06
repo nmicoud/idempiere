@@ -128,11 +128,14 @@ public class PackIn {
 		File in = new File(fileName);
 		if (!in.exists()) {
 			String msg = "File does not exist: " + fileName;
-			if (log.isLoggable(Level.INFO)) log.info("importXML:" + msg);
-			return msg;
+			if (log.isLoggable(Level.SEVERE)) log.info("importXML:" + msg);
+			throw new AdempiereException(msg);
 		}
-		try {
-			FileInputStream input = new FileInputStream(in);
+		try (FileInputStream input = new FileInputStream(in)) {
+			if (fileName.endsWith(".json"))
+				return importDataPack(input, ctx, trxName, "json");
+			if (fileName.endsWith(".yaml") || fileName.endsWith(".yml"))
+				return importDataPack(input, ctx, trxName, "yaml");
 			return importXML(input, ctx, trxName);
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "importXML:", e);
@@ -185,6 +188,47 @@ public class PackIn {
 			return msg;
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "importXML:", e);
+			throw new RuntimeException(e.getLocalizedMessage(), e);
+		}
+	}
+
+	/**
+	 * Import a 2Pack from a JSON or YAML input stream by replaying synthetic SAX
+	 * events into the existing PackInHandler.
+	 * @param input stream of the JSON or YAML file
+	 * @param format "json" or "yaml"
+	 */
+	public String importDataPack(InputStream input, Properties ctx, String trxName, String format) {
+		try {
+			log.info("starting data pack import, format=" + format);
+			IDFinder.clearIDCache();
+			importDetails = new ArrayList<X_AD_Package_Imp_Detail>();
+
+			PackInHandler handler = new PackInHandler();
+			PIPOContext context = new PIPOContext();
+			context.trx = Trx.get(trxName, true);
+			context.packIn = this;
+			context.ctx = ctx;
+			context.ctx.setProperty("isHandleTranslations", MSysConfig.getValue(MSysConfig.TWOPACK_HANDLE_TRANSLATIONS));
+			handler.setCtx(context);
+			handler.setProcess(this);
+
+			DataPackInReader reader = new DataPackInReader(handler, format);
+			reader.read(input);
+
+			for (PO importDetail : importDetails) {
+				importDetail.saveEx();
+			}
+			String msg = "Processed=" + handler.getElementsProcessed()
+					+ " Un-Resolved=" + handler.getUnresolvedCount();
+			getNotifier().addStatusLine(msg);
+			if (handler.getUnresolvedCount() > 0) {
+				handler.dumpUnresolvedElements();
+				throw new AdempiereException("Unresolved elements");
+			}
+			return msg;
+		} catch (Exception e) {
+			log.log(Level.SEVERE, "importDataPack:", e);
 			throw new RuntimeException(e.getLocalizedMessage(), e);
 		}
 	}
@@ -243,26 +287,24 @@ public class PackIn {
 		Enumeration<?> e = zf.entries();
 		ArrayList<File> files = new ArrayList<File>();
 		File[] retValue = null;
-		try{
+		try (zf) {
 			while (e.hasMoreElements()) {
 				ZipEntry ze = (ZipEntry) e.nextElement();
 				File file = new File(m_packageDirectory, ze.getName());
 				if (!file.toPath().normalize().startsWith(m_packageDirectory)) {
 					throw new AdempiereException("Bad zip entry: " + ze.getName());
 				}
+				try (
 				FileOutputStream fout = new FileOutputStream(file);
 				InputStream in = zf.getInputStream(ze);
+				) {
 				for (int c = in.read(); c != -1; c = in.read()) {
 					fout.write(c);
-				}
-				in.close();
-				fout.close();
+				}}
 				files.add(file);
 			}
-			retValue = new File[files.size()];
+			retValue = new File[files.size()];	
 			files.toArray(retValue);
-		} finally {
-			zf.close();
 		}
 		return retValue;
 	}

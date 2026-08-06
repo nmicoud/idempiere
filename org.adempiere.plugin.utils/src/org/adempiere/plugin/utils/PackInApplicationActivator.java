@@ -29,15 +29,18 @@ import java.util.logging.Level;
 import org.adempiere.util.ServerContext;
 import org.compiere.Adempiere;
 import org.compiere.model.MClient;
+import org.compiere.model.MPackageImp;
 import org.compiere.model.MSession;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.Query;
 import org.compiere.model.ServerStateChangeEvent;
 import org.compiere.model.ServerStateChangeListener;
+import org.compiere.model.SystemIDs;
 import org.compiere.model.X_AD_Package_Imp;
 import org.compiere.model.X_AD_Package_Imp_Proc;
 import org.compiere.util.AdempiereSystemError;
 import org.compiere.util.CLogger;
+import org.compiere.util.CacheMgt;
 import org.compiere.util.Env;
 import org.compiere.util.Util;
 
@@ -96,11 +99,21 @@ public class PackInApplicationActivator extends AbstractActivator{
 			return;
 		}
 
+		boolean cacheReset = false;
+		MSession localSession = null;
 		try {
 			if (getDBLock()) {
 				//Create Session to be able to create records in AD_ChangeLog
-				if (Env.getContextAsInt(Env.getCtx(), "#AD_Session_ID") <= 0)
-					MSession.get(Env.getCtx(), true);
+				if (Env.getContextAsInt(Env.getCtx(), Env.AD_SESSION_ID) <= 0) {
+					localSession = MSession.get(Env.getCtx());
+					if(localSession == null) {
+						localSession = MSession.create(Env.getCtx());
+					} else {
+						localSession = new MSession(Env.getCtx(), localSession.getAD_Session_ID(), null);
+					}
+					localSession.setWebSession("PackInApplicationActivator");
+					localSession.saveEx();
+				}
 				for(File zipFile : fileArray) {
 					currentFile = zipFile;
 					if (!packIn(zipFile)) {
@@ -109,12 +122,13 @@ public class PackInApplicationActivator extends AbstractActivator{
 						addLog(Level.WARNING, msg);
 						if (getProcessInfo() != null) {
 							getProcessInfo().setError(true);
-							getProcessInfo().setSummary("@Error@: " + msg);
+							getProcessInfo().setSummary("@Error@ " + msg);
 						}
 						break;
 					}
 					addLog(Level.INFO, "Successful application of " + zipFile);
 					filesToProcess.remove(zipFile);
+					cacheReset = true;
 				}
 			} else {
 				addLog(Level.WARNING, "Could not acquire the DB lock to automatically install the packins");
@@ -125,8 +139,13 @@ public class PackInApplicationActivator extends AbstractActivator{
 			addLog(Level.WARNING, e.getLocalizedMessage());
 		} finally {
 			releaseLock();
+			if (localSession != null)
+				localSession.logout();
 		}
-		
+		logger.log(Level.INFO, "Cache Reset: " + cacheReset);
+		if (cacheReset)
+			CacheMgt.get().reset();
+
 		if (filesToProcess.size() > 0) {
 			StringBuilder pending = new StringBuilder("The following packages were not applied: ");
 			for (File file : filesToProcess) {
@@ -139,12 +158,14 @@ public class PackInApplicationActivator extends AbstractActivator{
 	private boolean packIn(File packinFile) {
 		if (packinFile != null) {
 			String fileName = packinFile.getName();
-			logger.warning("Installing " + fileName + " ...");
-
 			// The convention for package names is: yyyymmddHHMM_ClientValue_InformationalDescription.zip
 			String [] parts = fileName.split("_");
+			if (parts.length < 2) {
+				logger.warning("Wrong name, ignored " + fileName);
+				return false;
+			}
+			logger.warning("Installing " + fileName + " ...");
 			String clientValue = parts[1];
-			
 			boolean allClients = clientValue.startsWith("ALL-CLIENTS");
 			
 			int[] clientIDs;
@@ -155,7 +176,7 @@ public class PackInApplicationActivator extends AbstractActivator{
 					seedClientValue = clientValue.split("-")[2];
 					seedClientIDs = getClientIDs(seedClientValue);				
 					if (seedClientIDs.length == 0) {
-						logger.log(Level.WARNING, "Seed client does not exist: " + seedClientValue);
+						logger.log(Level.WARNING, "Seed tenant does not exist: " + seedClientValue);
 						return false;
 					}
 				}
@@ -177,7 +198,7 @@ public class PackInApplicationActivator extends AbstractActivator{
 			} else {
 				clientIDs = getClientIDs(clientValue);
 				if (clientIDs.length == 0) {
-					logger.log(Level.WARNING, "Client does not exist: " + clientValue);
+					logger.log(Level.WARNING, "Tenant does not exist: " + clientValue);
 					return false;
 				}
 			}
@@ -185,10 +206,12 @@ public class PackInApplicationActivator extends AbstractActivator{
 			for (int clientID : clientIDs) {
 				MClient client = MClient.get(Env.getCtx(), clientID);
 				if  (allClients) {
-					String message = "Installing " + fileName + " in client " + client.getValue() + "/" + client.getName();
+					String message = "Installing " + fileName + " in tenant " + client.getValue() + "/" + client.getName();
 					statusUpdate(message);
 				}
-				Env.setContext(Env.getCtx(), "#AD_Client_ID", client.getAD_Client_ID());
+				Env.setContext(Env.getCtx(), Env.AD_CLIENT_ID, client.getAD_Client_ID());
+				Env.setContext(Env.getCtx(), Env.AD_ROLE_ID, SystemIDs.ROLE_SYSTEM);
+				Env.setContext(Env.getCtx(), Env.AD_USER_ID, SystemIDs.USER_SYSTEM);
 				try {
 				    // call 2pack
 					if (service != null) {
@@ -204,7 +227,9 @@ public class PackInApplicationActivator extends AbstractActivator{
 					logger.log(Level.WARNING, "Pack in failed.", e);
 					return false;
 				} finally {
-					Env.setContext(Env.getCtx(), "#AD_Client_ID", 0);
+					Env.setContext(Env.getCtx(), Env.AD_CLIENT_ID, 0);
+					Env.setContext(Env.getCtx(), Env.AD_ROLE_ID, (String)null);
+					Env.setContext(Env.getCtx(), Env.AD_USER_ID, (String)null);
 				}
 				logger.warning(packinFile.getPath() + " installed");
 			}
@@ -220,7 +245,7 @@ public class PackInApplicationActivator extends AbstractActivator{
 				X_AD_Package_Imp pimp = new X_AD_Package_Imp(Env.getCtx(), 0, null);
 				pimp.setAD_Package_Imp_Proc_ID(pimpr.getAD_Package_Imp_Proc_ID());
 				pimp.setName(fileName);
-				pimp.setPK_Status("Completed successfully");
+				pimp.setPK_Status(MPackageImp.PACKAGE_STATUS_COMPLETED);
 				pimp.setDescription("This ALL-CLIENT 2Pack was applied successfully in all tenants");
 				pimp.setProcessed(true);
 				pimp.saveEx();
@@ -246,6 +271,7 @@ public class PackInApplicationActivator extends AbstractActivator{
 				continue;
 			}
 			
+			logger.warning("Processing " + filePath);
 			processFilePath(toProcess);
 		}
 		
@@ -335,14 +361,14 @@ public class PackInApplicationActivator extends AbstractActivator{
 	
 	protected void setupPackInContext() {
 		Properties serverContext = new Properties();
-		serverContext.setProperty("#AD_Client_ID", "0");
+		serverContext.setProperty(Env.AD_CLIENT_ID, "0");
 		ServerContext.setCurrentInstance(serverContext);
 	}
 
 	@Override
 	protected void frameworkStarted() {
 		if (service != null) {
-			if (Adempiere.getThreadPoolExecutor() != null) {
+			if (Adempiere.isStarted()) {
 				Adempiere.getThreadPoolExecutor().execute(new Runnable() {			
 					@Override
 					public void run() {

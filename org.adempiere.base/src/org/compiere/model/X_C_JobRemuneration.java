@@ -23,15 +23,16 @@ import java.util.Properties;
 import org.compiere.util.KeyNamePair;
 
 /** Generated Model for C_JobRemuneration
- *  @author iDempiere (generated) 
- *  @version Release 8.2 - $Id$ */
-public class X_C_JobRemuneration extends PO implements I_C_JobRemuneration, I_Persistent 
+ *  @author iDempiere (generated)
+ *  @version Release 13 - $Id$ */
+@org.adempiere.base.Model(table="C_JobRemuneration")
+public class X_C_JobRemuneration extends PO implements I_C_JobRemuneration, I_Persistent
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20201220L;
+	private static final long serialVersionUID = 20260309L;
 
     /** Standard Constructor */
     public X_C_JobRemuneration (Properties ctx, int C_JobRemuneration_ID, String trxName)
@@ -39,8 +40,47 @@ public class X_C_JobRemuneration extends PO implements I_C_JobRemuneration, I_Pe
       super (ctx, C_JobRemuneration_ID, trxName);
       /** if (C_JobRemuneration_ID == 0)
         {
-			setC_Job_ID (0);
 			setC_JobRemuneration_ID (0);
+			setC_Job_ID (0);
+			setC_Remuneration_ID (0);
+			setValidFrom (new Timestamp( System.currentTimeMillis() ));
+        } */
+    }
+
+    /** Standard Constructor */
+    public X_C_JobRemuneration (Properties ctx, int C_JobRemuneration_ID, String trxName, String ... virtualColumns)
+    {
+      super (ctx, C_JobRemuneration_ID, trxName, virtualColumns);
+      /** if (C_JobRemuneration_ID == 0)
+        {
+			setC_JobRemuneration_ID (0);
+			setC_Job_ID (0);
+			setC_Remuneration_ID (0);
+			setValidFrom (new Timestamp( System.currentTimeMillis() ));
+        } */
+    }
+
+    /** Standard Constructor */
+    public X_C_JobRemuneration (Properties ctx, String C_JobRemuneration_UU, String trxName)
+    {
+      super (ctx, C_JobRemuneration_UU, trxName);
+      /** if (C_JobRemuneration_UU == null)
+        {
+			setC_JobRemuneration_ID (0);
+			setC_Job_ID (0);
+			setC_Remuneration_ID (0);
+			setValidFrom (new Timestamp( System.currentTimeMillis() ));
+        } */
+    }
+
+    /** Standard Constructor */
+    public X_C_JobRemuneration (Properties ctx, String C_JobRemuneration_UU, String trxName, String ... virtualColumns)
+    {
+      super (ctx, C_JobRemuneration_UU, trxName, virtualColumns);
+      /** if (C_JobRemuneration_UU == null)
+        {
+			setC_JobRemuneration_ID (0);
+			setC_Job_ID (0);
 			setC_Remuneration_ID (0);
 			setValidFrom (new Timestamp( System.currentTimeMillis() ));
         } */
@@ -53,7 +93,7 @@ public class X_C_JobRemuneration extends PO implements I_C_JobRemuneration, I_Pe
     }
 
     /** AccessLevel
-      * @return 2 - Client 
+      * @return 2 - Client
       */
     protected int get_AccessLevel()
     {
@@ -74,27 +114,65 @@ public class X_C_JobRemuneration extends PO implements I_C_JobRemuneration, I_Pe
       return sb.toString();
     }
 
+	/** Set Position Remuneration.
+		@param C_JobRemuneration_ID Remuneration for the Position
+	*/
+	public void setC_JobRemuneration_ID (int C_JobRemuneration_ID)
+	{
+		if (C_JobRemuneration_ID < 1)
+			set_ValueNoCheck (COLUMNNAME_C_JobRemuneration_ID, null);
+		else
+			set_ValueNoCheck (COLUMNNAME_C_JobRemuneration_ID, Integer.valueOf(C_JobRemuneration_ID));
+	}
+
+	/** Get Position Remuneration.
+		@return Remuneration for the Position
+	  */
+	public int getC_JobRemuneration_ID()
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_C_JobRemuneration_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	/** Set C_JobRemuneration_UU.
+		@param C_JobRemuneration_UU C_JobRemuneration_UU
+	*/
+	public void setC_JobRemuneration_UU (String C_JobRemuneration_UU)
+	{
+		set_Value (COLUMNNAME_C_JobRemuneration_UU, C_JobRemuneration_UU);
+	}
+
+	/** Get C_JobRemuneration_UU.
+		@return C_JobRemuneration_UU	  */
+	public String getC_JobRemuneration_UU()
+	{
+		return (String)get_Value(COLUMNNAME_C_JobRemuneration_UU);
+	}
+
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_Job getC_Job() throws RuntimeException
-    {
-		return (org.compiere.model.I_C_Job)MTable.get(getCtx(), org.compiere.model.I_C_Job.Table_Name)
-			.getPO(getC_Job_ID(), get_TrxName());	}
+	{
+		return (org.compiere.model.I_C_Job)MTable.get(getCtx(), org.compiere.model.I_C_Job.Table_ID)
+			.getPO(getC_Job_ID(), get_TrxName());
+	}
 
 	/** Set Position.
-		@param C_Job_ID 
-		Job Position
-	  */
+		@param C_Job_ID Job Position
+	*/
 	public void setC_Job_ID (int C_Job_ID)
 	{
-		if (C_Job_ID < 1) 
+		if (C_Job_ID < 1)
 			set_ValueNoCheck (COLUMNNAME_C_Job_ID, null);
-		else 
+		else
 			set_ValueNoCheck (COLUMNNAME_C_Job_ID, Integer.valueOf(C_Job_ID));
 	}
 
 	/** Get Position.
 		@return Job Position
 	  */
-	public int getC_Job_ID () 
+	public int getC_Job_ID()
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_C_Job_ID);
 		if (ii == null)
@@ -105,69 +183,33 @@ public class X_C_JobRemuneration extends PO implements I_C_JobRemuneration, I_Pe
     /** Get Record ID/ColumnName
         @return ID/ColumnName pair
       */
-    public KeyNamePair getKeyNamePair() 
+    public KeyNamePair getKeyNamePair()
     {
         return new KeyNamePair(get_ID(), String.valueOf(getC_Job_ID()));
     }
 
-	/** Set Position Remuneration.
-		@param C_JobRemuneration_ID 
-		Remuneration for the Position
-	  */
-	public void setC_JobRemuneration_ID (int C_JobRemuneration_ID)
-	{
-		if (C_JobRemuneration_ID < 1) 
-			set_ValueNoCheck (COLUMNNAME_C_JobRemuneration_ID, null);
-		else 
-			set_ValueNoCheck (COLUMNNAME_C_JobRemuneration_ID, Integer.valueOf(C_JobRemuneration_ID));
-	}
-
-	/** Get Position Remuneration.
-		@return Remuneration for the Position
-	  */
-	public int getC_JobRemuneration_ID () 
-	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_C_JobRemuneration_ID);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
-	}
-
-	/** Set C_JobRemuneration_UU.
-		@param C_JobRemuneration_UU C_JobRemuneration_UU	  */
-	public void setC_JobRemuneration_UU (String C_JobRemuneration_UU)
-	{
-		set_Value (COLUMNNAME_C_JobRemuneration_UU, C_JobRemuneration_UU);
-	}
-
-	/** Get C_JobRemuneration_UU.
-		@return C_JobRemuneration_UU	  */
-	public String getC_JobRemuneration_UU () 
-	{
-		return (String)get_Value(COLUMNNAME_C_JobRemuneration_UU);
-	}
-
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_Remuneration getC_Remuneration() throws RuntimeException
-    {
-		return (org.compiere.model.I_C_Remuneration)MTable.get(getCtx(), org.compiere.model.I_C_Remuneration.Table_Name)
-			.getPO(getC_Remuneration_ID(), get_TrxName());	}
+	{
+		return (org.compiere.model.I_C_Remuneration)MTable.get(getCtx(), org.compiere.model.I_C_Remuneration.Table_ID)
+			.getPO(getC_Remuneration_ID(), get_TrxName());
+	}
 
 	/** Set Remuneration.
-		@param C_Remuneration_ID 
-		Wage or Salary
-	  */
+		@param C_Remuneration_ID Wage or Salary
+	*/
 	public void setC_Remuneration_ID (int C_Remuneration_ID)
 	{
-		if (C_Remuneration_ID < 1) 
+		if (C_Remuneration_ID < 1)
 			set_ValueNoCheck (COLUMNNAME_C_Remuneration_ID, null);
-		else 
+		else
 			set_ValueNoCheck (COLUMNNAME_C_Remuneration_ID, Integer.valueOf(C_Remuneration_ID));
 	}
 
 	/** Get Remuneration.
 		@return Wage or Salary
 	  */
-	public int getC_Remuneration_ID () 
+	public int getC_Remuneration_ID()
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_C_Remuneration_ID);
 		if (ii == null)
@@ -176,9 +218,8 @@ public class X_C_JobRemuneration extends PO implements I_C_JobRemuneration, I_Pe
 	}
 
 	/** Set Description.
-		@param Description 
-		Optional short description of the record
-	  */
+		@param Description Optional short description of the record
+	*/
 	public void setDescription (String Description)
 	{
 		set_Value (COLUMNNAME_Description, Description);
@@ -187,15 +228,14 @@ public class X_C_JobRemuneration extends PO implements I_C_JobRemuneration, I_Pe
 	/** Get Description.
 		@return Optional short description of the record
 	  */
-	public String getDescription () 
+	public String getDescription()
 	{
 		return (String)get_Value(COLUMNNAME_Description);
 	}
 
 	/** Set Valid from.
-		@param ValidFrom 
-		Valid from including this date (first day)
-	  */
+		@param ValidFrom Valid from including this date (first day)
+	*/
 	public void setValidFrom (Timestamp ValidFrom)
 	{
 		set_Value (COLUMNNAME_ValidFrom, ValidFrom);
@@ -204,15 +244,14 @@ public class X_C_JobRemuneration extends PO implements I_C_JobRemuneration, I_Pe
 	/** Get Valid from.
 		@return Valid from including this date (first day)
 	  */
-	public Timestamp getValidFrom () 
+	public Timestamp getValidFrom()
 	{
 		return (Timestamp)get_Value(COLUMNNAME_ValidFrom);
 	}
 
 	/** Set Valid to.
-		@param ValidTo 
-		Valid to including this date (last day)
-	  */
+		@param ValidTo Valid to including this date (last day)
+	*/
 	public void setValidTo (Timestamp ValidTo)
 	{
 		set_Value (COLUMNNAME_ValidTo, ValidTo);
@@ -221,7 +260,7 @@ public class X_C_JobRemuneration extends PO implements I_C_JobRemuneration, I_Pe
 	/** Get Valid to.
 		@return Valid to including this date (last day)
 	  */
-	public Timestamp getValidTo () 
+	public Timestamp getValidTo()
 	{
 		return (Timestamp)get_Value(COLUMNNAME_ValidTo);
 	}

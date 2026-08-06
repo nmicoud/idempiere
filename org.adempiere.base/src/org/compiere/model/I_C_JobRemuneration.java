@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for C_JobRemuneration
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_C_JobRemuneration 
 {
@@ -44,8 +44,8 @@ public interface I_C_JobRemuneration
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -53,29 +53,14 @@ public interface I_C_JobRemuneration
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
-
-    /** Column name C_Job_ID */
-    public static final String COLUMNNAME_C_Job_ID = "C_Job_ID";
-
-	/** Set Position.
-	  * Job Position
-	  */
-	public void setC_Job_ID (int C_Job_ID);
-
-	/** Get Position.
-	  * Job Position
-	  */
-	public int getC_Job_ID();
-
-	public org.compiere.model.I_C_Job getC_Job() throws RuntimeException;
 
     /** Column name C_JobRemuneration_ID */
     public static final String COLUMNNAME_C_JobRemuneration_ID = "C_JobRemuneration_ID";
@@ -99,6 +84,38 @@ public interface I_C_JobRemuneration
 	/** Get C_JobRemuneration_UU	  */
 	public String getC_JobRemuneration_UU();
 
+    /** Column name C_Job_ID */
+    public static final String COLUMNNAME_C_Job_ID = "C_Job_ID";
+
+	/** Set Position.
+	  * Job Position
+	  */
+	public void setC_Job_ID (int C_Job_ID);
+
+	/** Get Position.
+	  * Job Position
+	  */
+	public int getC_Job_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_C_Job getC_Job() throws RuntimeException;
+
+    /** Column name C_Remuneration_ID */
+    public static final String COLUMNNAME_C_Remuneration_ID = "C_Remuneration_ID";
+
+	/** Set Remuneration.
+	  * Wage or Salary
+	  */
+	public void setC_Remuneration_ID (int C_Remuneration_ID);
+
+	/** Get Remuneration.
+	  * Wage or Salary
+	  */
+	public int getC_Remuneration_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_C_Remuneration getC_Remuneration() throws RuntimeException;
+
     /** Column name Created */
     public static final String COLUMNNAME_Created = "Created";
 
@@ -114,21 +131,6 @@ public interface I_C_JobRemuneration
 	  * User who created this records
 	  */
 	public int getCreatedBy();
-
-    /** Column name C_Remuneration_ID */
-    public static final String COLUMNNAME_C_Remuneration_ID = "C_Remuneration_ID";
-
-	/** Set Remuneration.
-	  * Wage or Salary
-	  */
-	public void setC_Remuneration_ID (int C_Remuneration_ID);
-
-	/** Get Remuneration.
-	  * Wage or Salary
-	  */
-	public int getC_Remuneration_ID();
-
-	public org.compiere.model.I_C_Remuneration getC_Remuneration() throws RuntimeException;
 
     /** Column name Description */
     public static final String COLUMNNAME_Description = "Description";

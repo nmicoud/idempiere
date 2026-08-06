@@ -32,17 +32,19 @@ import org.adempiere.webui.panel.InfoPanel;
 import org.compiere.model.GridField;
 import org.compiere.model.Lookup;
 import org.compiere.model.MLookup;
+import org.compiere.model.MSysConfig;
+import org.compiere.util.Env;
 import org.compiere.util.NamePair;
 import org.compiere.util.Util;
 import org.compiere.util.ValueNamePair;
+import org.idempiere.db.util.SQLFragment;
 import org.zkoss.zul.ListModel;
 import org.zkoss.zul.ListModelList;
 import org.zkoss.zul.ListSubModel;
 
 /**
- * 
+ * Model to get filter list from lookup and info window/panel
  * @author hengsin
- *
  */
 public class InfoListSubModel implements ListSubModel<ValueNamePair> {
 
@@ -50,12 +52,11 @@ public class InfoListSubModel implements ListSubModel<ValueNamePair> {
 	private GridField gridField;
 	private String tableName;
 	private String keyColumnName;
-	private String whereClause;
+	private SQLFragment sqlFilter = null;
 
 	private static final int AUTO_COMPLETE_QUERY_TIMEOUT = 1; //1 second
 	
 	/**
-	 * 
 	 * @param lookup
 	 * @param gridField
 	 * @param tableName
@@ -69,36 +70,57 @@ public class InfoListSubModel implements ListSubModel<ValueNamePair> {
 	}
 	
 	/**
-	 * 
+	 * Set where clause
 	 * @param whereClause
+	 * @deprecated use setSQLFilter(SQLFragment sqlFilter) instead
 	 */
+	@Deprecated (since="13", forRemoval=true)
 	public void setWhereClause(String whereClause) {
-		this.whereClause = whereClause;
+		this.sqlFilter = new SQLFragment(whereClause);
 	}
 	
 	/**
-	 * 
+	 * Get where clause
 	 * @return where clause
+	 * @deprecated use getSQLFilter() instead
 	 */
+	@Deprecated (since="13", forRemoval=true)
 	public String getWhereClause() {
-		return this.whereClause;
+		return sqlFilter != null ? sqlFilter.toSQLWithParameters() : null;
+	}
+	
+	/**
+	 * Set SQL filter
+	 * @param sqlFilter
+	 */
+	public void setSQLFilter(SQLFragment sqlFilter) {
+		this.sqlFilter = sqlFilter;
+	}
+	
+	/**
+	 * Get SQL filter
+	 * @return SQL filter
+	 */
+	public SQLFragment getSQLFilter() {
+		return this.sqlFilter;
 	}
 	
 	@Override
 	public ListModel<ValueNamePair> getSubModel(Object value, int nRows) {
 		ListModelList<ValueNamePair> model = new ListModelList<>();
 		if (value != null && !Util.isEmpty(value.toString(), true)) {
+			//build query text from input value
 			String queryText = value.toString().trim();
 			StringBuilder queryBuilder = new StringBuilder(queryText);
 			queryBuilder.append("?autocomplete={");
 			queryBuilder.append("timeout:")
-				.append(AUTO_COMPLETE_QUERY_TIMEOUT)
+				.append(MSysConfig.getIntValue(MSysConfig.ZK_SEARCH_AUTO_COMPLETE_TIMEOUT, AUTO_COMPLETE_QUERY_TIMEOUT, Env.getAD_Client_ID(Env.getCtx())))
 				.append(",")
 				.append("pagesize:")
 				.append(nRows);
 			if (lookup instanceof MLookup) {
 				MLookup mlookup = (MLookup) lookup;
-				List<String> displayColumns = mlookup.getLookupInfo().lookupDisplayColumns;
+				List<String> displayColumns = mlookup.getLookupInfo().lookupDisplayColumnNames;
 				if (displayColumns != null && displayColumns.size() > 0) {
 					queryBuilder.append(",")
 						.append("searchcolumn:")
@@ -108,15 +130,16 @@ public class InfoListSubModel implements ListSubModel<ValueNamePair> {
 			queryBuilder.append("}");
 			queryText = queryBuilder.toString();
 			
+			//build model from infopanel/infowindow processing of query text
 			final InfoPanel ip = InfoManager.create(lookup, gridField, tableName, keyColumnName, queryText, false, getWhereClause());
 			if (ip != null && ip.loadedOK()) {
 				int rowCount = ip.getRowCount();
 				if (rowCount > 0) {
 					List<String> added = new ArrayList<String>();
-					List<Integer> keys = new ArrayList<Integer>();
+					List<Object> keys = new ArrayList<Object>();
 					for(int i = 0; i < rowCount; i++) {
-						Integer key = ip.getRowKeyAt(i);
-						if (key != null && key.intValue() > 0 && !keys.contains(key)) {
+						Object key = ip.getRowKeyAt(i);
+						if (key != null && (key instanceof Integer && ((Integer)key).intValue() > 0 || key instanceof String && key.toString().length() > 0) && !keys.contains(key)) {
 							keys.add(key);							
 						}
 						if (nRows > 0 && keys.size() >= nRows)

@@ -19,6 +19,8 @@ package org.compiere.sla;
 import java.sql.Timestamp;
 import java.util.logging.Level;
 
+import org.adempiere.base.GeneratedCodeCoverageExclusion;
+import org.compiere.model.MProcessPara;
 import org.compiere.model.MSLACriteria;
 import org.compiere.model.MSLAGoal;
 import org.compiere.model.MSLAMeasure;
@@ -33,7 +35,12 @@ import org.compiere.util.AdempiereUserError;
  *	
  *  @author Jorg Janke
  *  @version $Id: SLAMeasureProcess.java,v 1.2 2006/07/30 00:51:06 jjanke Exp $
+ *  @deprecated not fully implement, marked as inactive in application dictionary
  */
+@Deprecated (since="13", forRemoval=true)
+@SuppressWarnings("removal")
+@GeneratedCodeCoverageExclusion
+@org.adempiere.base.annotation.Process
 public class SLAMeasureProcess extends SvrProcess
 {
 	/** Goal					*/
@@ -47,11 +54,10 @@ public class SLAMeasureProcess extends SvrProcess
 		ProcessInfoParameter[] para = getParameter();
 		for (int i = 0; i < para.length; i++)
 		{
-			String name = para[i].getParameterName();
 			if (para[i].getParameter() == null)
 				;
 			else
-				log.log(Level.SEVERE, "prepare - Unknown Parameter: " + name);
+				MProcessPara.validateUnknownParameter(getProcessInfo().getAD_Process_ID(), para[i]);
 		}
 		p_PA_SLA_Measure_ID = getRecord_ID();
 	}	//	prepare

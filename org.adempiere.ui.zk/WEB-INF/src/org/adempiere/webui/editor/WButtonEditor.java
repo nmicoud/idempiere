@@ -33,6 +33,7 @@ import org.adempiere.webui.component.Button;
 import org.adempiere.webui.event.ActionEvent;
 import org.adempiere.webui.event.ActionListener;
 import org.adempiere.webui.theme.ThemeManager;
+import org.adempiere.webui.util.Icon;
 import org.compiere.model.GridField;
 import org.compiere.model.MLookup;
 import org.compiere.model.MLookupFactory;
@@ -47,8 +48,7 @@ import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.Events;
 
 /**
- * This class is based on org.compiere.grid.ed.VButton written by Jorg Janke.
- * @author Jorg Janke
+ * Default editor for {@link DisplayType#Button}.
  * 
  * Modifications - UI Compatibility
  * @author ashley
@@ -69,7 +69,7 @@ public class WButtonEditor extends WEditor implements IProcessButton
     private String          m_text;
     private boolean         m_mandatory;
     private Object          m_value;
-    /** List of Key/Name        */
+    /** Value:Name. AD_Ref_List values for  PaymentRule, DocAction or Posted reference. */
     private HashMap<String,String>  m_values = null;
    
     /** Description as ToolTip  */
@@ -77,7 +77,7 @@ public class WButtonEditor extends WEditor implements IProcessButton
     private MLookup         m_lookup;
   
     private int AD_Process_ID;
-    private GridField gridfield = null;
+    private int AD_InfoWindow_ID;
     
     private ArrayList<ActionListener> actionListeners = new ArrayList<ActionListener>();
 
@@ -122,7 +122,7 @@ public class WButtonEditor extends WEditor implements IProcessButton
         super(new Button(), gridField, rowIndex, tableEditor, editorConfiguration);
         m_text = gridField.getHeader();
         AD_Process_ID = gridField.getAD_Process_ID();
-        gridfield = gridField;
+        AD_InfoWindow_ID = gridField.getAD_InfoWindow_ID();
         getComponent().setAttribute(EDITOR_ATTRIBUTE, this);
         init();
 	}
@@ -136,11 +136,26 @@ public class WButtonEditor extends WEditor implements IProcessButton
 		return AD_Process_ID;
 	}	//	getProcess_ID
 	
+	/* (non-Javadoc)
+	 * @see org.adempiere.webui.editor.IProcessButton#getInfoWindow_ID()
+	 */
+	@Override
+	public int getInfoWindow_ID()
+	{
+		return AD_InfoWindow_ID;
+	}	//	getInfoWindow_ID
+	
+	/**
+	 * @return GridField
+	 */
 	public GridField getGridField()
 	{
-		return gridfield;
+		return super.gridField;
 	}
 
+	/**
+	 * Init component
+	 */
     private void init()
     {
         label.setValue(" ");
@@ -152,7 +167,7 @@ public class WButtonEditor extends WEditor implements IProcessButton
         {
             readReference(REFERENCE_PAYMENTRULE);
             if (ThemeManager.isUseFontIconForImage())
-            	getComponent().setIconSclass("z-icon-Payment");
+            	getComponent().setIconSclass(Icon.getIconSclass(Icon.PAYMENT));
             else
             	getComponent().setImage(ThemeManager.getThemeResource("images/Payment16.png"));    //  29*14
         }
@@ -160,30 +175,31 @@ public class WButtonEditor extends WEditor implements IProcessButton
         {
             readReference(REFERENCE_DOCUMENTACTION);
             if (ThemeManager.isUseFontIconForImage())
-            	getComponent().setIconSclass("z-icon-Process");
+            	getComponent().setIconSclass(Icon.getIconSclass(Icon.PROCESS));
             else
             	getComponent().setImage(ThemeManager.getThemeResource("images/Process16.png"));    //  16*16
         }
         else if (columnName.equals("CreateFrom"))
         {
         	if (ThemeManager.isUseFontIconForImage())
-        		getComponent().setIconSclass("z-icon-CreateFrom");
+        		getComponent().setIconSclass(Icon.getIconSclass(Icon.CREATE_FROM));
         	else
         		getComponent().setImage(ThemeManager.getThemeResource("images/Copy16.png"));       //  16*16
         }
         else if (columnName.equals("Record_ID"))
         {
         	if (ThemeManager.isUseFontIconForImage())
-        		getComponent().setIconSclass("z-icon-Zoom");
+        		getComponent().setIconSclass(Icon.getIconSclass(Icon.ZOOM));
         	else
         		getComponent().setImage(ThemeManager.getThemeResource("images/Zoom16.png"));       //  16*16
+        	// NOTE the label of Record_ID button is overwritten in setValue
             getComponent().setLabel(Msg.getMsg(Env.getCtx(), "ZoomDocument"));
         }
         else if (columnName.equals("Posted"))
         {
             readReference(REFERENCE_POSTED);
             if (ThemeManager.isUseFontIconForImage())
-            	getComponent().setIconSclass("z-icon-InfoAccount");
+            	getComponent().setIconSclass(Icon.getIconSclass(Icon.INFO_ACCOUNT));
             else
             	getComponent().setImage(ThemeManager.getThemeResource("images/InfoAccount16.png"));    //  16*16
         }
@@ -220,7 +236,6 @@ public class WButtonEditor extends WEditor implements IProcessButton
     {
         return m_mandatory;
     }
-   
     
     @Override
     public void setMandatory(boolean mandatory)
@@ -235,9 +250,13 @@ public class WButtonEditor extends WEditor implements IProcessButton
         String text = m_text;
 
         //  Nothing to show or Record_ID
-        if (value == null || super.getColumnName().equals("Record_ID"))
+        if (value == null)
         {
             ;
+        }
+        else if (super.getColumnName().equals("Record_ID"))
+        {
+            text = m_text + " (" + value.toString() + ")";
         }
         else if (super.getColumnName().equals("DocAction")
         		&& !MSysConfig.getBooleanValue(MSysConfig.DOCACTIONBUTTON_SHOWACTIONNAME, false, Env.getAD_Client_ID(Env.getCtx())))
@@ -272,6 +291,9 @@ public class WButtonEditor extends WEditor implements IProcessButton
 		getComponent().setEnabled(readWrite);
 	}
 
+	/**
+	 * @return AD_Ref_List Value:Name HashMap
+	 */
 	public HashMap<String, String> getValues()
     {
     	return m_values;
@@ -322,12 +344,19 @@ public class WButtonEditor extends WEditor implements IProcessButton
        
     }   //  readReference
     
+    /**
+     * @param actionListener
+     */
     public void addActionListener(ActionListener actionListener)
     {
     	if (!actionListeners.contains(actionListener))
     		actionListeners.add(actionListener);
     }
 
+    /**
+     * @param actionListener
+     * @return true if found and remove
+     */
     public boolean removeActionListener(ActionListener actionListener)
     {
     	return actionListeners.remove(actionListener);
@@ -339,6 +368,7 @@ public class WButtonEditor extends WEditor implements IProcessButton
         return LISTENER_EVENTS;
     }
 
+    @Override
 	public void onEvent(Event event) throws Exception 
 	{
 		if (Events.ON_CLICK.equals(event.getName()))
@@ -353,6 +383,9 @@ public class WButtonEditor extends WEditor implements IProcessButton
 		}
 	}
 	
+    /**
+     * @param adTabpanel
+     */
 	public void setADTabpanel(IADTabpanel adTabpanel) {
 		this.adTabpanel = adTabpanel;
 	}

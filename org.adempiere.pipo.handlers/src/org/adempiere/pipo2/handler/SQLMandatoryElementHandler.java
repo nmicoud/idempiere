@@ -31,6 +31,7 @@ import java.sql.Statement;
 import java.util.logging.Level;
 
 import javax.xml.transform.sax.TransformerHandler;
+import org.adempiere.pipo2.IPackSerializer;
 
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.pipo2.AbstractElementHandler;
@@ -89,7 +90,7 @@ public class SQLMandatoryElementHandler extends AbstractElementHandler {
 					stmt = null;
 				}
 			}
-			logImportDetail (ctx, impDetail, 1, "SQLMandatory",count,"Execute");
+			logImportDetail (ctx, impDetail, 1, "SQLMandatory",count,"Execute", sql, String.valueOf(count));
 			ctx.packIn.getNotifier().addSuccessLine("-> " + sql);
 			// Cache Reset when deleting records via SQL
 			if (sql.toLowerCase().startsWith("delete from ")) {
@@ -102,7 +103,7 @@ public class SQLMandatoryElementHandler extends AbstractElementHandler {
 			}
 		} catch (Exception e)	{
 			ctx.packIn.getNotifier().addFailureLine("SQL Mandatory failed, error (" + e.getLocalizedMessage() + "):");
-			logImportDetail (ctx, impDetail, 0, "SQLMandatory",-1,"Execute");
+			logImportDetail (ctx, impDetail, 0, "SQLMandatory",-1,"Execute", sql, e.getLocalizedMessage());
 			ctx.packIn.getNotifier().addFailureLine("-> " + sql);
 			log.log(Level.SEVERE,"SQLMandatory", e);
 			throw new AdempiereException(e);
@@ -115,39 +116,37 @@ public class SQLMandatoryElementHandler extends AbstractElementHandler {
 	public void endElement(PIPOContext ctx, Element element) throws SAXException {
 	}
 
-	public void create(PIPOContext ctx, TransformerHandler document)
-			throws SAXException {
+	public void create(PIPOContext ctx, IPackSerializer document)
+			throws Exception {
 		String SQLMandatory = Env.getContext(ctx.ctx, SQLElementParameters.SQL_STATEMENT);
 		String DBType = Env.getContext(ctx.ctx, SQLElementParameters.DB_TYPE);
 		AttributesImpl atts = new AttributesImpl();
 		addTypeName(atts, "custom");
-		document.startElement("","","SQLMandatory",atts);
+		document.startElement("SQLMandatory",atts);
 		createSQLStatmentBinding(document, SQLMandatory, DBType);
-		document.endElement("","","SQLMandatory");
+		document.endElement("SQLMandatory");
 	}
 
-	private void createSQLStatmentBinding( TransformerHandler document, String sqlMandatory, String DBType) throws SAXException
+	private void createSQLStatmentBinding( IPackSerializer document, String sqlMandatory, String DBType) throws Exception
 	{
-		document.startElement("","","DBType", new AttributesImpl());
+		document.startElement("DBType", new AttributesImpl());
 		char[] contents = DBType.toCharArray();
-		document.characters(contents,0,contents.length);
-		document.endElement("","","DBType");
+		document.characters(new String(contents, 0, contents.length));
+		document.endElement("DBType");
 
-		document.startElement("","","statement", new AttributesImpl());
+		document.startElement("statement", new AttributesImpl());
 		contents = sqlMandatory.toCharArray();
-		document.startCDATA();
-		document.characters(contents,0,contents.length);
-		document.endCDATA();
-		document.endElement("","","statement");
+		document.characters(new String(contents, 0, contents.length));
+		document.endElement("statement");
 
 	}
 
-	public void packOut(PackOut packout, TransformerHandler packoutHandler, TransformerHandler docHandler,int field) throws Exception
+	public void packOut(PackOut packout, IPackSerializer packoutSerializer, TransformerHandler docHandler,int field) throws Exception
 	{
 		PackoutItem detail = packout.getCurrentPackoutItem();
 		Env.setContext(packout.getCtx().ctx, SQLElementParameters.SQL_STATEMENT, (String)detail.getProperty(SQLElementParameters.SQL_STATEMENT));
 		Env.setContext(packout.getCtx().ctx, SQLElementParameters.DB_TYPE, (String)detail.getProperty(SQLElementParameters.DB_TYPE));
-		this.create(packout.getCtx(), packoutHandler);
+		this.create(packout.getCtx(), packoutSerializer);
 		packout.getCtx().ctx.remove(SQLElementParameters.SQL_STATEMENT);
 		packout.getCtx().ctx.remove(SQLElementParameters.DB_TYPE);
 	}

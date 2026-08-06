@@ -21,6 +21,7 @@ import java.util.TimeZone;
 
 import org.adempiere.webui.session.SessionManager;
 import org.compiere.util.Env;
+import org.compiere.util.Util;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
@@ -28,16 +29,17 @@ import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.sys.ComponentCtrl;
 
 /**
- * 
+ * Model for client info from browser
  * @author Low Heng Sin
  *
  */
 public class ClientInfo implements Serializable {	
 	/**
-	 * 
+	 * generated serial id
 	 */
 	private static final long serialVersionUID = -2686811277627911861L;
 	
+	//values from browser
 	public int colorDepth;
 	public int desktopWidth;
 	public int desktopHeight;
@@ -51,6 +53,10 @@ public class ClientInfo implements Serializable {
 	public boolean tablet;
 	public double devicePixelRatio;
 	
+	//size constants for responsive layout
+	public static final int XXX_LARGE_WIDTH = 2560;
+	public static final int XX_LARGE_WIDTH = 1920;
+	public static final int EXTRA_LARGE_WIDTH = 1366;
 	public static final int LARGE_WIDTH = 1200;
 	public static final int MEDIUM_WIDTH = 1000;
 	public static final int SMALL_WIDTH = 700;
@@ -93,13 +99,27 @@ public class ClientInfo implements Serializable {
 	}
 
 	/**
+	 * Is mobile browser client
 	 * @return true if mobile browser
 	 */
 	public static boolean isMobile() {
-		return "Y".equals(Env.getContext(Env.getCtx(), "#clientInfo_mobile"));
+		return "Y".equals(Env.getContext(Env.getCtx(), Env.CLIENT_INFO_MOBILE));
 	}
 
 	/**
+	 * Is firefox
+	 * @param version null to match all version
+	 * @return true if browser is firefox and match the pass in version parameter
+	 */
+	public static boolean isFirefox(String version) {
+		StringBuilder ua = new StringBuilder("Firefox");
+		if (!Util.isEmpty(version, true))
+			ua.append("/").append(version);
+		return get() != null && get().userAgent != null && get().userAgent.contains(ua.toString());
+	}
+	
+	/**
+	 * Get current client info instance
 	 * @return the current clientinfo instance
 	 */
 	public static ClientInfo get() {
@@ -107,36 +127,36 @@ public class ClientInfo implements Serializable {
 	}
 	
 	/**
-	 * 
+	 * Get minimum width of desktop
 	 * @param minWidth
-	 * @return true if desktopWidth >= minWidth
+	 * @return true if desktopWidth &gt;= minWidth
 	 */
 	public static boolean minWidth(int minWidth) {
 		return ClientInfo.get().desktopWidth > 0 && ClientInfo.get().desktopWidth >= minWidth;
 	}
 	
 	/**
-	 * 
+	 * Get maximum width of desktop
 	 * @param maxWidth
-	 * @return true if desktopWidth <= maxWidth
+	 * @return true if desktopWidth &lt;= maxWidth
 	 */
 	public static boolean maxWidth(int maxWidth) {
 		return ClientInfo.get().desktopWidth > 0 && ClientInfo.get().desktopWidth <= maxWidth;
 	}	
 	
 	/**
-	 * 
+	 * Get minimum height of desktop
 	 * @param minHeight
-	 * @return true if desktopHeight >= minHeight
+	 * @return true if desktopHeight &gt;= minHeight
 	 */
 	public static boolean minHeight(int minHeight) {
 		return ClientInfo.get().desktopHeight > 0 && ClientInfo.get().desktopHeight >= minHeight;
 	}
 	
 	/**
-	 * 
+	 * Get maximum height of desktop
 	 * @param maxHeight
-	 * @return true if desktopHeight <= maxHeight
+	 * @return true if desktopHeight &lt;= maxHeight
 	 */
 	public static boolean maxHeight(int maxHeight) {
 		return ClientInfo.get().desktopHeight > 0 && ClientInfo.get().desktopHeight <= maxHeight;
@@ -159,6 +179,7 @@ public class ClientInfo implements Serializable {
 	}
 	
 	/**
+	 * Is screen orientation portrait
 	 * @return true if screen orientation is portrait, false otherwise
 	 */
 	public boolean isPortrait() {

@@ -25,36 +25,68 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 
+import javax.crypto.SecretKey;
+import javax.script.Compilable;
+import javax.script.CompiledScript;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineFactory;
 import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 
+import org.adempiere.base.event.IEventManager;
+import org.adempiere.base.markdown.IMarkdownRenderer;
+import org.adempiere.base.search.ISearchProvider;
+import org.adempiere.base.upload.IUploadService;
+import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.model.IAddressValidation;
 import org.adempiere.model.IShipmentProcessor;
 import org.adempiere.model.ITaxProvider;
 import org.adempiere.model.MShipperFacade;
+import org.adempiere.util.DefaultReservationTracerFactory;
+import org.adempiere.util.IReservationTracerFactory;
+import org.compiere.Adempiere;
 import org.compiere.impexp.BankStatementLoaderInterface;
 import org.compiere.impexp.BankStatementMatcherInterface;
 import org.compiere.model.Callout;
+import org.compiere.model.I_AD_PrintHeaderFooter;
 import org.compiere.model.MAddressValidation;
+import org.compiere.model.MAuthorizationAccount;
+import org.compiere.model.MAuthorizationCredential;
+import org.compiere.model.MAuthorizationProvider;
 import org.compiere.model.MBankAccountProcessor;
 import org.compiere.model.MPaymentProcessor;
+import org.compiere.model.MRule;
+import org.compiere.model.MSysConfig;
 import org.compiere.model.MTaxProvider;
 import org.compiere.model.ModelValidator;
+import org.compiere.model.PO;
 import org.compiere.model.PaymentInterface;
 import org.compiere.model.PaymentProcessor;
+import org.compiere.model.ServerStateChangeEvent;
+import org.compiere.model.ServerStateChangeListener;
 import org.compiere.model.StandardTaxProvider;
+import org.compiere.model.SystemIDs;
 import org.compiere.process.ProcessCall;
 import org.compiere.util.CCache;
 import org.compiere.util.CLogger;
+import org.compiere.util.DB;
+import org.compiere.util.DefaultKeyStore;
+import org.compiere.util.Env;
 import org.compiere.util.PaymentExport;
 import org.compiere.util.ReplenishInterface;
+import org.compiere.util.Util;
 import org.idempiere.distributed.ICacheService;
 import org.idempiere.distributed.IClusterService;
 import org.idempiere.distributed.IMessageService;
 import org.idempiere.fa.service.api.DepreciationFactoryLookupDTO;
 import org.idempiere.fa.service.api.IDepreciationMethod;
 import org.idempiere.fa.service.api.IDepreciationMethodFactory;
+import org.idempiere.model.IMappedModelFactory;
+import org.idempiere.print.IPrintHeaderFooter;
+import org.idempiere.print.renderer.IReportRenderer;
+import org.idempiere.print.renderer.IReportRendererConfiguration;
+import org.idempiere.process.IMappedProcessFactory;
+import org.osgi.framework.ServiceReference;
 
 /**
  * This is a facade class for the Service Locator.
@@ -65,9 +97,37 @@ import org.idempiere.fa.service.api.IDepreciationMethodFactory;
  */
 public class Core {
 
+	public static final String SCRIPT_ENGINE_FACTORY_CACHE_TABLE_NAME = "_ScriptEngineFactory_Cache";
+
+	public static final String IPROCESS_FACTORY_CACHE_TABLE_NAME = "_IProcessFactory_Cache";
+
+	public static final String IRESOURCE_FINDER_CACHE_TABLE_NAME = "_IResourceFinder_Cache";
+
+	public static final String IDEPRECIATION_METHOD_FACTORY_CACHE_TABLE_NAME = "_IDepreciationMethodFactory_Cache";
+
+	public static final String IPAYMENT_EXPORTER_FACTORY_CACHE_TABLE_NAME = "_IPaymentExporterFactory_Cache";
+
+	public static final String IREPLENISH_FACTORY_CACHE_TABLE_NAME = "_IReplenishFactory_Cache";
+
+	public static final String ITAX_PROVIDER_FACTORY_CACHE_TABLE_NAME = "_ITaxProviderFactory_Cache";
+
+	public static final String IADDRESS_VALIDATION_FACTORY_CACHE_TABLE_NAME = "_IAddressValidationFactory_Cache";
+
+	public static final String IBANK_STATEMENT_MATCHER_FACTORY_CACHE_TABLE_NAME = "_IBankStatementMatcherFactory_Cache";
+
+	public static final String IBANK_STATEMENT_LOADER_FACTORY_CACHE_TABLE_NAME = "_IBankStatementLoaderFactory_Cache";
+
+	public static final String IMODEL_VALIDATOR_FACTORY_CACHE_TABLE_NAME = "_IModelValidatorFactory_Cache";
+
+	public static final String ISHIPMENT_PROCESSOR_FACTORY_CACHE_TABLE_NAME = "_IShipmentProcessorFactory_Cache";
+
+	public static final String IPAYMENT_PROCESSOR_FACTORY_CACHE_TABLE_NAME = "_IPaymentProcessorFactory_Cache";
+	
+	public static final String IPRINT_HEADER_FOOTER_CACHE_TABLE_NAME = "_IIPrintHeaderFooterCache";
+
 	private final static CLogger s_log = CLogger.getCLogger(Core.class);
 
-	private static final CCache<String, IServiceReferenceHolder<IResourceFinder>> s_resourceFinderCache = new CCache<>(null, "IResourceFinder", 100, false);
+	private static final CCache<String, IServiceReferenceHolder<IResourceFinder>> s_resourceFinderCache = new CCache<>(IRESOURCE_FINDER_CACHE_TABLE_NAME, "IResourceFinder", 100, false);
 	
 	/**
 	 * @return list of active resource finder
@@ -102,8 +162,6 @@ public class Core {
 		};
 	}
 	
-	private static final CCache<String, List<IServiceReferenceHolder<IColumnCalloutFactory>>> s_columnCalloutFactoryCache = new CCache<>(null, "List<IColumnCalloutFactory>", 100, false);
-
 	/**
 	 *
 	 * @param tableName
@@ -111,94 +169,20 @@ public class Core {
 	 * @return list of callout register for tableName.columnName
 	 */
 	public static List<IColumnCallout> findCallout(String tableName, String columnName) {
-		List<IColumnCallout> list = new ArrayList<IColumnCallout>();
-		
-		String cacheKey = tableName + "." + columnName;
-		List<IServiceReferenceHolder<IColumnCalloutFactory>> cache = s_columnCalloutFactoryCache.get(cacheKey);
-		if (cache != null) {
-			boolean staleReference = false;
-			for (IServiceReferenceHolder<IColumnCalloutFactory> factory : cache) {
-				IColumnCalloutFactory service = factory.getService();
-				if (service != null) {
-					IColumnCallout[] callouts = service.getColumnCallouts(tableName, columnName);
-					if (callouts != null && callouts.length > 0) {
-						for(IColumnCallout callout : callouts) {
-							list.add(callout);
-						}
-					} else {						
-						staleReference = true;
-						break;
-					}
-				} else {
-					staleReference = true;
-					break;
-				}
-			}
-			if (!staleReference)
-				return list;
-			else
-				s_columnCalloutFactoryCache.remove(cacheKey);
-		}
-		
-		List<IServiceReferenceHolder<IColumnCalloutFactory>> factories = Service.locator().list(IColumnCalloutFactory.class).getServiceReferences();
-		List<IServiceReferenceHolder<IColumnCalloutFactory>> found = new ArrayList<>();
-		if (factories != null) {
-			for(IServiceReferenceHolder<IColumnCalloutFactory> factory : factories) {
-				IColumnCalloutFactory service = factory.getService();
-				if (service != null) {
-					IColumnCallout[] callouts = service.getColumnCallouts(tableName, columnName);
-					if (callouts != null && callouts.length > 0) {
-						for(IColumnCallout callout : callouts) {
-							list.add(callout);						
-						}
-						found.add(factory);
-					}
-				}
-			}
-			s_columnCalloutFactoryCache.put(cacheKey, found);
-		}
-		return list;
+		return ColumnCalloutManager.findCallout(tableName, columnName);
 	}
 
-	private static final CCache<String, IServiceReferenceHolder<ICalloutFactory>> s_calloutFactoryCache = new CCache<>(null, "ICalloutFactory", 100, false);
-	
-	// IDEMPIERE-2732
 	/**
 	 *
 	 * @param className
-	 * @param method 
+	 * @param methodName 
 	 * @return callout for className
 	 */
 	public static Callout getCallout(String className, String methodName) {
-		String cacheKey = className + "::" + methodName;
-		IServiceReferenceHolder<ICalloutFactory> cache = s_calloutFactoryCache.get(cacheKey);
-		if (cache != null) {
-			ICalloutFactory service = cache.getService();
-			if (service != null) {
-				Callout callout = service.getCallout(className, methodName);
-				if (callout != null) {
-					return callout;
-				}
-			}
-			s_calloutFactoryCache.remove(cacheKey);
-		}
-		List<IServiceReferenceHolder<ICalloutFactory>> factories = Service.locator().list(ICalloutFactory.class).getServiceReferences();
-		if (factories != null) {
-			for(IServiceReferenceHolder<ICalloutFactory> factory : factories) {
-				ICalloutFactory service = factory.getService();
-				if (service != null) {
-					Callout callout = service.getCallout(className, methodName);
-					if (callout != null) {
-						s_calloutFactoryCache.put(cacheKey, factory);
-						return callout;
-					}
-				}
-			}
-		}
-		return null;
+		return ColumnCalloutManager.getCallout(className, methodName);
 	}
 
-	private static final CCache<String, IServiceReferenceHolder<IProcessFactory>> s_processFactoryCache = new CCache<>(null, "IProcessFactory", 100, false);
+	private static final CCache<String, IServiceReferenceHolder<IProcessFactory>> s_processFactoryCache = new CCache<>(IPROCESS_FACTORY_CACHE_TABLE_NAME, "IProcessFactory", 100, false);
 	
 	/**
 	 *
@@ -267,7 +251,7 @@ public class Core {
 		return factories;
 	}
 
-	private static final CCache<String, IServiceReferenceHolder<IModelValidatorFactory>> s_modelValidatorFactoryCache = new CCache<>(null, "IModelValidatorFactory", 100, false);
+	private static final CCache<String, IServiceReferenceHolder<IModelValidatorFactory>> s_modelValidatorFactoryCache = new CCache<>(IMODEL_VALIDATOR_FACTORY_CACHE_TABLE_NAME, "IModelValidatorFactory", 100, false);
 	
 	/**
 	 *
@@ -302,7 +286,19 @@ public class Core {
 		return null;
 	}
 
+	/**
+	 * Get the password reset service for the current tenant. Delegates to
+	 * {@link PasswordResetServiceFactory}, which honors the {@code PASSWORD_RESET_SERVICE_CLASS}
+	 * config and falls back to the default provider.
+	 * @return {@link IPasswordResetService}, or null if none is registered
+	 */
+	public static IPasswordResetService getPasswordResetService()
+	{
+		return PasswordResetServiceFactory.getService(Env.getAD_Client_ID(Env.getCtx()));
+	}
+
 	private static IServiceReferenceHolder<IKeyStore> s_keystoreServiceReference = null;
+	private static volatile boolean s_legacyKeyWarningLogged = false;
 	
 	/**
 	 * 
@@ -315,15 +311,71 @@ public class Core {
 			if (keystoreService != null)
 				return keystoreService;
 		}
-		IServiceReferenceHolder<IKeyStore> serviceReference = Service.locator().locate(IKeyStore.class).getServiceReference();
-		if (serviceReference != null) {
-			keystoreService = serviceReference.getService();
-			s_keystoreServiceReference = serviceReference;
+		
+		IServicesHolder<IKeyStore> list = Service.locator().list(IKeyStore.class);
+		List<IServiceReferenceHolder<IKeyStore>> references = list.getServiceReferences();
+		for (IServiceReferenceHolder<IKeyStore> refHolder : references) {
+			ServiceReference<IKeyStore> ref = refHolder.getServiceReference();
+			IKeyStore service = ref != null ? BaseActivator.getBundleContext().getService(ref) : null;
+			if (service != null) {
+				//test key store service is working
+				SecretKey key = service.getKey(0);
+				if (key != null) {
+					if (!s_legacyKeyWarningLogged) {
+						final boolean legacyKeyDetected = key.getAlgorithm().equals(DefaultKeyStore.LEGACY_ALGORITHM);
+						if (legacyKeyDetected)
+							s_log.warning("Encryption with legacy key algorithm DES detected - it is recommended to migrate to a stronger algorithm");
+						if (DB.isConnected()) {
+							updateLegacyKeyWarningSysConfig(legacyKeyDetected);
+						} else {
+							Adempiere.addServerStateChangeListener(new ServerStateChangeListener() {
+								@Override
+								public void stateChange(ServerStateChangeEvent event) {
+									if (event.getEventType() == ServerStateChangeEvent.SERVER_START) 
+										updateLegacyKeyWarningSysConfig(legacyKeyDetected);
+								}
+							});
+						}
+					}
+					s_legacyKeyWarningLogged = true;
+					keystoreService = service;
+					s_keystoreServiceReference = refHolder;
+					break;
+				} else {
+					String componentName = (String)ref.getProperty(org.osgi.service.component.ComponentConstants.COMPONENT_NAME);
+					throw new AdempiereException("Key store service [class=" + service.getClass().getName()
+							+ ", component=" + componentName 
+							+ ", bundle=" + ref.getBundle().getSymbolicName() 
+							+ "] is not configured properly");
+				}
+			}
 		}
 		return keystoreService;
 	}
 	
-	private static final CCache<String, IServiceReferenceHolder<IPaymentProcessorFactory>> s_paymentProcessorFactoryCache = new CCache<>(null, "IPaymentProcessorFactory", 100, false);
+	/**
+	 * Update SECURITY_DASHBOARD_LEGACY_KEY_WARNING SysConfig.
+	 * This method will be called asynchronously to avoid issues when DB is not yet connected.
+	 */
+	private static void updateLegacyKeyWarningSysConfig(boolean legacyKeyDetected) {
+		// Run in a separate thread to avoid blocking and to retry until DB is connected
+		String warn = MSysConfig.getValue(MSysConfig.SECURITY_DASHBOARD_LEGACY_KEY_WARNING, "Y");
+		if ("D".equals(warn))
+			return; // warning disabled by sysadmin, do not override
+		if ("Y".equals(warn) && legacyKeyDetected)
+			return; // warning already enabled and legacy key still detected, no update needed
+		if ("N".equals(warn) && !legacyKeyDetected)
+			return; // warning already negated and no legacy key detected, no update needed
+
+		MSysConfig conf = new MSysConfig(Env.getCtx(), SystemIDs.SYSCONFIG_SECURITY_DASHBOARD_LEGACY_KEY_WARNING, null);
+		conf.setValue(legacyKeyDetected ? "Y" : "N");
+		conf.saveEx();
+
+		if (s_log.isLoggable(Level.INFO))
+			s_log.info("Updated SECURITY_DASHBOARD_LEGACY_KEY_WARNING SysConfig");
+	}
+
+	private static final CCache<String, IServiceReferenceHolder<IPaymentProcessorFactory>> s_paymentProcessorFactoryCache = new CCache<>(IPAYMENT_PROCESSOR_FACTORY_CACHE_TABLE_NAME, "IPaymentProcessorFactory", 100, false);
 	
 	/**
 	 *  Get payment processor instance
@@ -382,7 +434,7 @@ public class Core {
 		return myProcessor;
 	}
 	
-	private static final CCache<String, IServiceReferenceHolder<IBankStatementLoaderFactory>> s_bankStatementLoaderFactoryCache = new CCache<>(null, "IBankStatementLoaderFactory", 100, false);
+	private static final CCache<String, IServiceReferenceHolder<IBankStatementLoaderFactory>> s_bankStatementLoaderFactoryCache = new CCache<>(IBANK_STATEMENT_LOADER_FACTORY_CACHE_TABLE_NAME, "IBankStatementLoaderFactory", 100, false);
 	
 	/**
 	 * get BankStatementLoader instance
@@ -433,7 +485,7 @@ public class Core {
 		return myBankStatementLoader;
 	}
 	
-	private static final CCache<String, IServiceReferenceHolder<IBankStatementMatcherFactory>> s_bankStatementMatcherFactoryCache = new CCache<>(null, "IBankStatementMatcherFactory", 100, false);
+	private static final CCache<String, IServiceReferenceHolder<IBankStatementMatcherFactory>> s_bankStatementMatcherFactoryCache = new CCache<>(IBANK_STATEMENT_MATCHER_FACTORY_CACHE_TABLE_NAME, "IBankStatementMatcherFactory", 100, false);
 	
 	/**
 	 * get BankStatementMatcher instance
@@ -484,7 +536,7 @@ public class Core {
 		return myBankStatementMatcher;
 	}
 	
-	private static final CCache<String, IServiceReferenceHolder<IShipmentProcessorFactory>> s_shipmentProcessorFactoryCache = new CCache<>(null, "IShipmentProcessorFactory", 100, false);
+	private static final CCache<String, IServiceReferenceHolder<IShipmentProcessorFactory>> s_shipmentProcessorFactoryCache = new CCache<>(ISHIPMENT_PROCESSOR_FACTORY_CACHE_TABLE_NAME, "IShipmentProcessorFactory", 100, false);
 	
 	/**
 	 * 
@@ -530,7 +582,7 @@ public class Core {
 		return null;
 	}
 	
-	private static final CCache<String, IServiceReferenceHolder<IAddressValidationFactory>> s_addressValidationFactoryCache = new CCache<>(null, "IAddressValidationFactory", 100, false);
+	private static final CCache<String, IServiceReferenceHolder<IAddressValidationFactory>> s_addressValidationFactoryCache = new CCache<>(IADDRESS_VALIDATION_FACTORY_CACHE_TABLE_NAME, "IAddressValidationFactory", 100, false);
 	
 	/**
 	 * Get address validation instance
@@ -574,7 +626,7 @@ public class Core {
 		return null;
 	}
 	
-	private static final CCache<String, IServiceReferenceHolder<ITaxProviderFactory>> s_taxProviderFactoryCache = new CCache<>(null, "ITaxProviderFactory", 100, false);
+	private static final CCache<String, IServiceReferenceHolder<ITaxProviderFactory>> s_taxProviderFactoryCache = new CCache<>(ITAX_PROVIDER_FACTORY_CACHE_TABLE_NAME, "ITaxProviderFactory", 100, false);
 	
 	/**
 	 * Get tax provider instance
@@ -631,7 +683,7 @@ public class Core {
 		return null;
 	}
 	
-	private static final CCache<String, IServiceReferenceHolder<IReplenishFactory>> s_replenishFactoryCache = new CCache<>(null, "IReplenishFactory", 100, false);
+	private static final CCache<String, IServiceReferenceHolder<IReplenishFactory>> s_replenishFactoryCache = new CCache<>(IREPLENISH_FACTORY_CACHE_TABLE_NAME, "IReplenishFactory", 100, false);
 	
 	/**
 	 * get Custom Replenish instance
@@ -682,7 +734,7 @@ public class Core {
 		return myReplenishInstance;
 	}
 	
-	private final static CCache<String, IServiceReferenceHolder<ScriptEngineFactory>> s_scriptEngineFactoryCache = new CCache<>(null, "ScriptEngineFactory", 100, false);
+	private final static CCache<String, IServiceReferenceHolder<ScriptEngineFactory>> s_scriptEngineFactoryCache = new CCache<>(SCRIPT_ENGINE_FACTORY_CACHE_TABLE_NAME, "ScriptEngineFactory", 100, false);
 	
 	/** Get script engine 
 	 * 
@@ -721,7 +773,7 @@ public class Core {
 		return null;
 	}
 	
-	private static final CCache<String, IServiceReferenceHolder<IPaymentExporterFactory>> s_paymentExporterFactory = new CCache<>(null, "IPaymentExporterFactory", 100, false);
+	private static final CCache<String, IServiceReferenceHolder<IPaymentExporterFactory>> s_paymentExporterFactory = new CCache<>(IPAYMENT_EXPORTER_FACTORY_CACHE_TABLE_NAME, "IPaymentExporterFactory", 100, false);
 	
 	/**
 	 * get PaymentExporter instance
@@ -803,8 +855,9 @@ public class Core {
 
 		return null;
 	}
-	
-	private final static CCache<String, IServiceReferenceHolder<IDepreciationMethodFactory>> s_depreciationMethodFactoryCache = new CCache<>(null, "IDepreciationMethodFactory", 100, false);
+
+
+	private final static CCache<String, IServiceReferenceHolder<IDepreciationMethodFactory>> s_depreciationMethodFactoryCache = new CCache<>(IDEPRECIATION_METHOD_FACTORY_CACHE_TABLE_NAME, "IDepreciationMethodFactory", 100, false);
 	
 	/**
 	 * lookup implement {@link IDepreciationMethod}
@@ -923,5 +976,352 @@ public class Core {
 		}
 		return ids;
 	}
+
+	private static IServiceReferenceHolder<IMappedModelFactory> s_mappedModelFactoryReference = null;
+	
+	/**
+	 * 
+	 * @return {@link IMappedModelFactory}
+	 */
+	public static IMappedModelFactory getMappedModelFactory(){
+		IMappedModelFactory modelFactoryService = null;
+		if (s_mappedModelFactoryReference != null) {
+			modelFactoryService = s_mappedModelFactoryReference.getService();
+			if (modelFactoryService != null)
+				return modelFactoryService;
+		}
+		IServiceReferenceHolder<IMappedModelFactory> serviceReference = Service.locator().locate(IMappedModelFactory.class).getServiceReference();
+		if (serviceReference != null) {
+			modelFactoryService = serviceReference.getService();
+			s_mappedModelFactoryReference = serviceReference;
+		}
+		return modelFactoryService;
+	}
+	
+	private static IServiceReferenceHolder<IMappedProcessFactory> s_mappedProcessFactoryReference = null;
+	
+	/**
+	 * 
+	 * @return {@link IMappedProcessFactory}
+	 */
+	public static IMappedProcessFactory getMappedProcessFactory(){
+		IMappedProcessFactory processFactoryService = null;
+		if (s_mappedProcessFactoryReference != null) {
+			processFactoryService = s_mappedProcessFactoryReference.getService();
+			if (processFactoryService != null)
+				return processFactoryService;
+		}
+		IServiceReferenceHolder<IMappedProcessFactory> serviceReference = Service.locator().locate(IMappedProcessFactory.class).getServiceReference();
+		if (serviceReference != null) {
+			processFactoryService = serviceReference.getService();
+			s_mappedProcessFactoryReference = serviceReference;
+		}
+		return processFactoryService;
+	}
+	
+	/**
+	 * 
+	 * @return {@link IMappedColumnCalloutFactory}
+	 */
+	public static IMappedColumnCalloutFactory getMappedColumnCalloutFactory() {
+		return ColumnCalloutManager.getMappedColumnCalloutFactory();		
+	}
+	
+	private static IServiceReferenceHolder<IMappedDocumentFactory> s_mappedDocumentFactoryReference = null;
+	
+	/**
+	 * 
+	 * @return {@link IMappedDocumentFactory}
+	 */
+	public static IMappedDocumentFactory getMappedDocumentFactory() {
+		IMappedDocumentFactory factoryService = null;
+		if (s_mappedDocumentFactoryReference != null) {
+			factoryService = s_mappedDocumentFactoryReference.getService();
+			if (factoryService != null)
+				return factoryService;
+		}
 		
+		IServiceReferenceHolder<IMappedDocumentFactory> serviceReference = Service.locator().locate(IMappedDocumentFactory.class).getServiceReference();
+		if (serviceReference != null) {
+			factoryService = serviceReference.getService();
+			s_mappedDocumentFactoryReference = serviceReference;
+		}
+		return factoryService;
+	}
+	
+	private static IServiceReferenceHolder<IEventManager> s_eventManagerReference = null;
+	
+	/**
+	 * 
+	 * @return {@link IEventManager}
+	 */
+	public static IEventManager getEventManager() {
+		IEventManager eventManager = null;
+		if (s_eventManagerReference != null) {
+			eventManager = s_eventManagerReference.getService();
+			if (eventManager != null)
+				return eventManager;
+		}
+		IServiceReferenceHolder<IEventManager> serviceReference = Service.locator().locate(IEventManager.class).getServiceReference();
+		if (serviceReference != null) {
+			eventManager = serviceReference.getService();
+			s_eventManagerReference = serviceReference;
+		}
+		
+		return eventManager;
+	}
+	
+	/**
+	 * 
+	 * @return {@link IUploadService}
+	 */
+	public static List<IUploadService> getUploadServices() {
+		List<IUploadService> services = new ArrayList<IUploadService>();
+		List<MAuthorizationAccount> accounts = MAuthorizationAccount.getAuthorizedAccouts(Env.getAD_User_ID(Env.getCtx()), MAuthorizationAccount.AD_AUTHORIZATIONSCOPES_Document);
+		for (MAuthorizationAccount account : accounts) {
+			IUploadService service = getUploadService(account);
+			if (service != null) {
+				services.add(service);
+			}
+		}
+		return services;
+	}
+	
+	/**
+	 * 
+	 * @param account
+	 * @return {@link IUploadService}
+	 */
+	public static IUploadService getUploadService(MAuthorizationAccount account) {
+		MAuthorizationCredential credential = new MAuthorizationCredential(account.getCtx(), account.getAD_AuthorizationCredential_ID(), account.get_TrxName());
+		MAuthorizationProvider authProvider = new MAuthorizationProvider(account.getCtx(), credential.getAD_AuthorizationProvider_ID(), account.get_TrxName());
+		String provider = authProvider.getName();
+		ServiceQuery query = new ServiceQuery();
+		query.put("provider", provider);
+		IServiceHolder<IUploadService> holder = Service.locator().locate(IUploadService.class, query);
+		if (holder != null) {
+			return holder.getService();
+		}
+		
+		return null;
+	}
+	
+	private final static CCache<String, IServiceReferenceHolder<IPrintHeaderFooter>> s_printHeaderFooterCache = new CCache<>(IPRINT_HEADER_FOOTER_CACHE_TABLE_NAME, "IPrintHeaderFooterFactory", 100, false);
+	
+	/**
+	 * Get print header/footer instance
+	 * @param printHeaderFooter print header/footer
+	 * @return print header/footer instance or null if not found
+	 */
+	public static IPrintHeaderFooter getPrintHeaderFooter(I_AD_PrintHeaderFooter printHeaderFooter) {
+		String componentName = printHeaderFooter.getSourceClassName();
+		if (Util.isEmpty(componentName, true)) {
+			s_log.log(Level.SEVERE, "Print Header/Footer source class not defined: " + printHeaderFooter);
+			return null;
+		}
+		
+		IServiceReferenceHolder<IPrintHeaderFooter> cache = s_printHeaderFooterCache.get(componentName);
+		if (cache != null) {
+			IPrintHeaderFooter service = cache.getService();
+			if (service != null) {
+				return service;
+			}
+			s_printHeaderFooterCache.remove(componentName);
+		}
+		
+		IServiceReferenceHolder<IPrintHeaderFooter> serviceReference = Service.locator()
+				.locate(IPrintHeaderFooter.class, componentName, null).getServiceReference();
+		if (serviceReference == null) 
+			return null;
+		IPrintHeaderFooter service = serviceReference.getService();
+		if (service != null) {
+			s_printHeaderFooterCache.put(componentName, serviceReference);
+			return service;
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * Get {@link IReservationTracerFactory} component
+	 * @return {@link IReservationTracerFactory} implementation
+	 */
+	public static IReservationTracerFactory getReservationTracerFactory() {
+		IServiceHolder<IReservationTracerFactory> serviceHolder = Service.locator().locate(IReservationTracerFactory.class);
+		if (serviceHolder != null && serviceHolder.getService() != null)
+			return serviceHolder.getService();
+		
+		return DefaultReservationTracerFactory.getInstance();
+	}
+	
+	/**
+	 * Get tax lookup service
+	 * @return ITaxLookup service
+	 */
+	public static ITaxLookup getTaxLookup() {
+		String service = MSysConfig.getValue(MSysConfig.TAX_LOOKUP_SERVICE, DefaultTaxLookup.class.getName(), Env.getAD_Client_ID(Env.getCtx()));
+		IServiceHolder<ITaxLookup> serviceHolder = Service.locator().locate(ITaxLookup.class, service, null);
+		if (serviceHolder != null)
+			return serviceHolder.getService();
+
+		//fall back, should not reach here
+		return new DefaultTaxLookup();
+	}
+	
+	/**
+	 * @return {@link DefaultAnnotationBasedEventManager}
+	 */
+	public static DefaultAnnotationBasedEventManager getDefaultAnnotationBasedEventManager() {
+		IServiceReferenceHolder<DefaultAnnotationBasedEventManager> serviceReference = Service.locator().locate(DefaultAnnotationBasedEventManager.class).getServiceReference();
+		if (serviceReference != null) {
+			return serviceReference.getService();
+		}
+		return null;
+	}
+
+	/**
+	 * get Credit Manager
+	 * 
+	 * @param  po
+	 * @return    instance of the ICreditManager
+	 */
+	public static ICreditManager getCreditManager(PO po)
+	{
+		if (po == null)
+		{
+			s_log.log(Level.SEVERE, "Invalid PO");
+			return null;
+		}
+
+		ICreditManager myCreditManager = null;
+
+		List<ICreditManagerFactory> factoryList = Service.locator().list(ICreditManagerFactory.class).getServices();
+		if (factoryList != null)
+		{
+			for (ICreditManagerFactory factory : factoryList)
+			{
+				myCreditManager = factory.getCreditManager(po);
+				if (myCreditManager != null)
+				{
+					break;
+				}
+			}
+		}
+
+		if (myCreditManager == null)
+		{
+			s_log.log(Level.CONFIG, "For " + po.get_TableName() + " not found any service/extension registry.");
+			return null;
+		}
+
+		return myCreditManager;
+	} // getCreditManager
+	
+	@SuppressWarnings("unchecked")
+	public static IReportRenderer<IReportRendererConfiguration> getReportRenderer(String id) {
+		IReportRenderer<IReportRendererConfiguration> renderer = null;
+		@SuppressWarnings("rawtypes")
+		List<IServiceReferenceHolder<IReportRenderer>> rendererReferences = Service.locator().list(IReportRenderer.class).getServiceReferences();
+		for(var holder : rendererReferences) {
+			renderer = holder.getService();
+			if (renderer.getId().equals(id)) {
+				return renderer;
+			}
+		}
+		return null;
+	}
+
+	/** Cache for compiled scripts, keyed by AD_Rule_ID */
+	private final static CCache<Integer, CompiledScript> s_compiledScriptCache = new CCache<>(MRule.Table_Name, "CompiledScript", 100, false);
+
+	/**
+	 * Get a compiled script for the given rule.
+	 * Uses JSR-223 Compilable interface for caching pre-compiled scripts.
+	 * This significantly improves performance for repeatedly executed scripts
+	 * (e.g., table validators, callouts) by avoiding re-parsing and re-compilation.
+	 *
+	 * @param  rule MRule containing the script
+	 * @return      CompiledScript if engine supports compilation, null otherwise
+	 */
+	public static CompiledScript getCompiledScript(MRule rule)
+	{
+		if (rule == null || rule.getAD_Rule_ID() <= 0 || Util.isEmpty(rule.getScript(), true))
+			return null;
+
+		// Cache only supported for Groovy script engine
+		if (!"groovy".equalsIgnoreCase(rule.getEngineName()))
+		{
+			if (s_log.isLoggable(Level.FINE))
+				s_log.fine("Script compilation caching is only supported for Groovy engine, skipping: " + rule.getEngineName());
+			return null;
+		}
+
+		Integer key = Integer.valueOf(rule.getAD_Rule_ID());
+
+		// Check cache first
+		CompiledScript compiled = s_compiledScriptCache.get(key);
+		if (compiled != null)
+			return compiled;
+
+		// Get script engine
+		ScriptEngine engine = getScriptEngine(rule.getEngineName());
+		if (engine == null)
+		{
+			s_log.log(Level.WARNING, "Script engine not found: " + rule.getEngineName());
+			return null;
+		}
+
+		// Check if engine supports compilation
+		if (!(engine instanceof Compilable))
+		{
+			if (s_log.isLoggable(Level.FINE))
+				s_log.fine("Script engine " + rule.getEngineName() + " does not support compilation");
+			return null;
+		}
+
+		// Compile and cache
+		try
+		{
+			compiled = ((Compilable) engine).compile(rule.getScript());
+			s_compiledScriptCache.put(key, compiled);
+			if (s_log.isLoggable(Level.FINE))
+				s_log.fine("Compiled and cached script: " + rule.getValue());
+			return compiled;
+		}
+		catch (ScriptException e)
+		{
+			s_log.log(Level.SEVERE, "Failed to compile script: " + rule.getValue() + ", Error: " + e.getLocalizedMessage(), e);
+			return null;
+		}
+	} // getCompiledScript
+
+	/**
+	 * Get markdown renderer service
+	 * @return markdown renderer service
+	 */
+
+	/**
+	 * @return list of search providers
+	 */
+	public static List<ISearchProvider> getSearchProviders() {
+		List<ISearchProvider> providers = new ArrayList<>();
+		List<IServiceReferenceHolder<ISearchProvider>> refs = Service.locator().list(ISearchProvider.class)
+				.getServiceReferences();
+		if (refs != null) {
+			for (IServiceReferenceHolder<ISearchProvider> ref : refs) {
+				ISearchProvider provider = ref.getService();
+				if (provider != null) {
+					providers.add(provider);
+				}
+			}
+		}
+		return providers;
+	}
+
+	public static IMarkdownRenderer getMarkdownRenderer() {
+		IServiceReferenceHolder<IMarkdownRenderer> holder = Service.locator().locate(IMarkdownRenderer.class).getServiceReference();
+		return holder != null ? holder.getService() : null; 
+	}
+
+
 }

@@ -19,19 +19,21 @@ package org.compiere.model;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
+import java.sql.Timestamp;
 import java.util.Properties;
 import org.compiere.util.Env;
 
 /** Generated Model for M_CostHistory
- *  @author iDempiere (generated) 
- *  @version Release 8.2 - $Id$ */
-public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent 
+ *  @author iDempiere (generated)
+ *  @version Release 13 - $Id$ */
+@org.adempiere.base.Model(table="M_CostHistory")
+public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20201220L;
+	private static final long serialVersionUID = 20260309L;
 
     /** Standard Constructor */
     public X_M_CostHistory (Properties ctx, int M_CostHistory_ID, String trxName)
@@ -39,6 +41,75 @@ public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
       super (ctx, M_CostHistory_ID, trxName);
       /** if (M_CostHistory_ID == 0)
         {
+			setDateAcct (new Timestamp( System.currentTimeMillis() ));
+			setIsBackDate (false);
+// N
+			setM_AttributeSetInstance_ID (0);
+			setM_CostDetail_ID (0);
+			setM_CostElement_ID (0);
+			setM_CostHistory_ID (0);
+			setM_CostHistory_UU (null);
+			setM_CostType_ID (0);
+			setNewCostPrice (Env.ZERO);
+			setNewQty (Env.ZERO);
+			setOldCostPrice (Env.ZERO);
+			setOldQty (Env.ZERO);
+        } */
+    }
+
+    /** Standard Constructor */
+    public X_M_CostHistory (Properties ctx, int M_CostHistory_ID, String trxName, String ... virtualColumns)
+    {
+      super (ctx, M_CostHistory_ID, trxName, virtualColumns);
+      /** if (M_CostHistory_ID == 0)
+        {
+			setDateAcct (new Timestamp( System.currentTimeMillis() ));
+			setIsBackDate (false);
+// N
+			setM_AttributeSetInstance_ID (0);
+			setM_CostDetail_ID (0);
+			setM_CostElement_ID (0);
+			setM_CostHistory_ID (0);
+			setM_CostHistory_UU (null);
+			setM_CostType_ID (0);
+			setNewCostPrice (Env.ZERO);
+			setNewQty (Env.ZERO);
+			setOldCostPrice (Env.ZERO);
+			setOldQty (Env.ZERO);
+        } */
+    }
+
+    /** Standard Constructor */
+    public X_M_CostHistory (Properties ctx, String M_CostHistory_UU, String trxName)
+    {
+      super (ctx, M_CostHistory_UU, trxName);
+      /** if (M_CostHistory_UU == null)
+        {
+			setDateAcct (new Timestamp( System.currentTimeMillis() ));
+			setIsBackDate (false);
+// N
+			setM_AttributeSetInstance_ID (0);
+			setM_CostDetail_ID (0);
+			setM_CostElement_ID (0);
+			setM_CostHistory_ID (0);
+			setM_CostHistory_UU (null);
+			setM_CostType_ID (0);
+			setNewCostPrice (Env.ZERO);
+			setNewQty (Env.ZERO);
+			setOldCostPrice (Env.ZERO);
+			setOldQty (Env.ZERO);
+        } */
+    }
+
+    /** Standard Constructor */
+    public X_M_CostHistory (Properties ctx, String M_CostHistory_UU, String trxName, String ... virtualColumns)
+    {
+      super (ctx, M_CostHistory_UU, trxName, virtualColumns);
+      /** if (M_CostHistory_UU == null)
+        {
+			setDateAcct (new Timestamp( System.currentTimeMillis() ));
+			setIsBackDate (false);
+// N
 			setM_AttributeSetInstance_ID (0);
 			setM_CostDetail_ID (0);
 			setM_CostElement_ID (0);
@@ -59,7 +130,7 @@ public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
     }
 
     /** AccessLevel
-      * @return 3 - Client - Org 
+      * @return 3 - Client - Org
       */
     protected int get_AccessLevel()
     {
@@ -80,27 +151,82 @@ public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
       return sb.toString();
     }
 
+	/** Set Back-Date Processed On.
+		@param BackDateProcessedOn The date+time (expressed in decimal format) when the document has been processed
+	*/
+	public void setBackDateProcessedOn (Timestamp BackDateProcessedOn)
+	{
+		set_Value (COLUMNNAME_BackDateProcessedOn, BackDateProcessedOn);
+	}
+
+	/** Get Back-Date Processed On.
+		@return The date+time (expressed in decimal format) when the document has been processed
+	  */
+	public Timestamp getBackDateProcessedOn()
+	{
+		return (Timestamp)get_Value(COLUMNNAME_BackDateProcessedOn);
+	}
+
+	/** Set Account Date.
+		@param DateAcct Accounting Date
+	*/
+	public void setDateAcct (Timestamp DateAcct)
+	{
+		set_Value (COLUMNNAME_DateAcct, DateAcct);
+	}
+
+	/** Get Account Date.
+		@return Accounting Date
+	  */
+	public Timestamp getDateAcct()
+	{
+		return (Timestamp)get_Value(COLUMNNAME_DateAcct);
+	}
+
+	/** Set Back-Date.
+		@param IsBackDate Back-Date
+	*/
+	public void setIsBackDate (boolean IsBackDate)
+	{
+		set_Value (COLUMNNAME_IsBackDate, Boolean.valueOf(IsBackDate));
+	}
+
+	/** Get Back-Date.
+		@return Back-Date	  */
+	public boolean isBackDate()
+	{
+		Object oo = get_Value(COLUMNNAME_IsBackDate);
+		if (oo != null)
+		{
+			 if (oo instanceof Boolean)
+				 return ((Boolean)oo).booleanValue();
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
+	@Deprecated(since="13") // use better methods with cache
 	public I_M_AttributeSetInstance getM_AttributeSetInstance() throws RuntimeException
-    {
-		return (I_M_AttributeSetInstance)MTable.get(getCtx(), I_M_AttributeSetInstance.Table_Name)
-			.getPO(getM_AttributeSetInstance_ID(), get_TrxName());	}
+	{
+		return (I_M_AttributeSetInstance)MTable.get(getCtx(), I_M_AttributeSetInstance.Table_ID)
+			.getPO(getM_AttributeSetInstance_ID(), get_TrxName());
+	}
 
 	/** Set Attribute Set Instance.
-		@param M_AttributeSetInstance_ID 
-		Product Attribute Set Instance
-	  */
+		@param M_AttributeSetInstance_ID Product Attribute Set Instance
+	*/
 	public void setM_AttributeSetInstance_ID (int M_AttributeSetInstance_ID)
 	{
-		if (M_AttributeSetInstance_ID < 0) 
+		if (M_AttributeSetInstance_ID < 0)
 			set_ValueNoCheck (COLUMNNAME_M_AttributeSetInstance_ID, null);
-		else 
+		else
 			set_ValueNoCheck (COLUMNNAME_M_AttributeSetInstance_ID, Integer.valueOf(M_AttributeSetInstance_ID));
 	}
 
 	/** Get Attribute Set Instance.
 		@return Product Attribute Set Instance
 	  */
-	public int getM_AttributeSetInstance_ID () 
+	public int getM_AttributeSetInstance_ID()
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_M_AttributeSetInstance_ID);
 		if (ii == null)
@@ -108,27 +234,28 @@ public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
 		return ii.intValue();
 	}
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_M_CostDetail getM_CostDetail() throws RuntimeException
-    {
-		return (org.compiere.model.I_M_CostDetail)MTable.get(getCtx(), org.compiere.model.I_M_CostDetail.Table_Name)
-			.getPO(getM_CostDetail_ID(), get_TrxName());	}
+	{
+		return (org.compiere.model.I_M_CostDetail)MTable.get(getCtx(), org.compiere.model.I_M_CostDetail.Table_ID)
+			.getPO(getM_CostDetail_ID(), get_TrxName());
+	}
 
 	/** Set Cost Detail.
-		@param M_CostDetail_ID 
-		Cost Detail Information
-	  */
+		@param M_CostDetail_ID Cost Detail Information
+	*/
 	public void setM_CostDetail_ID (int M_CostDetail_ID)
 	{
-		if (M_CostDetail_ID < 1) 
+		if (M_CostDetail_ID < 1)
 			set_ValueNoCheck (COLUMNNAME_M_CostDetail_ID, null);
-		else 
+		else
 			set_ValueNoCheck (COLUMNNAME_M_CostDetail_ID, Integer.valueOf(M_CostDetail_ID));
 	}
 
 	/** Get Cost Detail.
 		@return Cost Detail Information
 	  */
-	public int getM_CostDetail_ID () 
+	public int getM_CostDetail_ID()
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_M_CostDetail_ID);
 		if (ii == null)
@@ -136,27 +263,28 @@ public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
 		return ii.intValue();
 	}
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_M_CostElement getM_CostElement() throws RuntimeException
-    {
-		return (org.compiere.model.I_M_CostElement)MTable.get(getCtx(), org.compiere.model.I_M_CostElement.Table_Name)
-			.getPO(getM_CostElement_ID(), get_TrxName());	}
+	{
+		return (org.compiere.model.I_M_CostElement)MTable.get(getCtx(), org.compiere.model.I_M_CostElement.Table_ID)
+			.getPO(getM_CostElement_ID(), get_TrxName());
+	}
 
 	/** Set Cost Element.
-		@param M_CostElement_ID 
-		Product Cost Element
-	  */
+		@param M_CostElement_ID Product Cost Element
+	*/
 	public void setM_CostElement_ID (int M_CostElement_ID)
 	{
-		if (M_CostElement_ID < 1) 
+		if (M_CostElement_ID < 1)
 			set_ValueNoCheck (COLUMNNAME_M_CostElement_ID, null);
-		else 
+		else
 			set_ValueNoCheck (COLUMNNAME_M_CostElement_ID, Integer.valueOf(M_CostElement_ID));
 	}
 
 	/** Get Cost Element.
 		@return Product Cost Element
 	  */
-	public int getM_CostElement_ID () 
+	public int getM_CostElement_ID()
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_M_CostElement_ID);
 		if (ii == null)
@@ -165,21 +293,20 @@ public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
 	}
 
 	/** Set Cost History.
-		@param M_CostHistory_ID 
-		Movement history for M_Cost
-	  */
+		@param M_CostHistory_ID Movement history for M_Cost
+	*/
 	public void setM_CostHistory_ID (int M_CostHistory_ID)
 	{
-		if (M_CostHistory_ID < 1) 
+		if (M_CostHistory_ID < 1)
 			set_ValueNoCheck (COLUMNNAME_M_CostHistory_ID, null);
-		else 
+		else
 			set_ValueNoCheck (COLUMNNAME_M_CostHistory_ID, Integer.valueOf(M_CostHistory_ID));
 	}
 
 	/** Get Cost History.
 		@return Movement history for M_Cost
 	  */
-	public int getM_CostHistory_ID () 
+	public int getM_CostHistory_ID()
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_M_CostHistory_ID);
 		if (ii == null)
@@ -188,7 +315,8 @@ public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
 	}
 
 	/** Set Cost History UUID.
-		@param M_CostHistory_UU Cost History UUID	  */
+		@param M_CostHistory_UU Cost History UUID
+	*/
 	public void setM_CostHistory_UU (String M_CostHistory_UU)
 	{
 		set_ValueNoCheck (COLUMNNAME_M_CostHistory_UU, M_CostHistory_UU);
@@ -196,32 +324,33 @@ public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
 
 	/** Get Cost History UUID.
 		@return Cost History UUID	  */
-	public String getM_CostHistory_UU () 
+	public String getM_CostHistory_UU()
 	{
 		return (String)get_Value(COLUMNNAME_M_CostHistory_UU);
 	}
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_M_CostType getM_CostType() throws RuntimeException
-    {
-		return (org.compiere.model.I_M_CostType)MTable.get(getCtx(), org.compiere.model.I_M_CostType.Table_Name)
-			.getPO(getM_CostType_ID(), get_TrxName());	}
+	{
+		return (org.compiere.model.I_M_CostType)MTable.get(getCtx(), org.compiere.model.I_M_CostType.Table_ID)
+			.getPO(getM_CostType_ID(), get_TrxName());
+	}
 
 	/** Set Cost Type.
-		@param M_CostType_ID 
-		Type of Cost (e.g. Current, Plan, Future)
-	  */
+		@param M_CostType_ID Type of Cost (e.g. Current, Plan, Future)
+	*/
 	public void setM_CostType_ID (int M_CostType_ID)
 	{
-		if (M_CostType_ID < 1) 
+		if (M_CostType_ID < 1)
 			set_ValueNoCheck (COLUMNNAME_M_CostType_ID, null);
-		else 
+		else
 			set_ValueNoCheck (COLUMNNAME_M_CostType_ID, Integer.valueOf(M_CostType_ID));
 	}
 
 	/** Get Cost Type.
 		@return Type of Cost (e.g. Current, Plan, Future)
 	  */
-	public int getM_CostType_ID () 
+	public int getM_CostType_ID()
 	{
 		Integer ii = (Integer)get_Value(COLUMNNAME_M_CostType_ID);
 		if (ii == null)
@@ -229,10 +358,38 @@ public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
 		return ii.intValue();
 	}
 
-	/** Set New Accumulated Amt.
-		@param NewCAmt 
-		Accumulated Amt after processing of M_CostDetail
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_M_Product getM_Product() throws RuntimeException
+	{
+		return (org.compiere.model.I_M_Product)MTable.get(getCtx(), org.compiere.model.I_M_Product.Table_ID)
+			.getPO(getM_Product_ID(), get_TrxName());
+	}
+
+	/** Set Product.
+		@param M_Product_ID Product, Service, Item
+	*/
+	public void setM_Product_ID (int M_Product_ID)
+	{
+		if (M_Product_ID < 1)
+			set_Value (COLUMNNAME_M_Product_ID, null);
+		else
+			set_Value (COLUMNNAME_M_Product_ID, Integer.valueOf(M_Product_ID));
+	}
+
+	/** Get Product.
+		@return Product, Service, Item
 	  */
+	public int getM_Product_ID()
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_M_Product_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	/** Set New Accumulated Amt.
+		@param NewCAmt Accumulated Amt after processing of M_CostDetail
+	*/
 	public void setNewCAmt (BigDecimal NewCAmt)
 	{
 		set_ValueNoCheck (COLUMNNAME_NewCAmt, NewCAmt);
@@ -241,7 +398,7 @@ public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
 	/** Get New Accumulated Amt.
 		@return Accumulated Amt after processing of M_CostDetail
 	  */
-	public BigDecimal getNewCAmt () 
+	public BigDecimal getNewCAmt()
 	{
 		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_NewCAmt);
 		if (bd == null)
@@ -249,30 +406,9 @@ public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
 		return bd;
 	}
 
-	/** Set New Cost Price.
-		@param NewCostPrice 
-		New current cost price after processing of M_CostDetail
-	  */
-	public void setNewCostPrice (BigDecimal NewCostPrice)
-	{
-		set_ValueNoCheck (COLUMNNAME_NewCostPrice, NewCostPrice);
-	}
-
-	/** Get New Cost Price.
-		@return New current cost price after processing of M_CostDetail
-	  */
-	public BigDecimal getNewCostPrice () 
-	{
-		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_NewCostPrice);
-		if (bd == null)
-			 return Env.ZERO;
-		return bd;
-	}
-
 	/** Set New Accumulated Qty.
-		@param NewCQty 
-		New Accumulated Qty after processing of M_CostDetail
-	  */
+		@param NewCQty New Accumulated Qty after processing of M_CostDetail
+	*/
 	public void setNewCQty (BigDecimal NewCQty)
 	{
 		set_ValueNoCheck (COLUMNNAME_NewCQty, NewCQty);
@@ -281,7 +417,7 @@ public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
 	/** Get New Accumulated Qty.
 		@return New Accumulated Qty after processing of M_CostDetail
 	  */
-	public BigDecimal getNewCQty () 
+	public BigDecimal getNewCQty()
 	{
 		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_NewCQty);
 		if (bd == null)
@@ -289,10 +425,28 @@ public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
 		return bd;
 	}
 
-	/** Set New Current Quantity.
-		@param NewQty 
-		New current quantity after processing of M_CostDetail
+	/** Set New Cost Price.
+		@param NewCostPrice New current cost price after processing of M_CostDetail
+	*/
+	public void setNewCostPrice (BigDecimal NewCostPrice)
+	{
+		set_ValueNoCheck (COLUMNNAME_NewCostPrice, NewCostPrice);
+	}
+
+	/** Get New Cost Price.
+		@return New current cost price after processing of M_CostDetail
 	  */
+	public BigDecimal getNewCostPrice()
+	{
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_NewCostPrice);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
+	}
+
+	/** Set New Current Quantity.
+		@param NewQty New current quantity after processing of M_CostDetail
+	*/
 	public void setNewQty (BigDecimal NewQty)
 	{
 		set_ValueNoCheck (COLUMNNAME_NewQty, NewQty);
@@ -301,7 +455,7 @@ public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
 	/** Get New Current Quantity.
 		@return New current quantity after processing of M_CostDetail
 	  */
-	public BigDecimal getNewQty () 
+	public BigDecimal getNewQty()
 	{
 		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_NewQty);
 		if (bd == null)
@@ -310,9 +464,8 @@ public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
 	}
 
 	/** Set Old Accumulated Amt.
-		@param OldCAmt 
-		Old accumulated amt before the processing of M_CostDetail
-	  */
+		@param OldCAmt Old accumulated amt before the processing of M_CostDetail
+	*/
 	public void setOldCAmt (BigDecimal OldCAmt)
 	{
 		set_ValueNoCheck (COLUMNNAME_OldCAmt, OldCAmt);
@@ -321,7 +474,7 @@ public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
 	/** Get Old Accumulated Amt.
 		@return Old accumulated amt before the processing of M_CostDetail
 	  */
-	public BigDecimal getOldCAmt () 
+	public BigDecimal getOldCAmt()
 	{
 		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_OldCAmt);
 		if (bd == null)
@@ -329,30 +482,9 @@ public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
 		return bd;
 	}
 
-	/** Set Old Current Cost Price.
-		@param OldCostPrice 
-		Old current cost price before the processing of M_CostDetail
-	  */
-	public void setOldCostPrice (BigDecimal OldCostPrice)
-	{
-		set_ValueNoCheck (COLUMNNAME_OldCostPrice, OldCostPrice);
-	}
-
-	/** Get Old Current Cost Price.
-		@return Old current cost price before the processing of M_CostDetail
-	  */
-	public BigDecimal getOldCostPrice () 
-	{
-		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_OldCostPrice);
-		if (bd == null)
-			 return Env.ZERO;
-		return bd;
-	}
-
 	/** Set Old Accumulated Qty.
-		@param OldCQty 
-		Old accumulated qty before the processing of M_CostDetail
-	  */
+		@param OldCQty Old accumulated qty before the processing of M_CostDetail
+	*/
 	public void setOldCQty (BigDecimal OldCQty)
 	{
 		set_ValueNoCheck (COLUMNNAME_OldCQty, OldCQty);
@@ -361,7 +493,7 @@ public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
 	/** Get Old Accumulated Qty.
 		@return Old accumulated qty before the processing of M_CostDetail
 	  */
-	public BigDecimal getOldCQty () 
+	public BigDecimal getOldCQty()
 	{
 		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_OldCQty);
 		if (bd == null)
@@ -369,10 +501,28 @@ public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
 		return bd;
 	}
 
-	/** Set Old Current Quantity.
-		@param OldQty 
-		Old current quantity before the processing of M_CostDetail
+	/** Set Old Current Cost Price.
+		@param OldCostPrice Old current cost price before the processing of M_CostDetail
+	*/
+	public void setOldCostPrice (BigDecimal OldCostPrice)
+	{
+		set_ValueNoCheck (COLUMNNAME_OldCostPrice, OldCostPrice);
+	}
+
+	/** Get Old Current Cost Price.
+		@return Old current cost price before the processing of M_CostDetail
 	  */
+	public BigDecimal getOldCostPrice()
+	{
+		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_OldCostPrice);
+		if (bd == null)
+			 return Env.ZERO;
+		return bd;
+	}
+
+	/** Set Old Current Quantity.
+		@param OldQty Old current quantity before the processing of M_CostDetail
+	*/
 	public void setOldQty (BigDecimal OldQty)
 	{
 		set_ValueNoCheck (COLUMNNAME_OldQty, OldQty);
@@ -381,7 +531,7 @@ public class X_M_CostHistory extends PO implements I_M_CostHistory, I_Persistent
 	/** Get Old Current Quantity.
 		@return Old current quantity before the processing of M_CostDetail
 	  */
-	public BigDecimal getOldQty () 
+	public BigDecimal getOldQty()
 	{
 		BigDecimal bd = (BigDecimal)get_Value(COLUMNNAME_OldQty);
 		if (bd == null)

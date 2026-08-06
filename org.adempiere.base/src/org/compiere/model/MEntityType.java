@@ -28,23 +28,23 @@ import org.idempiere.cache.ImmutablePOSupport;
 import org.idempiere.cache.ImmutablePOCache;
 
 /**
- * 	Enitity Type Model
+ * 	Entity Type Model
  *	
  *  @author Jorg Janke
  *  @version $Id: MEntityType.java,v 1.2 2006/07/30 00:51:02 jjanke Exp $
  * 
  * @author Teo Sarca
  * 		<li>BF [ 2827777 ] MEntityType.isSystemMaintained not working well
- * 			https://sourceforge.net/tracker/?func=detail&aid=2827777&group_id=176962&atid=879332
+ * 			https://sourceforge.net/p/adempiere/bugs/1993/
  * 		<li>FR [ 2827786 ] Introduce MEntityType.get(Properties ctx, String entityType)
- * 			https://sourceforge.net/tracker/?func=detail&aid=2827786&group_id=176962&atid=879335
+ * 			https://sourceforge.net/p/adempiere/feature-requests/778/
  * 		<li>BF [ 2861194 ] EntityType is not using normal PO framework for getting IDs
- * 			https://sourceforge.net/tracker/?func=detail&aid=2861194&group_id=176962&atid=879332
+ * 			https://sourceforge.net/p/adempiere/bugs/2103/
  */
 public class MEntityType extends X_AD_EntityType implements ImmutablePOSupport
 {
 	/**
-	 * 
+	 * generated serial id
 	 */
 	private static final long serialVersionUID = -7160389442572466581L;
 
@@ -86,7 +86,17 @@ public class MEntityType extends X_AD_EntityType implements ImmutablePOSupport
 	@SuppressWarnings("unused")
 	private static CLogger s_log = CLogger.getCLogger (MEntityType.class);
 	
-	/**************************************************************************
+    /**
+     * UUID based Constructor
+     * @param ctx  Context
+     * @param AD_EntityType_UU  UUID key
+     * @param trxName Transaction
+     */
+    public MEntityType(Properties ctx, String AD_EntityType_UU, String trxName) {
+        super(ctx, AD_EntityType_UU, trxName);
+    }
+
+	/**
 	 * 	Standard Constructor
 	 *	@param ctx context
 	 *	@param AD_EntityType_ID id
@@ -109,7 +119,7 @@ public class MEntityType extends X_AD_EntityType implements ImmutablePOSupport
 	}	//	MEntityType
 	
 	/**
-	 * 
+	 * Copy constructor
 	 * @param copy
 	 */
 	public MEntityType(MEntityType copy) 
@@ -118,7 +128,7 @@ public class MEntityType extends X_AD_EntityType implements ImmutablePOSupport
 	}
 
 	/**
-	 * 
+	 * Copy constructor
 	 * @param ctx
 	 * @param copy
 	 */
@@ -128,7 +138,7 @@ public class MEntityType extends X_AD_EntityType implements ImmutablePOSupport
 	}
 
 	/**
-	 * 
+	 * Copy constructor
 	 * @param ctx
 	 * @param copy
 	 * @param trxName
@@ -147,8 +157,8 @@ public class MEntityType extends X_AD_EntityType implements ImmutablePOSupport
 	
 	/**
 	 * Is System Maintained.
-	 * Any Entity Type with ID < 1000000.
-	 * @return true if D/C/U/CUST/A/EXT/XX (ID < 1000000)
+	 * Any Entity Type with ID &lt; 1000000.
+	 * @return true if D/C/U/CUST/A/EXT/XX (ID &lt; 1000000)
 	 */
 	public boolean isSystemMaintained()
 	{
@@ -156,28 +166,27 @@ public class MEntityType extends X_AD_EntityType implements ImmutablePOSupport
 		return id < s_maxAD_EntityType_ID;
 	}	//	isSystemMaintained
 	
-	/**
-	 * 	Before Save
-	 *	@param newRecord new
-	 *	@return true if it can be saved
-	 */
+	@Override
 	protected boolean beforeSave (boolean newRecord)
 	{
 		if (!newRecord)
 		{
 			int id = getAD_EntityType_ID();
+			// Disallow edit of ENTITYTYPE_DICTIONARY and ENTITYTYPE_ADEMPIERE records
 			boolean systemMaintained = (id == ENTITYTYPE_DICTIONARY || id == ENTITYTYPE_ADEMPIERE);	//	C/D
 			if (systemMaintained)
 			{
 				log.saveError("Error", "You cannot modify a System maintained entity");
 				return false;
 			}
+			// Disallow edit of EntityType column
 			systemMaintained = is_ValueChanged("EntityType");
 			if (systemMaintained)
 			{
 				log.saveError("Error", "You cannot modify EntityType");
 				return false;
 			}
+			// Disallow edit of name, description, help and active column if this is a system maintained record
 			systemMaintained = isSystemMaintained()
 				&&	(is_ValueChanged("Name") || is_ValueChanged("Description") 
 					|| is_ValueChanged("Help") || is_ValueChanged("IsActive"));
@@ -187,38 +196,11 @@ public class MEntityType extends X_AD_EntityType implements ImmutablePOSupport
 				return false;
 			}
 		}
-		else	//	new
-		{
-			/*
-			setEntityType(getEntityType().toUpperCase());	//	upper case
-			if (getEntityType().trim().length() < 4)
-			{
-				log.saveError("FillMandatory", Msg.getElement(getCtx(), "EntityType") 
-					+ " - 4 Characters");
-				return false;
-			}
-			boolean ok = true;
-			char[] cc = getEntityType().toCharArray();
-			for (int i = 0; i < cc.length; i++)
-			{
-				char c = cc[i];
-				if (Character.isDigit(c) || (c >= 'A' && c <= 'Z'))
-					continue;
-				//
-				log.saveError("FillMandatory", Msg.getElement(getCtx(), "EntityType") 
-					+ " - Must be ASCII Letter or Digit");
-				return false;
-			}
-			*/
-			//setAD_EntityType_ID();
-		}	//	new
+		
 		return true;
 	}	//	beforeSave
 	
-	/**
-	 * 	Before Delete
-	 *	@return true if it can be deleted
-	 */
+	@Override
 	protected boolean beforeDelete ()
 	{
 		if (isSystemMaintained())	//	all pre-defined

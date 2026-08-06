@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_CtxHelpSuggestion
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_AD_CtxHelpSuggestion 
 {
@@ -41,37 +41,13 @@ public interface I_AD_CtxHelpSuggestion
 
     /** Load Meta Data */
 
-    /** Column name AcceptSuggestion */
-    public static final String COLUMNNAME_AcceptSuggestion = "AcceptSuggestion";
-
-	/** Set Accept.
-	  * Accept suggested changes
-	  */
-	public void setAcceptSuggestion (String AcceptSuggestion);
-
-	/** Get Accept.
-	  * Accept suggested changes
-	  */
-	public String getAcceptSuggestion();
-
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
-
-    /** Column name AD_CtxHelp_ID */
-    public static final String COLUMNNAME_AD_CtxHelp_ID = "AD_CtxHelp_ID";
-
-	/** Set Context Help	  */
-	public void setAD_CtxHelp_ID (int AD_CtxHelp_ID);
-
-	/** Get Context Help	  */
-	public int getAD_CtxHelp_ID();
-
-	public org.compiere.model.I_AD_CtxHelp getAD_CtxHelp() throws RuntimeException;
 
     /** Column name AD_CtxHelpMsg_ID */
     public static final String COLUMNNAME_AD_CtxHelpMsg_ID = "AD_CtxHelpMsg_ID";
@@ -82,6 +58,7 @@ public interface I_AD_CtxHelpSuggestion
 	/** Get Context Help Message	  */
 	public int getAD_CtxHelpMsg_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_CtxHelpMsg getAD_CtxHelpMsg() throws RuntimeException;
 
     /** Column name AD_CtxHelpSuggestion_ID */
@@ -102,6 +79,18 @@ public interface I_AD_CtxHelpSuggestion
 	/** Get Context Help Suggestion UUID	  */
 	public String getAD_CtxHelpSuggestion_UU();
 
+    /** Column name AD_CtxHelp_ID */
+    public static final String COLUMNNAME_AD_CtxHelp_ID = "AD_CtxHelp_ID";
+
+	/** Set Context Help	  */
+	public void setAD_CtxHelp_ID (int AD_CtxHelp_ID);
+
+	/** Get Context Help	  */
+	public int getAD_CtxHelp_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_AD_CtxHelp getAD_CtxHelp() throws RuntimeException;
+
     /** Column name AD_Language */
     public static final String COLUMNNAME_AD_Language = "AD_Language";
 
@@ -119,12 +108,12 @@ public interface I_AD_CtxHelpSuggestion
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -137,6 +126,7 @@ public interface I_AD_CtxHelpSuggestion
 	/** Get Tenant of User	  */
 	public int getAD_UserClient_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_AllClients_V getAD_UserClient() throws RuntimeException;
 
     /** Column name AD_User_ID */
@@ -152,7 +142,21 @@ public interface I_AD_CtxHelpSuggestion
 	  */
 	public int getAD_User_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_AllUsers_V getAD_User() throws RuntimeException;
+
+    /** Column name AcceptSuggestion */
+    public static final String COLUMNNAME_AcceptSuggestion = "AcceptSuggestion";
+
+	/** Set Accept.
+	  * Accept suggested changes
+	  */
+	public void setAcceptSuggestion (String AcceptSuggestion);
+
+	/** Get Accept.
+	  * Accept suggested changes
+	  */
+	public String getAcceptSuggestion();
 
     /** Column name CompareSuggestion */
     public static final String COLUMNNAME_CompareSuggestion = "CompareSuggestion";

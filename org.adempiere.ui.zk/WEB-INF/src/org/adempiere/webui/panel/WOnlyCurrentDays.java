@@ -29,28 +29,23 @@ import org.compiere.util.Msg;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
-import org.zkoss.zul.Hbox;
 import org.zkoss.zul.Separator;
 
-
 /**
- *	Queries how many days back history is displayed as current
+ *	Dialog to select how many days back history is included as part of query
  *
  * 	@author 	Niraj Sohun
  * 	@date		September 24, 2007
  */
-
 public class WOnlyCurrentDays extends Window implements EventListener<Event>, DialogEvents
 {
 	/**
-	 * 
+	 * generated serial id
 	 */
 	private static final long serialVersionUID = 2464266193433220449L;
 
 	/**
 	 *	Constructor
-	 *  @param parent parent frame
-	 *  @param buttonLocation lower left corner of the button
 	 */
 	public WOnlyCurrentDays()
 	{
@@ -69,7 +64,8 @@ public class WOnlyCurrentDays extends Window implements EventListener<Event>, Di
 		this.setAttribute(Window.MODE_KEY, Window.MODE_HIGHLIGHTED);		
 	}	//	WOnlyCurrentDays
 
-	private Hbox mainPanel = new Hbox();
+	@SuppressWarnings("deprecation")
+	private org.zkoss.zul.Hbox mainPanel = new org.zkoss.zul.Hbox();
 	private Button bShowAll = new Button();
 	private Button bShowMonth = new Button();
 	private Button bShowWeek = new Button();
@@ -83,10 +79,9 @@ public class WOnlyCurrentDays extends Window implements EventListener<Event>, Di
 	private static final CLogger log = CLogger.getCLogger(WOnlyCurrentDays.class);
 
 	/**
-	 * 	Static Initializer
+	 * 	Layout dialog
 	 * 	@throws Exception
-	 */
-	
+	 */	
 	private void jbInit() throws Exception
 	{
 		bShowAll.setLabel(Msg.getMsg(Env.getCtx(), "All"));
@@ -125,13 +120,13 @@ public class WOnlyCurrentDays extends Window implements EventListener<Event>, Di
 	/**
 	 * 	Get selected number of days
 	 * 	@return days or -1 for all
-	 */
-	
+	 */	
 	public int getCurrentDays()
 	{
 		return m_days;
 	}	//	getCurrentDays
 
+	@Override
 	public void onEvent(Event event) throws Exception 
 	{
 		if (event.getTarget() == bShowDay)

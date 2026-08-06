@@ -20,24 +20,35 @@ import java.util.logging.Level;
 import org.compiere.model.MInfoColumn;
 import org.compiere.model.MProcess;
 import org.compiere.model.X_AD_InfoProcess;
+import org.compiere.util.DefaultEvaluatee;
 import org.compiere.util.Env;
 import org.compiere.util.Evaluatee;
 import org.compiere.util.Evaluator;
+import org.idempiere.cache.ImmutablePOSupport;
 
 /**
- * Contain info of process in info window
- * include process_id, image name, name
+ * Contain details of process in info window, 
+ * including ad_process_id, image name and name.
  * @author hieplq
- *
  */
-public class MInfoProcess extends X_AD_InfoProcess implements IInfoColumn {
+public class MInfoProcess extends X_AD_InfoProcess implements IInfoColumn, ImmutablePOSupport {
+	
 	/**
-	 * 
+	 * generated serial id
 	 */
-	private static final long serialVersionUID = -5586972894900686397L;
+	private static final long serialVersionUID = 7833442401205258074L;
+
+    /**
+     * UUID based Constructor
+     * @param ctx  Context
+     * @param AD_InfoProcess_UU  UUID key
+     * @param trxName Transaction
+     */
+    public MInfoProcess(Properties ctx, String AD_InfoProcess_UU, String trxName) {
+        super(ctx, AD_InfoProcess_UU, trxName);
+    }
 
 	/**
-	 * {@inheritDoc}
 	 * @param ctx
 	 * @param AD_InfoProcess_ID
 	 * @param trxName
@@ -48,7 +59,6 @@ public class MInfoProcess extends X_AD_InfoProcess implements IInfoColumn {
 	}
 
 	/**
-	 * {@inheritDoc}
 	 * @param ctx
 	 * @param rs
 	 * @param trxName
@@ -70,8 +80,8 @@ public class MInfoProcess extends X_AD_InfoProcess implements IInfoColumn {
 	
 	protected String m_viewIDName;
 	
-	/**************************************************************************
-	 *	Is the Column Visible ? Evaluater base in display logic expression and context of this po
+	/**
+	 *	Is the Column Visible ? Evaluated based on display logic expression and context of this PO.
 	 *  @return true, if visible
 	 */
 	public boolean isDisplayed (final int windowNo)
@@ -79,19 +89,18 @@ public class MInfoProcess extends X_AD_InfoProcess implements IInfoColumn {
 		return isDisplayed(this.getCtx(), windowNo);
 }
 	
-	 /**************************************************************************
-	 * Is the Column Visible ? Evaluater base in display logic expression and context
+	 /**
+	 * Is the Column Visible ? Evaluated based on display logic expression and context of this PO.
 	 * @param ctx
-	 * @return
+	 * @return true, if visible
 	 */
 	public boolean isDisplayed(final Properties ctx, final int windowNo) {		
 		if (getDisplayLogic() == null || getDisplayLogic().trim().length() == 0)
 			return true;
 		
-		Evaluatee evaluatee = new Evaluatee() {
-			public String get_ValueAsString(String variableName) {
-				return Env.getContext (ctx, windowNo, variableName, true);
-			}
+		Evaluatee evaluatee = (variableName) -> {
+			DefaultEvaluatee de = new DefaultEvaluatee(null, windowNo, -1, true);
+			return de.get_ValueAsString(ctx, variableName);
 		};
 		
 		boolean retValue = Evaluator.evaluateLogic(evaluatee, getDisplayLogic());
@@ -113,7 +122,17 @@ public class MInfoProcess extends X_AD_InfoProcess implements IInfoColumn {
 	 */
 	@Override
 	public MInfoColumn getAD_InfoColumn (){
-		return (MInfoColumn)super.getAD_InfoColumn();
+		return new MInfoColumn(getCtx(), getAD_InfoColumn_ID(), get_TrxName());
+	}
+
+	@Override
+	public MInfoProcess markImmutable() {
+		if (is_Immutable())
+			return this;
+		
+		makeImmutable();
+		
+		return this;
 	}
 	
 }

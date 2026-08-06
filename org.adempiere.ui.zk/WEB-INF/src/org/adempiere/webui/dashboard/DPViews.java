@@ -13,20 +13,28 @@
  *****************************************************************************/
 package org.adempiere.webui.dashboard;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import org.adempiere.webui.LayoutUtils;
 import org.adempiere.webui.apps.AEnv;
+import org.adempiere.webui.component.FlexVlayout;
 import org.adempiere.webui.component.ToolBarButton;
 import org.adempiere.webui.component.Window;
+import org.adempiere.webui.panel.ADForm;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ThemeManager;
+import org.adempiere.webui.util.Icon;
 import org.adempiere.webui.window.InfoSchedule;
+import org.compiere.model.MAttachment;
 import org.compiere.model.MInfoWindow;
 import org.compiere.model.MRole;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MUserDefInfo;
 import org.compiere.model.Query;
+import org.compiere.model.SystemIDs;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
@@ -34,21 +42,22 @@ import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
-import org.zkoss.zul.Box;
-import org.zkoss.zul.Vbox;
+import org.zkoss.zul.Layout;
 
 /**
- * Dashboard item: Info views
+ * Dashboard gadget: List of Info views
  * @author Elaine
  * @date November 20, 2008
  */
 public class DPViews extends DashboardPanel implements EventListener<Event> {
-
 	/**
-	 * 
+	 * generated serial id
 	 */
 	private static final long serialVersionUID = 8375414665766937581L;
 
+	/**
+	 * Default constructor
+	 */
 	public DPViews()
 	{
 		super();
@@ -56,9 +65,13 @@ public class DPViews extends DashboardPanel implements EventListener<Event> {
 		this.appendChild(createViewPanel());
 	}
 
-	private Box createViewPanel()
+	/**
+	 * Layout panel
+	 * @return {@link Layout}
+	 */
+	private Layout createViewPanel()
 	{
-		Vbox vbox = new Vbox();
+		FlexVlayout vbox = new FlexVlayout();
 
 		if (MSysConfig.getBooleanValue(MSysConfig.DPViews_ShowInfoAccount, true, Env.getAD_Client_ID(Env.getCtx()))
 				&& MRole.getDefault().isShowAcct() && MRole.getDefault().isAllow_Info_Account())
@@ -67,7 +80,7 @@ public class DPViews extends DashboardPanel implements EventListener<Event> {
 			btnViewItem.setSclass("link");
 			btnViewItem.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "InfoAccount")));
 			if (ThemeManager.isUseFontIconForImage())
-				btnViewItem.setIconSclass("z-icon-InfoAccount");
+				btnViewItem.setIconSclass(Icon.getIconSclass(Icon.INFO_ACCOUNT));
 			else
 				btnViewItem.setImage(ThemeManager.getThemeResource("images/InfoAccount16.png"));
 			btnViewItem.addEventListener(Events.ON_CLICK, this);
@@ -82,7 +95,7 @@ public class DPViews extends DashboardPanel implements EventListener<Event> {
 			btnViewItem.setSclass("link");
 			btnViewItem.setLabel(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "InfoSchedule")));
 			if (ThemeManager.isUseFontIconForImage())
-				btnViewItem.setIconSclass("z-icon-InfoSchedule");
+				btnViewItem.setIconSclass(Icon.getIconSclass(Icon.INFO_SCHEDULE));
 			else
 				btnViewItem.setImage(ThemeManager.getThemeResource("images/InfoSchedule16.png"));
 			btnViewItem.addEventListener(Events.ON_CLICK, this);
@@ -91,33 +104,73 @@ public class DPViews extends DashboardPanel implements EventListener<Event> {
 				LayoutUtils.addSclass("medium-toolbarbutton toolbarbutton-with-text", btnViewItem);
 		}
 
-		List<MInfoWindow> list = new Query(Env.getCtx(), MInfoWindow.Table_Name, "IsValid='Y' AND IsShowInDashboard='Y'", null)
-		.setOnlyActiveRecords(true)
-		.setOrderBy(MInfoWindow.COLUMNNAME_SeqNo)
-		.list();
+		List<MInfoWindow> listAll = new Query(Env.getCtx(), MInfoWindow.Table_Name, "IsValid='Y'", null)
+				.setOnlyActiveRecords(true)
+				.list();
 
-		MInfoWindow[] infos = list.toArray(new MInfoWindow[list.size()]);
+		MInfoWindow[] infosAll = listAll.toArray(new MInfoWindow[listAll.size()]);
 
-		for (int i = 0; i < infos.length; i++)
+		List<ListInfoWindow> selectedInfoWindows = new ArrayList<ListInfoWindow>();
+
+		for (int i = 0; i < infosAll.length; i++) 
 		{
-			MInfoWindow info = infos[i];
+			MInfoWindow info = infosAll[i];
+			if (MInfoWindow.get(info.getAD_InfoWindow_ID(), null) != null)
+			{
+				MUserDefInfo userDef = MUserDefInfo.getBestMatch(Env.getCtx(), info.getAD_InfoWindow_ID());
+
+				if (userDef != null) {
+
+					if ((info.isShowInDashboard() && Util.isEmpty(userDef.getIsShowInDashboard())) || (!Util.isEmpty(userDef.getIsShowInDashboard()) && userDef.getIsShowInDashboard().equals(MUserDefInfo.ISSHOWINDASHBOARD_Yes))) {
+						int seqNo = userDef.getSeqNo() > 0 ? userDef.getSeqNo() : info.getSeqNo();
+						selectedInfoWindows.add(new ListInfoWindow(info, seqNo));
+					}
+				}
+				else if (info.isShowInDashboard())
+					selectedInfoWindows.add(new ListInfoWindow(info, info.getSeqNo()));
+			}
+		}
+
+		Collections.sort(selectedInfoWindows, new SeqNoComparator());
+
+		for (ListInfoWindow so : selectedInfoWindows) {
+			MInfoWindow info = so.getInfoWindow();
 			if (MInfoWindow.get(info.getAD_InfoWindow_ID(), null) != null)
 			{
 				// Load User Def
 				String name = info.get_Translation("Name");
+				String image = (Util.isEmpty(info.getImageURL()) ? "Info16.png" : info.getImageURL());
+
 				MUserDefInfo userDef = MUserDefInfo.getBestMatch(Env.getCtx(), info.getAD_InfoWindow_ID());
-				if(userDef != null && !Util.isEmpty(userDef.getName())) {
-					name = userDef.getName();
+				if(userDef != null) {
+
+					if (!Util.isEmpty(userDef.getName()))
+						name = userDef.getName();
+					if (!Util.isEmpty(userDef.getImageURL()))
+						image = userDef.getImageURL();
 				} 
-				
+
 				ToolBarButton btnViewItem = new ToolBarButton(info.getName());
 				btnViewItem.setSclass("link");
 				btnViewItem.setLabel(name);
-				String image = (Util.isEmpty(info.getImageURL()) ? "Info16.png" : info.getImageURL());
-				if (ThemeManager.isUseFontIconForImage())
+
+				if (MAttachment.isAttachmentURLPath(image))
 				{
-					image = image.replace("16.png", "");
-					btnViewItem.setIconSclass("z-icon-"+image);
+					btnViewItem.setImage(MAttachment.getImageAttachmentURLFromPath(null, image));
+				}
+				else if (image.indexOf("://") > 0)
+				{
+					btnViewItem.setImage(image);
+				}
+				else if (ThemeManager.isUseFontIconForImage()) 
+				{
+					if (image.endsWith("16.png"))
+						image = image.replace("16.png", "");
+					else if (image.endsWith("24.png"))
+						image = image.replace("24.png", "");					
+					else if (image.endsWith(".png"))
+						image = image.replace(".png", "");
+					btnViewItem.setIconSclass(Icon.getIconSclass(image));
 				}
 				else
 				{
@@ -133,6 +186,7 @@ public class DPViews extends DashboardPanel implements EventListener<Event> {
 		return vbox;
 	}
 
+	@Override
 	public void onEvent(Event event)
 	{
 		Component comp = event.getTarget();
@@ -147,7 +201,9 @@ public class DPViews extends DashboardPanel implements EventListener<Event> {
 
 				if (actionCommand.equals("InfoAccount"))
 				{
-					new org.adempiere.webui.acct.WAcctViewer();
+					ADForm form = ADForm.openForm(SystemIDs.FORM_ACCOUNT_INFO);
+					form.setAttribute(Window.MODE_KEY, form.getWindowMode());
+					AEnv.showWindow(form);
 				}
 				else if (actionCommand.equals("InfoSchedule"))
 				{
@@ -168,6 +224,50 @@ public class DPViews extends DashboardPanel implements EventListener<Event> {
 					SessionManager.getAppDesktop().openInfo(infoWindowID);
 				}
 			}
+		}
+	}
+
+	/**
+	 * Info Window to be displayed in the panel
+	 * @author nmicoud
+	 */ 
+	private class ListInfoWindow {
+
+		MInfoWindow iw = null;
+		int seqNo = 0;
+
+		/**
+		 * @param infoWindow
+		 * @param seqNo
+		 */
+		public ListInfoWindow(MInfoWindow infoWindow, int seqNo) {
+			iw = infoWindow;
+			this.seqNo = seqNo;
+		}
+
+		/**
+		 * @return Sequence Number
+		 */
+		public int getSeqNo() {
+			return seqNo;
+		}
+
+		/**
+		 * @return MInfoWindow
+		 */
+		public MInfoWindow getInfoWindow() {
+			return iw;
+		}
+	}
+
+	/**
+	 * @author nmicoud
+	 * IDEMPIERE-4946 Implement InfoWindow SeqNo customization
+	 */
+	public static class SeqNoComparator implements Comparator<ListInfoWindow> {
+		@Override
+		public int compare(ListInfoWindow iw1, ListInfoWindow iw2) {
+			return (Integer.valueOf(iw1.getSeqNo())).compareTo(Integer.valueOf(iw2.getSeqNo()));
 		}
 	}
 }

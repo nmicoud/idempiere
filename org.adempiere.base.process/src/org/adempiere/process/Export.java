@@ -44,6 +44,7 @@ import org.compiere.model.MClient;
 import org.compiere.model.MColumn;
 import org.compiere.model.MEXPFormat;
 import org.compiere.model.MEXPFormatLine;
+import org.compiere.model.MProcessPara;
 import org.compiere.model.MTable;
 import org.compiere.model.PO;
 import org.compiere.model.X_EXP_FormatLine;
@@ -62,6 +63,7 @@ import org.w3c.dom.Text;
  *  @author Trifon Trifonov
  *  @version $Id: $
  */
+@org.adempiere.base.annotation.Process
 public class Export extends SvrProcess
 {
 	private static final String TOTAL_SEGMENTS = "${totalSegments}";
@@ -114,7 +116,7 @@ public class Export extends SvrProcess
 			else if (name.equals("AD_Table_ID"))
 				p_AD_Table_ID = para[i].getParameterAsInt();
 			else
-				log.log(Level.SEVERE, "Unknown Parameter: " + name);
+				MProcessPara.validateUnknownParameter(getProcessInfo().getAD_Process_ID(), para[i]);
 		}
 		
 		// TODO - we can get Language from Business Partner
@@ -159,7 +161,7 @@ public class Export extends SvrProcess
 				   .append("WHERE ").append(po.get_KeyColumns()[0]).append("=?")
 		;
 		
-		if (exportFormat.getWhereClause() != null & !"".equals(exportFormat.getWhereClause())) {
+		if (exportFormat.getWhereClause() != null && !"".equals(exportFormat.getWhereClause())) {
 			sql.append(" AND ").append(exportFormat.getWhereClause());
 		}
 		
@@ -352,7 +354,7 @@ public class Export extends SvrProcess
 					   .append("WHERE ").append(masterPO.get_KeyColumns()[0]).append("=?")
 					   //+ "WHERE " + po.get_WhereClause(false)
 				;
-				if (embeddedFormat.getWhereClause() != null & !"".equals(embeddedFormat.getWhereClause())) {
+				if (embeddedFormat.getWhereClause() != null && !"".equals(embeddedFormat.getWhereClause())) {
 					sql.append(" AND ").append(embeddedFormat.getWhereClause());
 				}
 				ResultSet rsEmbedded = null;

@@ -20,8 +20,12 @@ import java.sql.ResultSet;
 import java.util.List;
 import java.util.Properties;
 
+import org.compiere.util.CacheMgt;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
+import org.compiere.util.Trx;
+import org.compiere.util.TrxEventListener;
+import org.compiere.util.Util;
 import org.idempiere.cache.ImmutableIntPOCache;
 import org.idempiere.cache.ImmutablePOSupport;
 
@@ -34,21 +38,40 @@ import org.idempiere.cache.ImmutablePOSupport;
 public class MOrg extends X_AD_Org implements ImmutablePOSupport
 {
 	/**
-	 * 
+	 * generated serial id
 	 */
-	private static final long serialVersionUID = -696173265471741122L;
+	private static final long serialVersionUID = -8501438599288536080L;
 
 	/**
 	 * 	Get Active Organizations Of Client
-	 *	@param po persistent object
-	 *	@return array of orgs
+	 *	@param po PO to get AD_Client_ID value
+	 *	@return array of organization
 	 */
 	public static MOrg[] getOfClient (PO po)
 	{
-		List<MOrg> list = new Query(po.getCtx(), Table_Name, "AD_Client_ID=?", null)
+		return getOfClient(po.getAD_Client_ID());
+	}	//	getOfClient
+
+	/**
+	 * 	Get Active Organizations Of current Client
+	 *	@return array of organization
+	 */
+	public static MOrg[] getOfClient ()
+	{
+		return getOfClient(Env.getAD_Client_ID(Env.getCtx()));		
+	}
+
+	/**
+	 * 	Get Active Organizations Of Client
+	 *	@param clientID AD_Client_ID
+	 *	@return array of organization
+	 */
+	public static MOrg[] getOfClient (int clientID)
+	{
+		List<MOrg> list = new Query(Env.getCtx(), Table_Name, "AD_Client_ID=?", null)
 								.setOrderBy(COLUMNNAME_Value)
 								.setOnlyActiveRecords(true)
-								.setParameters(po.getAD_Client_ID())
+								.setParameters(clientID)
 								.list();
 		for (MOrg org : list)
 		{
@@ -56,7 +79,7 @@ public class MOrg extends X_AD_Org implements ImmutablePOSupport
 		}
 		return list.toArray(new MOrg[list.size()]);
 	}	//	getOfClient
-	
+
 	/**
 	 * 	Get Org from Cache (immutable)
 	 *	@param AD_Org_ID id
@@ -87,10 +110,21 @@ public class MOrg extends X_AD_Org implements ImmutablePOSupport
 	}	//	get
 
 	/**	Cache						*/
-	private static ImmutableIntPOCache<Integer,MOrg>	s_cache	= new ImmutableIntPOCache<Integer,MOrg>(Table_Name, 50);
-	
-	
-	/**************************************************************************
+	private static ImmutableIntPOCache<Integer,MOrg>	s_cache	= new ImmutableIntPOCache<Integer,MOrg>(Table_Name, 50, 0, false, 0);
+		
+    /**
+     * UUID based Constructor
+     * @param ctx  Context
+     * @param AD_Org_UU  UUID key
+     * @param trxName Transaction
+     */
+    public MOrg(Properties ctx, String AD_Org_UU, String trxName) {
+        super(ctx, AD_Org_UU, trxName);
+		if (Util.isEmpty(AD_Org_UU))
+			setInitialDefaults();
+    }
+
+	/**
 	 * 	Standard Constructor
 	 *	@param ctx context
 	 *	@param AD_Org_ID id
@@ -100,12 +134,17 @@ public class MOrg extends X_AD_Org implements ImmutablePOSupport
 	{
 		super(ctx, AD_Org_ID, trxName);
 		if (AD_Org_ID == 0)
-		{
+			setInitialDefaults();
+	}	//	MOrg
+
+	/**
+	 * Set the initial defaults for a new record
+	 */
+	private void setInitialDefaults() {
 		//	setValue (null);
 		//	setName (null);
-			setIsSummary (false);
-		}
-	}	//	MOrg
+		setIsSummary (false);
+	}
 
 	/**
 	 * 	Load Constructor
@@ -132,7 +171,7 @@ public class MOrg extends X_AD_Org implements ImmutablePOSupport
 	}	//	MOrg
 
 	/**
-	 * 
+	 * Copy constructor
 	 * @param copy
 	 */
 	public MOrg(MOrg copy)
@@ -141,7 +180,7 @@ public class MOrg extends X_AD_Org implements ImmutablePOSupport
 	}
 	
 	/**
-	 * 
+	 * Copy constructor
 	 * @param ctx
 	 * @param copy
 	 */
@@ -151,7 +190,7 @@ public class MOrg extends X_AD_Org implements ImmutablePOSupport
 	}
 
 	/**
-	 * 
+	 * Copy constructor
 	 * @param ctx
 	 * @param copy
 	 * @param trxName
@@ -176,18 +215,12 @@ public class MOrg extends X_AD_Org implements ImmutablePOSupport
 		return orgInfo;
 	}	//	getMOrgInfo
 
-
-	
-	/**
-	 * 	After Save
-	 *	@param newRecord new Record
-	 *	@param success save success
-	 *	@return success
-	 */
+	@Override
 	protected boolean afterSave (boolean newRecord, boolean success)
 	{
 		if (!success)
 			return success;
+		// Create organization tree record
 		if (newRecord)
 		{
 			//	Info
@@ -201,26 +234,41 @@ public class MOrg extends X_AD_Org implements ImmutablePOSupport
 			//	TreeNode
 			insert_Tree(MTree_Base.TREETYPE_Organization);
 		}
+		// Update driven by value organization tree
 		if (newRecord || is_ValueChanged(COLUMNNAME_Value))
 			update_Tree(MTree_Base.TREETYPE_Organization);
-		//	Value/Name change
+		//	Value/Name change, update Combination and Description of C_ValidCombination
 		if (!newRecord && (is_ValueChanged("Value") || is_ValueChanged("Name")))
 		{
 			MAccount.updateValueDescription(getCtx(), "AD_Org_ID=" + getAD_Org_ID(), get_TrxName());
 			if ("Y".equals(Env.getContext(getCtx(), "$Element_OT"))) 
 				MAccount.updateValueDescription(getCtx(), "AD_OrgTrx_ID=" + getAD_Org_ID(), get_TrxName());
 		}
-		
+
+		// Reset role and system cache
+		Trx.get(get_TrxName(), false).addTrxEventListener(new TrxEventListener() {
+			@Override
+			public void afterRollback(Trx trx, boolean success) {
+			}
+
+			@Override
+			public void afterCommit(Trx trx, boolean success) {
+				MRole.getDefault().loadAccess(true);
+				CacheMgt.get().reset();
+			}
+
+			@Override
+			public void afterClose(Trx trx) {
+			}
+		});
+
 		return true;
 	}	//	afterSave
 	
-	/**
-	 * 	After Delete
-	 *	@param success
-	 *	@return deleted
-	 */
+	@Override
 	protected boolean afterDelete (boolean success)
 	{
+		// Delete tree record
 		if (success)
 			delete_Tree(MTree_Base.TREETYPE_Organization);
 		return success;

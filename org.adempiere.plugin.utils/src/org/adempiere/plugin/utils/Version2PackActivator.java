@@ -139,17 +139,32 @@ public class Version2PackActivator extends AbstractActivator{
 			}
 		}
 		
-		Collections.sort(list, new Comparator<TwoPackEntry>() {
-			@Override
-			public int compare(TwoPackEntry o1, TwoPackEntry o2) {
-				return new Version(o1.version).compareTo(new Version(o2.version));
-			}
-		});		
+		try {
+			Collections.sort(list, new Comparator<TwoPackEntry>() {
+				@Override
+				public int compare(TwoPackEntry o1, TwoPackEntry o2) {
+					return new Version(o1.version).compareTo(new Version(o2.version));
+				}
+			});		
+		} catch (Exception e) {
+			logger.log(Level.WARNING, "Exception sorting 2packs on " + getName(), e);
+			return;
+		}
 				
+		MSession localSession = null;
 		try {
 			if (getDBLock()) {
 				//Create Session to be able to create records in AD_ChangeLog
-				MSession.get(Env.getCtx(), true);
+				if (Env.getContextAsInt(Env.getCtx(), Env.AD_SESSION_ID) <= 0) {
+					localSession = MSession.get(Env.getCtx());
+					if(localSession == null) {
+						localSession = MSession.create(Env.getCtx());
+					} else {
+						localSession = new MSession(Env.getCtx(), localSession.getAD_Session_ID(), null);
+					}
+					localSession.setWebSession("Version2PackActivator");
+					localSession.saveEx();
+				}
 				for(TwoPackEntry entry : list) {
 					if (!packIn(entry.url)) {
 						// stop processing further packages if one fail
@@ -163,6 +178,8 @@ public class Version2PackActivator extends AbstractActivator{
 			e.printStackTrace();
 		} finally {
 			releaseLock();
+			if (localSession != null)
+				localSession.logout();
 		}
 	}
 
@@ -182,9 +199,10 @@ public class Version2PackActivator extends AbstractActivator{
 			String suffix = "_"+path.substring(path.lastIndexOf("2Pack_"));
 			logger.log(Level.WARNING, "Installing " + getName() + " " + path + " ...");
 			FileOutputStream zipstream = null;
+			InputStream stream = null;
 			try {
 				// copy the resource to a temporary file to process it with 2pack
-				InputStream stream = packout.openStream();
+				stream = packout.openStream();
 				File zipfile = File.createTempFile(getName()+"_", suffix);
 				zipstream = new FileOutputStream(zipfile);
 			    byte[] buffer = new byte[1024];
@@ -202,6 +220,11 @@ public class Version2PackActivator extends AbstractActivator{
 				if (zipstream != null) {
 					try {
 						zipstream.close();
+					} catch (Exception e2) {}
+				}
+				if (stream != null) {
+					try {
+						stream.close();
 					} catch (Exception e2) {}
 				}
 			}
@@ -223,14 +246,14 @@ public class Version2PackActivator extends AbstractActivator{
 
 	protected void setupPackInContext() {
 		Properties serverContext = new Properties();
-		serverContext.setProperty("#AD_Client_ID", "0");
+		serverContext.setProperty(Env.AD_CLIENT_ID, "0");
 		ServerContext.setCurrentInstance(serverContext);
 	};
 
 	@Override
 	protected void frameworkStarted() {
 		if (service != null) {
-			if (Adempiere.getThreadPoolExecutor() != null) {
+			if (Adempiere.isStarted()) {
 				Adempiere.getThreadPoolExecutor().execute(new Runnable() {			
 					@Override
 					public void run() {

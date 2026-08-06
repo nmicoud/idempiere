@@ -8,6 +8,8 @@ import java.util.List;
 
 import org.adempiere.webui.component.ConfirmPanel;
 import org.adempiere.webui.component.Window;
+import org.adempiere.webui.session.SessionManager;
+import org.adempiere.webui.util.CKEditor;
 import org.compiere.model.I_AD_CtxHelpMsg;
 import org.compiere.model.MCtxHelp;
 import org.compiere.model.MCtxHelpMsg;
@@ -15,9 +17,12 @@ import org.compiere.model.MCtxHelpSuggestion;
 import org.compiere.model.MForm;
 import org.compiere.model.MInfoWindow;
 import org.compiere.model.MProcess;
+import org.compiere.model.MSysConfig;
 import org.compiere.model.MTab;
+import org.compiere.model.MTable;
 import org.compiere.model.MTask;
 import org.compiere.model.MUserDefInfo;
+import org.compiere.model.MWindow;
 import org.compiere.model.PO;
 import org.compiere.model.X_AD_CtxHelp;
 import org.compiere.util.DB;
@@ -30,17 +35,16 @@ import org.compiere.wf.MWorkflow;
 import org.zkforge.ckez.CKeditor;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
+import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.Borderlayout;
 import org.zkoss.zul.Cell;
 import org.zkoss.zul.Center;
-import org.zkoss.zul.Hbox;
 import org.zkoss.zul.Label;
 import org.zkoss.zul.South;
-import org.zkoss.zul.Vbox;
 
 /**
+ * Dialog to capture suggestion for context help (AD_CtxHelp)
  * @author hengsin
- *
  */
 public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 
@@ -60,15 +64,22 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 	private String baseContent;
 	
 	private String translatedContent;
+	/* SysConfig USE_ESC_FOR_TAB_CLOSING */
+	private boolean isUseEscForTabClosing = MSysConfig.getBooleanValue(MSysConfig.USE_ESC_FOR_TAB_CLOSING, false, Env.getAD_Client_ID(Env.getCtx()));
 
 	/**
-	 * default constructor
+	 * @param ctxHelpMsg
 	 */
 	public WCtxHelpSuggestion(MCtxHelpMsg ctxHelpMsg) {
-		this.ctxHelpMsg = ctxHelpMsg;
+		this.ctxHelpMsg = new MCtxHelpMsg(ctxHelpMsg.getCtx(), ctxHelpMsg.getAD_CtxHelpMsg_ID(), ctxHelpMsg.get_TrxName());
 		layout();
 	}
 
+	/**
+	 * @param po
+	 * @param baseContent
+	 * @param translatedContent
+	 */
 	public WCtxHelpSuggestion(PO po, String baseContent, String translatedContent) {
 		this.po = po;
 		this.baseContent = baseContent;
@@ -76,6 +87,10 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 		layout();
 	}
 
+	/**
+	 * Layout dialog
+	 */
+	@SuppressWarnings("deprecation")
 	private void layout() {
 		Borderlayout borderlayout = new Borderlayout();
 		appendChild(borderlayout);
@@ -87,13 +102,13 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 		center.setHflex("1");
 		borderlayout.appendChild(center);
 		
-		Vbox vlayout = new Vbox();
+		org.zkoss.zul.Vbox vlayout = new org.zkoss.zul.Vbox();
 		vlayout.setStyle("padding: 8px 16px");
 		vlayout.setWidth("100%");
 		vlayout.setHeight("100%");
 		vlayout.setPack("stretch");
 		center.appendChild(vlayout);
-		Hbox hlayout = new Hbox();
+		org.zkoss.zul.Hbox hlayout = new org.zkoss.zul.Hbox();
 		hlayout.setVflex("min");
 		hlayout.setWidth("100%");
 		hlayout.setAlign("center");
@@ -106,11 +121,11 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 		cell = new Cell();
 		cell.setWidth("85%");
 		cell.setAlign("left");
-		cell.appendChild(new Label(ctxHelpMsg != null ? ctxHelpMsg.getAD_CtxHelp().getName() : getContextHelpName(po)));
+		cell.appendChild(new Label(ctxHelpMsg != null ? new MCtxHelp(ctxHelpMsg.getCtx(), ctxHelpMsg.getAD_CtxHelp_ID(), ctxHelpMsg.get_TrxName()).getName() : getContextHelpName(po)));
 		hlayout.appendChild(cell);
 		vlayout.appendChild(hlayout);
 				
-		hlayout = new Hbox();
+		hlayout = new org.zkoss.zul.Hbox();
 		hlayout.setVflex("1");
 		hlayout.setHflex("1");
 		hlayout.setAlign("stretch");
@@ -121,8 +136,8 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 		cell.appendChild(new Label(Msg.getElement(Env.getCtx(), "MsgText") + " : "));
 		hlayout.appendChild(cell);
 		helpTextbox = new CKeditor();
-		helpTextbox.setCustomConfigurationsPath("/js/ckeditor/config-min.js");
-		helpTextbox.setToolbar("MyToolbar");
+		helpTextbox.setCustomConfigurationsPath(CKEditor.getCustomConfigurationsPath(true));
+		helpTextbox.setToolbar(CKEditor.getToolbar());
 		String msgText = ctxHelpMsg != null ? ctxHelpMsg.get_Translation("MsgText") : (Util.isEmpty(translatedContent) ? baseContent : translatedContent);
 		msgText = removeHeaderTag(msgText);
 		helpTextbox.setValue(msgText);
@@ -157,6 +172,7 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 		} else {
 			setTitle(Msg.getElement(Env.getCtx(), "AD_CtxHelpSuggestion_ID"));
 		}
+		addEventListener(Events.ON_CANCEL, e -> onCancel());
 	}
 
 	@Override
@@ -164,10 +180,24 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 		if (event.getTarget() == confirmPanel.getButton(ConfirmPanel.A_OK)) {
 			onSave();
 		} else if (event.getTarget() == confirmPanel.getButton(ConfirmPanel.A_CANCEL)) {
-			this.detach();
+			onCancel();
 		}		
 	}
 
+	/**
+	 * Handle onCancel event
+	 */
+	private void onCancel() {
+		// do not allow to close tab for Events.ON_CTRL_KEY event
+		if(isUseEscForTabClosing)
+			SessionManager.getAppDesktop().setCloseTabWithShortcut(false);
+
+		this.detach();
+	}
+
+	/**
+	 * Save changes to AD_CtxHelpMsg or AD_CtxHelpSuggestion
+	 */
 	private void onSave() {
 		String trxName = Trx.createTrxName();
 		Trx trx = Trx.get(trxName, true);
@@ -176,9 +206,9 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 			onSave0(trx);
 			trx.commit(true);
 			if (ctxHelpMsg != null && ctxHelpMsg.getAD_Client_ID() == Env.getAD_Client_ID(Env.getCtx())) {
-				FDialog.info(0, this, Msg.getMsg(Env.getCtx(), "Your changes have been saved."));
+				Dialog.info(0, Msg.getMsg(Env.getCtx(), "Your changes have been saved."));
 			} else {
-				FDialog.info(0, this, Msg.getMsg(Env.getCtx(),"Your suggestions have been submitted for review"));
+				Dialog.info(0, Msg.getMsg(Env.getCtx(),"Your suggestions have been submitted for review"));
 			}
 		} catch (Exception e) {
 			trx.rollback();
@@ -191,6 +221,10 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 		}
 	}
 	
+	/**
+	 * Save changes to AD_CtxHelpMsg or AD_CtxHelpSuggestion
+	 * @param trx
+	 */
 	private void onSave0(Trx trx) {
 		if (ctxHelpMsg != null && ctxHelpMsg.getAD_Client_ID() == Env.getAD_Client_ID(Env.getCtx())) {
 			if (Env.isBaseLanguage(Env.getCtx(), I_AD_CtxHelpMsg.Table_Name)) {
@@ -202,6 +236,7 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 			Object[] params = new Object[]{helpTextbox.getValue(), ctxHelpMsg.get_ID(), ctxHelpMsg.getAD_Client_ID(), Env.getAD_Language(Env.getCtx())};
 			DB.executeUpdateEx(update.toString(), params, trx.getTrxName());			
 		} else {
+			/* this whole block code is forcefully writing records on System tenant */
 			MCtxHelpSuggestion suggestion = new MCtxHelpSuggestion(Env.getCtx(), 0, trx.getTrxName());
 			suggestion.setClientOrg(0, 0);
 			if (ctxHelpMsg != null) {
@@ -211,11 +246,20 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 				MCtxHelp ctxHelp = new MCtxHelp(Env.getCtx(), 0, trx.getTrxName());
 				setContextHelpInfo(po, ctxHelp);
 				ctxHelp.setClientOrg(0, 0);
-				ctxHelp.saveEx();
+				ctxHelp.saveCrossTenantSafeEx();
 				
 				if (po != null) {
-					po.set_ValueOfColumn("AD_CtxHelp_ID", ctxHelp.getAD_CtxHelp_ID());
-					po.saveEx(trx.getTrxName());
+					if (po.is_Immutable()) {
+						// get a new not immutable PO
+						MTable table = MTable.get(po.get_Table_ID());
+						PO mutablePO = table.getPO(po.get_ID(), trx.getTrxName());
+						mutablePO.set_ValueOfColumn("AD_CtxHelp_ID", ctxHelp.getAD_CtxHelp_ID());
+						mutablePO.saveCrossTenantSafeEx(trx.getTrxName());
+						po.load(trx.getTrxName());
+					} else {
+						po.set_ValueOfColumn("AD_CtxHelp_ID", ctxHelp.getAD_CtxHelp_ID());
+						po.saveCrossTenantSafeEx(trx.getTrxName());
+					}
 				}
 				
 				suggestion.setAD_CtxHelp_ID(ctxHelp.getAD_CtxHelp_ID());
@@ -223,7 +267,7 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 				msg.setAD_CtxHelp_ID(ctxHelp.getAD_CtxHelp_ID());
 				msg.setClientOrg(0, 0);
 				msg.setMsgText(baseContent);
-				msg.saveEx();
+				msg.saveCrossTenantSafeEx();
 				suggestion.setAD_CtxHelpMsg_ID(msg.getAD_CtxHelpMsg_ID());
 				if (!Util.isEmpty(translatedContent) && !Env.isBaseLanguage(Env.getCtx(), I_AD_CtxHelpMsg.Table_Name)) {
 					int id = DB.getSQLValueEx(trx.getTrxName(), "SELECT AD_CtxHelpMsg_ID FROM AD_CtxHelpMsg_Trl WHERE AD_CtxHelpMsg_ID=? AND AD_Client_ID=? " +
@@ -261,11 +305,16 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 			suggestion.setMsgText(helpTextbox.getValue());
 			suggestion.setIsSaveAsTenantCustomization(false);
 			
-			suggestion.saveEx();			
+			suggestion.saveCrossTenantSafeEx();
 		} 
 		this.detach();
 	}
 	
+	/**
+	 * remove html header tag
+	 * @param htmlString
+	 * @return alter string
+	 */
 	private String removeHeaderTag(String htmlString) {
 		htmlString = htmlString
 				.replace("<html>", "")
@@ -277,34 +326,32 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 		return htmlString;
 	}
 	
+	/**
+	 * @param po
+	 * @return context help name for po
+	 */
 	private String getContextHelpName(PO po) {
 		if (po == null) {
 			return "Home";
-		} else if (po instanceof MTab) {
-			MTab tab = (MTab) po;
-			return tab.getAD_Window().getName() + " / " + tab.getName();
-		} else if (po instanceof MProcess) {
-			MProcess process = (MProcess) po;
+		} else if (po instanceof MTab tab) {
+			MWindow window = MWindow.get(tab.getCtx(), tab.getAD_Window_ID());
+			return window.getName() + " / " + tab.getName();
+		} else if (po instanceof MProcess process) {
 			String name = process.getName();
 			return "Report/Process " + name;
-		} else if (po instanceof MForm) {
-			MForm form = (MForm) po;
+		} else if (po instanceof MForm form) {
 			String name = form.getName();
 			return "Form " + name;
-		} else if (po instanceof MWorkflow) {
-			MWorkflow wf = (MWorkflow) po;
+		} else if (po instanceof MWorkflow wf) {
 			String name = wf.getName();
 			return "Workflow " + name;
-		} else if (po instanceof MInfoWindow) {
-			MInfoWindow info = (MInfoWindow) po;
+		} else if (po instanceof MInfoWindow info) {
 			String name = info.getName();
 			return "Info " + name;
-		} else if (po instanceof MWFNode) {
-			MWFNode node = (MWFNode) po;
+		} else if (po instanceof MWFNode node) {
 			String name = "node";
 			return node.getAD_Workflow().getName() + " / " + name;
-		} else if (po instanceof MTask) {
-			MTask task = (MTask) po;
+		} else if (po instanceof MTask task) {
 			String name = task.getName();
 			return "Task " + name;
 		} else {
@@ -312,14 +359,18 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 		}
 	}
 	
+	/**
+	 * @param po
+	 * @param ctxHelp
+	 */
 	private void setContextHelpInfo(PO po, MCtxHelp ctxHelp) {
 		if (po == null) {
 			ctxHelp.setName("Home");
 			ctxHelp.setCtxType(X_AD_CtxHelp.CTXTYPE_Home);
-		} else if (po instanceof MTab) {
-			MTab tab = (MTab) po;
+		} else if (po instanceof MTab tab) {
 			String name = tab.getName();
-			String fullName = tab.getAD_Window().getName() + " / " + name;
+			MWindow window = MWindow.get(tab.getCtx(), tab.getAD_Window_ID());
+			String fullName = window.getName() + " / " + name;
 			if (fullName.length() <= 60) {
 				ctxHelp.setName(fullName);
 			} else {
@@ -330,8 +381,7 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 				} 
 			}
 			ctxHelp.setCtxType(X_AD_CtxHelp.CTXTYPE_Tab);
-		} else if (po instanceof MProcess) {
-			MProcess process = (MProcess) po;
+		} else if (po instanceof MProcess process) {
 			String name = process.getName();
 			String fullName = "Report/Process " + name;
 			if (fullName.length() <= 60) {
@@ -341,8 +391,7 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 				ctxHelp.setName(name);
 			}
 			ctxHelp.setCtxType(X_AD_CtxHelp.CTXTYPE_Process);
-		} else if (po instanceof MForm) {
-			MForm form = (MForm) po;
+		} else if (po instanceof MForm form) {
 			String name = form.getName();
 			String fullName = "Form " + name;
 			if (fullName.length() <= 60) {
@@ -352,8 +401,7 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 				ctxHelp.setName(name);
 			}
 			ctxHelp.setCtxType(X_AD_CtxHelp.CTXTYPE_Form);
-		} else if (po instanceof MWorkflow) {
-			MWorkflow wf = (MWorkflow) po;
+		} else if (po instanceof MWorkflow wf) {
 			String name = wf.getName();
 			String fullName = "Workflow " + name;
 			if (fullName.length() <= 60) {
@@ -363,8 +411,7 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 				ctxHelp.setName(name);
 			}
 			ctxHelp.setCtxType(X_AD_CtxHelp.CTXTYPE_Workflow);
-		} else if (po instanceof MInfoWindow) {
-			MInfoWindow info = (MInfoWindow) po;
+		} else if (po instanceof MInfoWindow info) {
 			// Load User Def
 			String name = info.getName();
 			MUserDefInfo userDef = MUserDefInfo.getBestMatch(Env.getCtx(), info.getAD_InfoWindow_ID());
@@ -380,8 +427,7 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 				ctxHelp.setName(name);
 			}
 			ctxHelp.setCtxType(X_AD_CtxHelp.CTXTYPE_Info);
-		} else if (po instanceof MWFNode) {
-			MWFNode node = (MWFNode) po;
+		} else if (po instanceof MWFNode node) {
 			String name = "node";
 			String fullName = node.getAD_Workflow().getName() + " / " + name;
 			if (fullName.length() <= 60) {
@@ -391,8 +437,7 @@ public class WCtxHelpSuggestion extends Window implements EventListener<Event> {
 				ctxHelp.setName(name);
 			}
 			ctxHelp.setCtxType(X_AD_CtxHelp.CTXTYPE_Node);
-		} else if (po instanceof MTask) {
-			MTask task = (MTask) po;
+		} else if (po instanceof MTask task) {
 			String name = task.getName();
 			String fullName = "Task " + name;
 			if (fullName.length() <= 60) {

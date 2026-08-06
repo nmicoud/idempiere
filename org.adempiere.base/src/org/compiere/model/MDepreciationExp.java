@@ -1,3 +1,24 @@
+/***********************************************************************
+ * This file is part of iDempiere ERP Open Source                      *
+ * http://www.idempiere.org                                            *
+ *                                                                     *
+ * Copyright (C) Contributors                                          *
+ *                                                                     *
+ * This program is free software; you can redistribute it and/or       *
+ * modify it under the terms of the GNU General Public License         *
+ * as published by the Free Software Foundation; either version 2      *
+ * of the License, or (at your option) any later version.              *
+ *                                                                     *
+ * This program is distributed in the hope that it will be useful,     *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of      *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the        *
+ * GNU General Public License for more details.                        *
+ *                                                                     *
+ * You should have received a copy of the GNU General Public License   *
+ * along with this program; if not, write to the Free Software         *
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,          *
+ * MA 02110-1301, USA.                                                 *
+ **********************************************************************/
 package org.compiere.model;
 
 import java.math.BigDecimal;
@@ -16,44 +37,49 @@ import org.compiere.util.TimeUtil;
 import org.idempiere.fa.exceptions.AssetException;
 import org.idempiere.fa.exceptions.AssetNotActiveException;
 
-
+/**
+ * Depreciation expenses
+ */
 public class MDepreciationExp extends X_A_Depreciation_Exp
-{
-	
+{	
 	/**
-	 * 
+	 * generated serial id 
 	 */
 	private static final long serialVersionUID = 6731366890875525147L;
 	private static CLogger s_log = CLogger.getCLogger(MDepreciationExp.class);
-	private CLogger log = CLogger.getCLogger(this.getClass());
 	
-	/** Standard Constructor */
+    /**
+     * UUID based Constructor
+     * @param ctx  Context
+     * @param A_Depreciation_Exp_UU  UUID key
+     * @param trxName Transaction
+     */
+    public MDepreciationExp(Properties ctx, String A_Depreciation_Exp_UU, String trxName) {
+        super(ctx, A_Depreciation_Exp_UU, trxName);
+    }
+
+	/**
+	 * @param ctx
+	 * @param A_Depreciation_Exp_ID
+	 * @param trxName
+	 */
 	public MDepreciationExp(Properties ctx, int A_Depreciation_Exp_ID, String trxName)
 	{
 		super (ctx, A_Depreciation_Exp_ID, trxName);
-		/** 
-		if (A_Depreciation_Exp_ID == 0)
-		{
-			setA_Account_Number (0);
-			setA_Asset_ID (0);
-			setA_Depreciation_Exp_ID (0);
-			setA_Entry_Type (null);
-			setA_Period (0);
-			setDescription (null);
-			setExpense (Env.ZERO);
-			setIsDepreciated (false);
-			setProcessed (false);
-		}
-		*/
 	}
 	
-	/** Load Constructor */
+	/**
+	 * @param ctx
+	 * @param rs
+	 * @param trxName
+	 */
 	public MDepreciationExp (Properties ctx, ResultSet rs, String trxName)
 	{
 		super (ctx, rs, trxName);
 	}
 	
-	/** Gets depreciation expense 
+	/** 
+	 *  Gets depreciation expense from DB 
 	 *	@param ctx	context
 	 *	@param A_Depreciation_Exp_ID	depreciation expense id
 	 *	@return depreciation expense or null if A_Depreciation_Exp_ID=0 or not found
@@ -69,7 +95,20 @@ public class MDepreciationExp extends X_A_Depreciation_Exp
 		return depexp;
 	}
 	
-	/**	Create entry
+	/**	
+	 * Create new MDepreciationExp (not save to DB)
+	 * @param ctx
+	 * @param entryType
+	 * @param A_Asset_ID
+	 * @param A_Period
+	 * @param DateAcct
+	 * @param postingType
+	 * @param drAcct
+	 * @param crAcct
+	 * @param expense
+	 * @param description
+	 * @param assetwk
+	 * @return MDepreciationExp
 	 */
 	public static MDepreciationExp createEntry (Properties ctx, String entryType, int A_Asset_ID
 				, int A_Period, Timestamp DateAcct, String postingType
@@ -98,8 +137,8 @@ public class MDepreciationExp extends X_A_Depreciation_Exp
 	}
 	
 	/**
-	 * Update fields from asset workfile
-	 * @param wk asset workfile
+	 * Update fields from asset work file
+	 * @param wk asset work file
 	 */
 	public void updateFrom(MDepreciationWorkfile wk)
 	{
@@ -112,11 +151,18 @@ public class MDepreciationExp extends X_A_Depreciation_Exp
 		setA_Asset_Remaining_F(wk.getA_Asset_Remaining_F());
 	}
 	
-	/**	Create Depreciation Entries
-	 *	Produce record:
-	 *	<pre>
-	 *		68.. = 28..   depreciation value
-	 *	</pre>
+	/**	
+	 *  Create Depreciation Entries
+	 *  @param assetwk
+	 *  @param PeriodNo
+	 *  @param dateAcct
+	 *  @param amt
+	 *  @param amt_F
+	 *  @param accumAmt
+	 *  @param accumAmt_F
+	 *  @param help
+	 *  @param trxName
+	 *  @return collection of MDepreciationExp records
 	 */
 	public static Collection<MDepreciationExp> createDepreciation ( 
 				MDepreciationWorkfile assetwk,
@@ -136,7 +182,8 @@ public class MDepreciationExp extends X_A_Depreciation_Exp
 			, "@AssetDepreciationAmt@"
 			, assetwk);
 		if(depexp != null) {
-			depexp.setAD_Org_ID(assetwk.getA_Asset().getAD_Org_ID()); // added by zuhri
+			MAsset asset = new MAsset(assetwk.getCtx(), assetwk.getA_Asset_ID(), assetwk.get_TrxName());
+			depexp.setAD_Org_ID(asset.getAD_Org_ID()); // added by zuhri
 			if (accumAmt != null)
 				depexp.setA_Accumulated_Depr(accumAmt);
 			if (accumAmt_F != null)
@@ -182,8 +229,9 @@ public class MDepreciationExp extends X_A_Depreciation_Exp
 			}
 			//
 			assetwk.adjustAccumulatedDepr(getExpense(), getExpense_F(), false);
-			// Update workfile - Remaining asset cost
+			// set period and dateacct from latest depreciation expense (do nothing in case of first depreciation)
 			assetwk.setA_Current_Period();
+			// Update workfile - Remaining asset cost
 			assetwk.saveEx();
 			//adjust to the last day of the month in before save assetwk.
 			setDateAcct(assetwk.getDateAcct());
@@ -197,24 +245,25 @@ public class MDepreciationExp extends X_A_Depreciation_Exp
 		updateFrom(assetwk);
 		saveEx();
 
-		//
-		
+		// Increment the current period (A_Current_Period) 1, and a month DateAcct.
+		assetwk.setA_Current_Period();
+		assetwk.saveEx();
 	}
 	
-	
+	@Override
 	protected boolean beforeDelete()
 	{
 		if (isProcessed())
 		{
+			// Update accumulated depreciation in depreciation work file
 			Collection<MDepreciationWorkfile> workFiles = MDepreciationWorkfile.forA_Asset_ID(getCtx(), getA_Asset_ID(), get_TrxName());
 			for(MDepreciationWorkfile assetwk : workFiles) {	
 				// TODO : check if we can reverse it (check period, check dateacct etc)
-				//MDepreciationWorkfile assetwk = getA_Depreciation_Workfile();
 				assetwk.adjustAccumulatedDepr(getA_Accumulated_Depr().negate(), getA_Accumulated_Depr_F().negate(), false);
 				assetwk.saveEx();
 			}
 		}
-		// Try to delete postings
+		// Check period is open and delete postings (Fact_Acct)
 		if (isPosted())
 		{
 			MPeriod.testPeriodOpen(getCtx(), getDateAcct(), MDocType.DOCBASETYPE_GLDocument, getAD_Org_ID());
@@ -223,7 +272,7 @@ public class MDepreciationExp extends X_A_Depreciation_Exp
 		return true;
 	}
 	
-	
+	@Override
 	protected boolean afterDelete(boolean success)
 	{
 		if (!success)
@@ -231,12 +280,11 @@ public class MDepreciationExp extends X_A_Depreciation_Exp
 			return false;
 		}
 		//
-		// If it was processed, we need to update workfile's current period
+		// If it was processed, we need to update depreciation workfile's current period
 		if (isProcessed())
 		{
 			Collection<MDepreciationWorkfile> workFiles = MDepreciationWorkfile.forA_Asset_ID(getCtx(), getA_Asset_ID(), get_TrxName());
 			for(MDepreciationWorkfile wk : workFiles) {	
-				//MDepreciationWorkfile wk = getA_Depreciation_Workfile();
 				wk.setA_Current_Period();
 				wk.saveEx();
 			}
@@ -245,11 +293,22 @@ public class MDepreciationExp extends X_A_Depreciation_Exp
 		return true;
 	}
 	
+	/**
+	 * @return true if posted
+	 */
 	protected boolean isPosted()
 	{
 		return isProcessed() && getA_Depreciation_Entry_ID() > 0;
 	}
 	
+	/**
+	 * @param ctx
+	 * @param A_Asset_ID
+	 * @param dateAcct
+	 * @param postingType
+	 * @param trxName
+	 * @throws AssetException if there are unprocessed records
+	 */
 	public static void checkExistsNotProcessedEntries(Properties ctx,
 													int A_Asset_ID, Timestamp dateAcct, String postingType,
 													String trxName)
@@ -267,6 +326,13 @@ public class MDepreciationExp extends X_A_Depreciation_Exp
 		}
 	}
 	
+	/**
+	 * @param ctx
+	 * @param A_Asset_ID
+	 * @param postingType
+	 * @param trxName
+	 * @return list of not process MDepreciationExp records
+	 */
 	public static List<MDepreciationExp> getNotProcessedEntries(Properties ctx,
 			int A_Asset_ID, String postingType,
 			String trxName)
@@ -278,21 +344,22 @@ public class MDepreciationExp extends X_A_Depreciation_Exp
 	                      	.setParameters(new Object[]{A_Asset_ID, postingType, false})
 		                    .list();
 		return list;
-}
+	}
 
-	
+	@Override
 	public void setProcessed(boolean Processed)
 	{
 		super.setProcessed(Processed);
 		//
 		if (get_ID() > 0)
 		{
+			//lock record
 			final String sql = "UPDATE "+Table_Name+" SET Processed=? WHERE "+COLUMNNAME_A_Depreciation_Exp_ID+"=?";
 			DB.executeUpdateEx(sql, new Object[]{Processed, get_ID()}, get_TrxName());
 		}
 	}
 	
-	
+	@Override
 	public String toString()
 	{
 		return getClass().getSimpleName()+"["+get_ID()

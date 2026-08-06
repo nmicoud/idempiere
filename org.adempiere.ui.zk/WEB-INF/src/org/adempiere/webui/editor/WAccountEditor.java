@@ -23,6 +23,7 @@ import org.adempiere.webui.event.ContextMenuEvent;
 import org.adempiere.webui.event.ContextMenuListener;
 import org.adempiere.webui.event.ValueChangeEvent;
 import org.adempiere.webui.theme.ThemeManager;
+import org.adempiere.webui.util.Icon;
 import org.adempiere.webui.window.WAccountDialog;
 import org.adempiere.webui.window.WFieldRecordInfo;
 import org.compiere.model.GridField;
@@ -30,6 +31,7 @@ import org.compiere.model.MAccountLookup;
 import org.compiere.model.MRole;
 import org.compiere.util.CLogger;
 import org.compiere.util.DB;
+import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.zkoss.zk.au.out.AuScript;
 import org.zkoss.zk.ui.event.Event;
@@ -37,9 +39,9 @@ import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.util.Clients;
 
 /**
- *
+ * Default editor for {@link DisplayType#Account}. <br/>
+ * Implemented with {@link Combinationbox} component and {@link WAccountDialog} dialog.
  * @author Low Heng Sin
- *
  */
 public class WAccountEditor extends WEditor implements ContextMenuListener
 {
@@ -71,7 +73,7 @@ public class WAccountEditor extends WEditor implements ContextMenuListener
 	{
 		super(new Combinationbox(), gridField, tableEditor, editorConfiguration);
 		if (ThemeManager.isUseFontIconForImage())
-			getComponent().getButton().setIconSclass("z-icon-Account");
+			getComponent().getButton().setIconSclass(Icon.getIconSclass(Icon.ACCOUNT));
 		else
 			getComponent().setButtonImage(ThemeManager.getThemeResource("images/Account16.png"));
 
@@ -112,7 +114,7 @@ public class WAccountEditor extends WEditor implements ContextMenuListener
 	}
 	
 	/**
-	 *	Button - Start Dialog
+	 * Button - open {@link WAccountDialog}.
 	 */
 	public void cmd_button()
 	{
@@ -124,7 +126,7 @@ public class WAccountEditor extends WEditor implements ContextMenuListener
 		// Try to get C_AcctSchema_ID from global context - teo_sarca BF [ 1830531 ]
 		if (C_AcctSchema_ID <= 0)
 		{
-			C_AcctSchema_ID = Env.getContextAsInt(Env.getCtx(), "$C_AcctSchema_ID");
+			C_AcctSchema_ID = Env.getContextAsInt(Env.getCtx(), Env.C_ACCTSCHEMA_ID);
 		}
 		new WAccountDialog (gridField.getHeader(), m_mAccount, C_AcctSchema_ID, new Callback<Integer>() {
 			
@@ -153,21 +155,21 @@ public class WAccountEditor extends WEditor implements ContextMenuListener
 				
 				//safety check: if focus is going no where, focus back to self
 				String uid = getComponent().getTextbox().getUuid();
-				String script = "setTimeout(function(){try{var e = zk.Widget.$('#" + uid +
+				String script = "setTimeout(function(){try{let e = zk.Widget.$('#" + uid +
 						"').$n(); if (jq(':focus').size() == 0) e.focus();} catch(error){}}, 100);";
 				Clients.response(new AuScript(script));
 			}
 		});
-		//				
 	}	//	cmd_button
 
 	/**
-	 *	Text - try to find Alias or start Dialog
+	 * Process input text - try to find Alias or open Dialog
 	 */
 	public void cmd_text()
 	{
 		String text = getComponent().getText();
-		log.info("Text=" + text);
+		if (log.isLoggable(Level.INFO))
+			log.info("Text=" + text);
 		if (text == null || text.length() == 0 || text.equals("%"))
 		{
 			cmd_button();
@@ -224,8 +226,9 @@ public class WAccountEditor extends WEditor implements ContextMenuListener
 		}
 		else
 			cmd_button();
-	}	//	actionPerformed
+	}	//	cmd_text
 
+	@Override
 	public void onEvent(Event event)
 	{
 		if (Events.ON_CHANGE.equals(event.getName()) || Events.ON_OK.equals(event.getName()))
@@ -238,17 +241,16 @@ public class WAccountEditor extends WEditor implements ContextMenuListener
 		}
 	}
 
+	@Override
 	public String[] getEvents()
     {
         return LISTENER_EVENTS;
     }
 
-
 	@Override
 	public boolean isReadWrite() {
 		return getComponent().isEnabled();
 	}
-
 
 	@Override
 	public void setReadWrite(boolean readWrite) {

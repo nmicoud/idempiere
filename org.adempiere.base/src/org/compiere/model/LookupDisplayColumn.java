@@ -29,12 +29,12 @@ import org.compiere.util.Util;
  * 
  * @author Teo Sarca
  * 		<li>BF [ 2933367 ] Virtual Column Identifiers are not working
- * 			https://sourceforge.net/tracker/?func=detail&aid=2933367&group_id=176962&atid=879332
+ * 			https://sourceforge.net/p/adempiere/bugs/2291/
  */
 public class LookupDisplayColumn implements Serializable
 {
 	/**
-	 * 
+	 * generated serial id
 	 */
 	private static final long serialVersionUID = 5876427657897043394L;
 
@@ -46,6 +46,7 @@ public class LookupDisplayColumn implements Serializable
 	 * 	@param ad_Reference_Value_ID table/list reference id
 	 * @deprecated Please use {@link #LookupDisplayColumn(String, String, boolean, int, int)}
 	 */
+	@Deprecated (since="13", forRemoval=true)
 	public LookupDisplayColumn(String columnName, boolean isTranslated,
 		int ad_Reference_ID, int ad_Reference_Value_ID)
 	{
@@ -53,7 +54,6 @@ public class LookupDisplayColumn implements Serializable
 	}	//
 	
 	/**
-	 * Lookup Column Value Object
 	 * @param columnName column name
 	 * @param columnSQL column SQL (in case is virtual column)
 	 * @param isTranslated translated
@@ -67,7 +67,7 @@ public class LookupDisplayColumn implements Serializable
 		IsTranslated = isTranslated;
 		DisplayType = ad_Reference_ID;
 		AD_Reference_ID = ad_Reference_Value_ID;
-		if (columnSQL != null && columnSQL.length() > 0 && (columnSQL.startsWith("@SQL=") || columnSQL.startsWith("@SQLFIND=")))
+		if (columnSQL != null && columnSQL.length() > 0 && (columnSQL.startsWith(MColumn.VIRTUAL_UI_COLUMN_PREFIX) || columnSQL.startsWith(MColumn.VIRTUAL_SEARCH_COLUMN_PREFIX)))
 			ColumnSQL = "NULL";
 		else
 			ColumnSQL = columnSQL;
@@ -80,7 +80,7 @@ public class LookupDisplayColumn implements Serializable
 	public boolean 	IsTranslated;
 	/** Display Type	*/
 	public int 		DisplayType;
-	/** Value Reference	*/
+	/** table/list reference id (AD_Reference_Value_ID)	*/
 	public int 		AD_Reference_ID;
 	/** Column SQL		*/
 	public final String		ColumnSQL;

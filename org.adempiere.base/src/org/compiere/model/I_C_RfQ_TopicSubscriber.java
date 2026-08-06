@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for C_RfQ_TopicSubscriber
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_C_RfQ_TopicSubscriber 
 {
@@ -44,8 +44,8 @@ public interface I_C_RfQ_TopicSubscriber
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -53,12 +53,12 @@ public interface I_C_RfQ_TopicSubscriber
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -75,21 +75,23 @@ public interface I_C_RfQ_TopicSubscriber
 	  */
 	public int getAD_User_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_User getAD_User() throws RuntimeException;
 
     /** Column name C_BPartner_ID */
     public static final String COLUMNNAME_C_BPartner_ID = "C_BPartner_ID";
 
-	/** Set Business Partner .
+	/** Set Business Partner.
 	  * Identifies a Business Partner
 	  */
 	public void setC_BPartner_ID (int C_BPartner_ID);
 
-	/** Get Business Partner .
+	/** Get Business Partner.
 	  * Identifies a Business Partner
 	  */
 	public int getC_BPartner_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_BPartner getC_BPartner() throws RuntimeException;
 
     /** Column name C_BPartner_Location_ID */
@@ -105,38 +107,8 @@ public interface I_C_RfQ_TopicSubscriber
 	  */
 	public int getC_BPartner_Location_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_BPartner_Location getC_BPartner_Location() throws RuntimeException;
-
-    /** Column name Created */
-    public static final String COLUMNNAME_Created = "Created";
-
-	/** Get Created.
-	  * Date this record was created
-	  */
-	public Timestamp getCreated();
-
-    /** Column name CreatedBy */
-    public static final String COLUMNNAME_CreatedBy = "CreatedBy";
-
-	/** Get Created By.
-	  * User who created this records
-	  */
-	public int getCreatedBy();
-
-    /** Column name C_RfQ_Topic_ID */
-    public static final String COLUMNNAME_C_RfQ_Topic_ID = "C_RfQ_Topic_ID";
-
-	/** Set RfQ Topic.
-	  * Topic for Request for Quotations
-	  */
-	public void setC_RfQ_Topic_ID (int C_RfQ_Topic_ID);
-
-	/** Get RfQ Topic.
-	  * Topic for Request for Quotations
-	  */
-	public int getC_RfQ_Topic_ID();
-
-	public org.compiere.model.I_C_RfQ_Topic getC_RfQ_Topic() throws RuntimeException;
 
     /** Column name C_RfQ_TopicSubscriber_ID */
     public static final String COLUMNNAME_C_RfQ_TopicSubscriber_ID = "C_RfQ_TopicSubscriber_ID";
@@ -159,6 +131,38 @@ public interface I_C_RfQ_TopicSubscriber
 
 	/** Get C_RfQ_TopicSubscriber_UU	  */
 	public String getC_RfQ_TopicSubscriber_UU();
+
+    /** Column name C_RfQ_Topic_ID */
+    public static final String COLUMNNAME_C_RfQ_Topic_ID = "C_RfQ_Topic_ID";
+
+	/** Set RfQ Topic.
+	  * Topic for Request for Quotations
+	  */
+	public void setC_RfQ_Topic_ID (int C_RfQ_Topic_ID);
+
+	/** Get RfQ Topic.
+	  * Topic for Request for Quotations
+	  */
+	public int getC_RfQ_Topic_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_C_RfQ_Topic getC_RfQ_Topic() throws RuntimeException;
+
+    /** Column name Created */
+    public static final String COLUMNNAME_Created = "Created";
+
+	/** Get Created.
+	  * Date this record was created
+	  */
+	public Timestamp getCreated();
+
+    /** Column name CreatedBy */
+    public static final String COLUMNNAME_CreatedBy = "CreatedBy";
+
+	/** Get Created By.
+	  * User who created this records
+	  */
+	public int getCreatedBy();
 
     /** Column name IsActive */
     public static final String COLUMNNAME_IsActive = "IsActive";

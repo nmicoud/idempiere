@@ -38,9 +38,11 @@ import org.adempiere.webui.component.SimpleListModel;
 import org.adempiere.webui.component.Window;
 import org.adempiere.webui.session.SessionManager;
 import org.adempiere.webui.theme.ThemeManager;
+import org.adempiere.webui.util.Icon;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.model.MDashboardContent;
 import org.compiere.model.MDashboardPreference;
+import org.compiere.model.MSysConfig;
 import org.compiere.model.Query;
 import org.compiere.util.DB;
 import org.compiere.util.Env;
@@ -56,16 +58,17 @@ import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.event.MouseEvent;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Hlayout;
-import org.zkoss.zul.Vbox;
+import org.adempiere.webui.component.FlexVlayout;
 import org.zkoss.zul.Vlayout;
 
 /**
+ * Dialog to select dashboard content for user
  * @author juliana
  * @author hengsin
  */
 public class WGadgets extends Window implements  EventListener<Event>{
 	/**
-	 * 
+	 * generated serial id
 	 */
 	private static final long serialVersionUID = -4466888491090717617L;
 
@@ -83,10 +86,13 @@ public class WGadgets extends Window implements  EventListener<Event>{
 	protected ArrayList<MDashboardContent> yesItems =new ArrayList<MDashboardContent>();
 	protected ArrayList<MDashboardContent> noItems =new ArrayList<MDashboardContent>();
 
+	/** PA_DashboardContent_ID:MDashboardPreference */
 	protected Map<Integer, MDashboardPreference> dirtyList = new LinkedHashMap<Integer, MDashboardPreference>();
+	/* SysConfig USE_ESC_FOR_TAB_CLOSING */
+	private boolean isUseEscForTabClosing = MSysConfig.getBooleanValue(MSysConfig.USE_ESC_FOR_TAB_CLOSING, false, Env.getAD_Client_ID(Env.getCtx()));
 	
 	/**
-	 * 
+	 * default constructor
 	 */
 	public WGadgets() {			
 		init();
@@ -119,12 +125,26 @@ public class WGadgets extends Window implements  EventListener<Event>{
 			 }
 			 else if (panel.getButton("Cancel").equals(event.getTarget()))
 			 {				
-			  	  this.detach();
+			  	  onCancel();
 			 }			
 		}
 		
 	}
+
+	/**
+	 * Handle onCancel event
+	 */
+	private void onCancel() {
+		// do not allow to close tab for Events.ON_CTRL_KEY event
+		if(isUseEscForTabClosing)
+			SessionManager.getAppDesktop().setCloseTabWithShortcut(false);
+
+		this.detach();
+	}
 	
+	/**
+	 * Layout dialog
+	 */
 	public void init()
 	{
 		setSclass("popup-dialog");			
@@ -156,8 +176,8 @@ public class WGadgets extends Window implements  EventListener<Event>{
 		noList.setSeltype("multiple");
 
 		if (ThemeManager.isUseFontIconForImage()) {
-    		bAdd.setIconSclass("z-icon-Next");
-    		bRemove.setIconSclass("z-icon-Previous");
+    		bAdd.setIconSclass(Icon.getIconSclass(Icon.NEXT));
+    		bRemove.setIconSclass(Icon.getIconSclass(Icon.PREVIOUS));
     	} else {
     		bAdd.setImage(ThemeManager.getThemeResource("images/Next24.png"));
     		bRemove.setImage(ThemeManager.getThemeResource("images/Previous24.png"));
@@ -206,7 +226,7 @@ public class WGadgets extends Window implements  EventListener<Event>{
 		ZKUpdateUtil.setHflex(noList, "1");
 		ZKUpdateUtil.setVflex(noList, true);
 		hlayout.appendChild(noList);
-		Vbox vbox = new Vbox();
+		FlexVlayout vbox = new FlexVlayout();
 		vbox.appendChild(bAdd);
 		vbox.appendChild(bRemove);
 		ZKUpdateUtil.setWidth(vbox, "50px");
@@ -229,9 +249,12 @@ public class WGadgets extends Window implements  EventListener<Event>{
 		vlayout.appendChild(panel);
 		this.appendChild(vlayout);
 		this.setBorder("normal");
+		addEventListener(Events.ON_CANCEL, e -> onCancel());
 	}
 	
-	
+	/**
+	 * Load user dashboard contents from PA_DashboardContent and PA_DashboardPreference
+	 */
 	public void loadItems()
 	{
 		Properties ctx = Env.getCtx();
@@ -326,7 +349,7 @@ public class WGadgets extends Window implements  EventListener<Event>{
 	    }
 
 		for(MDashboardPreference pre : dirtyList.values()) {
-			MDashboardContent content = (MDashboardContent) pre.getPA_DashboardContent();
+			MDashboardContent content = new MDashboardContent(pre.getCtx(), pre.getPA_DashboardContent_ID(), pre.get_TrxName());
 			if (pre.isActive())
 				yesItems.add(content);
 			else
@@ -344,6 +367,7 @@ public class WGadgets extends Window implements  EventListener<Event>{
     }
 
 	/**
+	 * Move selected items from one list to another
 	 * @param event
 	 */
 	protected void migrateValueAcrossLists (Event event)
@@ -358,6 +382,11 @@ public class WGadgets extends Window implements  EventListener<Event>{
 		migrateLists (listFrom,listTo); //,endIndex);
 	}	//	migrateValueAcrossLists
 	
+	/**
+	 * Move selected items from listFrom to listTo
+	 * @param listFrom
+	 * @param listTo
+	 */
 	protected void migrateLists (Listbox listFrom , Listbox listTo) // , int endIndex)
 	{
 		int index = 0; 
@@ -399,7 +428,7 @@ public class WGadgets extends Window implements  EventListener<Event>{
 					pre = new MDashboardPreference(Env.getCtx(), 0, null);
 					pre.setAD_Org_ID(0);
 					pre.setAD_Role_ID(AD_Role_ID);
-					pre.setAD_User_ID(AD_User_ID); // allow System
+					pre.setAD_User_ID(AD_User_ID);
 					pre.setColumnNo(content.getColumnNo());
 					pre.setIsCollapsedByDefault(content.isCollapsedByDefault());
 					pre.setIsShowInDashboard(content.isShowInDashboard());
@@ -414,7 +443,7 @@ public class WGadgets extends Window implements  EventListener<Event>{
 					pre = new MDashboardPreference(Env.getCtx(), 0, null);
 					pre.setAD_Org_ID(0);
 					pre.setAD_Role_ID(AD_Role_ID);
-					pre.setAD_User_ID(AD_User_ID); // allow System
+					pre.setAD_User_ID(AD_User_ID);
 					pre.setColumnNo(content.getColumnNo());
 					pre.setIsCollapsedByDefault(content.isCollapsedByDefault());
 					pre.setIsShowInDashboard(content.isShowInDashboard());
@@ -433,6 +462,9 @@ public class WGadgets extends Window implements  EventListener<Event>{
 		}
 	}
 	
+	/**
+	 * Reload data and refresh UI
+	 */
     public void refresh() {		
 		
 		this.loadItems();
@@ -460,13 +492,12 @@ public class WGadgets extends Window implements  EventListener<Event>{
 		}
 	}
 
-
 	/**
 	 * List Item
 	 */
 	public static class ListElement extends NamePair {
 		/**
-		 *
+		 * generated serial id
 		 */
 		private static final long serialVersionUID = -5645910649588308798L;
 		private int		m_key;
@@ -477,7 +508,14 @@ public class WGadgets extends Window implements  EventListener<Event>{
 		/** Initial selection flag */
 		private boolean m_isYes;
 	
-	
+		/**
+		 * @param key
+		 * @param name
+		 * @param namecontent
+		 * @param isYes
+		 * @param AD_Client_ID
+		 * @param AD_Org_ID
+		 */
 		public ListElement(int key, String name, String namecontent, boolean isYes, int AD_Client_ID, int AD_Org_ID) {
 			super(name);
 			this.m_key = key;
@@ -488,27 +526,51 @@ public class WGadgets extends Window implements  EventListener<Event>{
 	
 		}
 		
+		/**
+		 * @return key
+		 */
 		public int getKey() {
 			return m_key;
 		}
-				
+			
+		/**
+		 * @return name
+		 */
 		public String getM_namecontent() {
 			return m_namecontent;
 		}
 	
+		/**
+		 * @param m_namecontent
+		 */
 		public void setM_namecontent(String m_namecontent) {
 			this.m_namecontent = m_namecontent;
 		}
 	
+		/**
+		 * @param value
+		 */
 		public void setIsYes(boolean value) {
 			m_isYes = value;
 		}
+		
+		/**
+		 * @return true if it is in yes list, false otherwise
+		 */
 		public boolean isYes() {
 			return m_isYes;
 		}
+		
+		/**
+		 * @return AD_Client_ID
+		 */
 		public int getAD_Client_ID() {
 			return m_AD_Client_ID;
 		}
+		
+		/**
+		 * @return AD_Org_ID
+		 */
 		public int getAD_Org_ID() {
 			return m_AD_Org_ID;
 		}
@@ -517,10 +579,12 @@ public class WGadgets extends Window implements  EventListener<Event>{
 		public String getID() {
 			return m_key != -1 ? String.valueOf(m_key) : null;
 		}
+		
 		@Override
 		public int hashCode() {
 			return m_key;
 		}
+		
 		@Override
 		public boolean equals(Object obj)
 		{
@@ -537,6 +601,7 @@ public class WGadgets extends Window implements  EventListener<Event>{
 			return false;
 		}	//	equals
 	
+		@Override
 		public String toString() {
 			String s = super.toString();
 			if (s == null || s.trim().length() == 0)
@@ -546,19 +611,17 @@ public class WGadgets extends Window implements  EventListener<Event>{
 	}
 
 	/**
+	 * Listener for onDrop and onDoubleClick event
 	 * @author eslatis
-	 *
 	 */
 	private class MoveListener implements EventListener<Event>
 	{
 
-		/**
-		 * Creates a ADSortTab.DragListener.
-		 */
 		public MoveListener()
 		{
 		}
 
+		@Override
 		public void onEvent(Event event) throws Exception {
 			if (event instanceof DropEvent)
 			{

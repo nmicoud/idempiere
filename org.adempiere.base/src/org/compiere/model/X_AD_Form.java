@@ -22,15 +22,16 @@ import java.util.Properties;
 import org.compiere.util.KeyNamePair;
 
 /** Generated Model for AD_Form
- *  @author iDempiere (generated) 
- *  @version Release 8.2 - $Id$ */
-public class X_AD_Form extends PO implements I_AD_Form, I_Persistent 
+ *  @author iDempiere (generated)
+ *  @version Release 13 - $Id$ */
+@org.adempiere.base.Model(table="AD_Form")
+public class X_AD_Form extends PO implements I_AD_Form, I_Persistent
 {
 
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20201220L;
+	private static final long serialVersionUID = 20260309L;
 
     /** Standard Constructor */
     public X_AD_Form (Properties ctx, int AD_Form_ID, String trxName)
@@ -38,10 +39,55 @@ public class X_AD_Form extends PO implements I_AD_Form, I_Persistent
       super (ctx, AD_Form_ID, trxName);
       /** if (AD_Form_ID == 0)
         {
-			setAccessLevel (null);
 			setAD_Form_ID (0);
+			setAccessLevel (null);
 			setEntityType (null);
-// @SQL=select get_sysconfig('DEFAULT_ENTITYTYPE','U',0,0) from dual
+// @SQL=SELECT CASE WHEN '@P|AdempiereSys:N@'='Y' THEN 'D' ELSE get_sysconfig('DEFAULT_ENTITYTYPE','U',0,0) END FROM Dual
+			setIsBetaFunctionality (false);
+			setName (null);
+        } */
+    }
+
+    /** Standard Constructor */
+    public X_AD_Form (Properties ctx, int AD_Form_ID, String trxName, String ... virtualColumns)
+    {
+      super (ctx, AD_Form_ID, trxName, virtualColumns);
+      /** if (AD_Form_ID == 0)
+        {
+			setAD_Form_ID (0);
+			setAccessLevel (null);
+			setEntityType (null);
+// @SQL=SELECT CASE WHEN '@P|AdempiereSys:N@'='Y' THEN 'D' ELSE get_sysconfig('DEFAULT_ENTITYTYPE','U',0,0) END FROM Dual
+			setIsBetaFunctionality (false);
+			setName (null);
+        } */
+    }
+
+    /** Standard Constructor */
+    public X_AD_Form (Properties ctx, String AD_Form_UU, String trxName)
+    {
+      super (ctx, AD_Form_UU, trxName);
+      /** if (AD_Form_UU == null)
+        {
+			setAD_Form_ID (0);
+			setAccessLevel (null);
+			setEntityType (null);
+// @SQL=SELECT CASE WHEN '@P|AdempiereSys:N@'='Y' THEN 'D' ELSE get_sysconfig('DEFAULT_ENTITYTYPE','U',0,0) END FROM Dual
+			setIsBetaFunctionality (false);
+			setName (null);
+        } */
+    }
+
+    /** Standard Constructor */
+    public X_AD_Form (Properties ctx, String AD_Form_UU, String trxName, String ... virtualColumns)
+    {
+      super (ctx, AD_Form_UU, trxName, virtualColumns);
+      /** if (AD_Form_UU == null)
+        {
+			setAD_Form_ID (0);
+			setAccessLevel (null);
+			setEntityType (null);
+// @SQL=SELECT CASE WHEN '@P|AdempiereSys:N@'='Y' THEN 'D' ELSE get_sysconfig('DEFAULT_ENTITYTYPE','U',0,0) END FROM Dual
 			setIsBetaFunctionality (false);
 			setName (null);
         } */
@@ -54,7 +100,7 @@ public class X_AD_Form extends PO implements I_AD_Form, I_Persistent
     }
 
     /** AccessLevel
-      * @return 4 - System 
+      * @return 4 - System
       */
     protected int get_AccessLevel()
     {
@@ -75,24 +121,88 @@ public class X_AD_Form extends PO implements I_AD_Form, I_Persistent
       return sb.toString();
     }
 
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_AD_CtxHelp getAD_CtxHelp() throws RuntimeException
+	{
+		return (org.compiere.model.I_AD_CtxHelp)MTable.get(getCtx(), org.compiere.model.I_AD_CtxHelp.Table_ID)
+			.getPO(getAD_CtxHelp_ID(), get_TrxName());
+	}
+
+	/** Set Context Help.
+		@param AD_CtxHelp_ID Context Help
+	*/
+	public void setAD_CtxHelp_ID (int AD_CtxHelp_ID)
+	{
+		if (AD_CtxHelp_ID < 1)
+			set_Value (COLUMNNAME_AD_CtxHelp_ID, null);
+		else
+			set_Value (COLUMNNAME_AD_CtxHelp_ID, Integer.valueOf(AD_CtxHelp_ID));
+	}
+
+	/** Get Context Help.
+		@return Context Help	  */
+	public int getAD_CtxHelp_ID()
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_AD_CtxHelp_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	/** Set Special Form.
+		@param AD_Form_ID Special Form
+	*/
+	public void setAD_Form_ID (int AD_Form_ID)
+	{
+		if (AD_Form_ID < 1)
+			set_ValueNoCheck (COLUMNNAME_AD_Form_ID, null);
+		else
+			set_ValueNoCheck (COLUMNNAME_AD_Form_ID, Integer.valueOf(AD_Form_ID));
+	}
+
+	/** Get Special Form.
+		@return Special Form
+	  */
+	public int getAD_Form_ID()
+	{
+		Integer ii = (Integer)get_Value(COLUMNNAME_AD_Form_ID);
+		if (ii == null)
+			 return 0;
+		return ii.intValue();
+	}
+
+	/** Set AD_Form_UU.
+		@param AD_Form_UU AD_Form_UU
+	*/
+	public void setAD_Form_UU (String AD_Form_UU)
+	{
+		set_Value (COLUMNNAME_AD_Form_UU, AD_Form_UU);
+	}
+
+	/** Get AD_Form_UU.
+		@return AD_Form_UU	  */
+	public String getAD_Form_UU()
+	{
+		return (String)get_Value(COLUMNNAME_AD_Form_UU);
+	}
+
 	/** AccessLevel AD_Reference_ID=5 */
 	public static final int ACCESSLEVEL_AD_Reference_ID=5;
 	/** Organization = 1 */
 	public static final String ACCESSLEVEL_Organization = "1";
+	/** Client only = 2 */
+	public static final String ACCESSLEVEL_ClientOnly = "2";
 	/** Client+Organization = 3 */
 	public static final String ACCESSLEVEL_ClientPlusOrganization = "3";
 	/** System only = 4 */
 	public static final String ACCESSLEVEL_SystemOnly = "4";
-	/** All = 7 */
-	public static final String ACCESSLEVEL_All = "7";
 	/** System+Client = 6 */
 	public static final String ACCESSLEVEL_SystemPlusClient = "6";
-	/** Client only = 2 */
-	public static final String ACCESSLEVEL_ClientOnly = "2";
+	/** All = 7 */
+	public static final String ACCESSLEVEL_All = "7";
 	/** Set Data Access Level.
-		@param AccessLevel 
-		Access Level required
-	  */
+		@param AccessLevel Access Level required
+	*/
 	public void setAccessLevel (String AccessLevel)
 	{
 
@@ -102,77 +212,14 @@ public class X_AD_Form extends PO implements I_AD_Form, I_Persistent
 	/** Get Data Access Level.
 		@return Access Level required
 	  */
-	public String getAccessLevel () 
+	public String getAccessLevel()
 	{
 		return (String)get_Value(COLUMNNAME_AccessLevel);
 	}
 
-	public org.compiere.model.I_AD_CtxHelp getAD_CtxHelp() throws RuntimeException
-    {
-		return (org.compiere.model.I_AD_CtxHelp)MTable.get(getCtx(), org.compiere.model.I_AD_CtxHelp.Table_Name)
-			.getPO(getAD_CtxHelp_ID(), get_TrxName());	}
-
-	/** Set Context Help.
-		@param AD_CtxHelp_ID Context Help	  */
-	public void setAD_CtxHelp_ID (int AD_CtxHelp_ID)
-	{
-		if (AD_CtxHelp_ID < 1) 
-			set_Value (COLUMNNAME_AD_CtxHelp_ID, null);
-		else 
-			set_Value (COLUMNNAME_AD_CtxHelp_ID, Integer.valueOf(AD_CtxHelp_ID));
-	}
-
-	/** Get Context Help.
-		@return Context Help	  */
-	public int getAD_CtxHelp_ID () 
-	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_AD_CtxHelp_ID);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
-	}
-
-	/** Set Special Form.
-		@param AD_Form_ID 
-		Special Form
-	  */
-	public void setAD_Form_ID (int AD_Form_ID)
-	{
-		if (AD_Form_ID < 1) 
-			set_ValueNoCheck (COLUMNNAME_AD_Form_ID, null);
-		else 
-			set_ValueNoCheck (COLUMNNAME_AD_Form_ID, Integer.valueOf(AD_Form_ID));
-	}
-
-	/** Get Special Form.
-		@return Special Form
-	  */
-	public int getAD_Form_ID () 
-	{
-		Integer ii = (Integer)get_Value(COLUMNNAME_AD_Form_ID);
-		if (ii == null)
-			 return 0;
-		return ii.intValue();
-	}
-
-	/** Set AD_Form_UU.
-		@param AD_Form_UU AD_Form_UU	  */
-	public void setAD_Form_UU (String AD_Form_UU)
-	{
-		set_Value (COLUMNNAME_AD_Form_UU, AD_Form_UU);
-	}
-
-	/** Get AD_Form_UU.
-		@return AD_Form_UU	  */
-	public String getAD_Form_UU () 
-	{
-		return (String)get_Value(COLUMNNAME_AD_Form_UU);
-	}
-
 	/** Set Classname.
-		@param Classname 
-		Java Classname
-	  */
+		@param Classname Java Classname
+	*/
 	public void setClassname (String Classname)
 	{
 		set_Value (COLUMNNAME_Classname, Classname);
@@ -181,15 +228,14 @@ public class X_AD_Form extends PO implements I_AD_Form, I_Persistent
 	/** Get Classname.
 		@return Java Classname
 	  */
-	public String getClassname () 
+	public String getClassname()
 	{
 		return (String)get_Value(COLUMNNAME_Classname);
 	}
 
 	/** Set Description.
-		@param Description 
-		Optional short description of the record
-	  */
+		@param Description Optional short description of the record
+	*/
 	public void setDescription (String Description)
 	{
 		set_Value (COLUMNNAME_Description, Description);
@@ -198,7 +244,7 @@ public class X_AD_Form extends PO implements I_AD_Form, I_Persistent
 	/** Get Description.
 		@return Optional short description of the record
 	  */
-	public String getDescription () 
+	public String getDescription()
 	{
 		return (String)get_Value(COLUMNNAME_Description);
 	}
@@ -206,9 +252,8 @@ public class X_AD_Form extends PO implements I_AD_Form, I_Persistent
 	/** EntityType AD_Reference_ID=389 */
 	public static final int ENTITYTYPE_AD_Reference_ID=389;
 	/** Set Entity Type.
-		@param EntityType 
-		Dictionary Entity Type; Determines ownership and synchronization
-	  */
+		@param EntityType Dictionary Entity Type; Determines ownership and synchronization
+	*/
 	public void setEntityType (String EntityType)
 	{
 
@@ -218,15 +263,14 @@ public class X_AD_Form extends PO implements I_AD_Form, I_Persistent
 	/** Get Entity Type.
 		@return Dictionary Entity Type; Determines ownership and synchronization
 	  */
-	public String getEntityType () 
+	public String getEntityType()
 	{
 		return (String)get_Value(COLUMNNAME_EntityType);
 	}
 
 	/** Set Comment/Help.
-		@param Help 
-		Comment or Hint
-	  */
+		@param Help Comment or Hint
+	*/
 	public void setHelp (String Help)
 	{
 		set_Value (COLUMNNAME_Help, Help);
@@ -235,15 +279,30 @@ public class X_AD_Form extends PO implements I_AD_Form, I_Persistent
 	/** Get Comment/Help.
 		@return Comment or Hint
 	  */
-	public String getHelp () 
+	public String getHelp()
 	{
 		return (String)get_Value(COLUMNNAME_Help);
 	}
 
-	/** Set Beta Functionality.
-		@param IsBetaFunctionality 
-		This functionality is considered Beta
+	/** Set Image URL.
+		@param ImageURL URL of  image
+	*/
+	public void setImageURL (String ImageURL)
+	{
+		set_Value (COLUMNNAME_ImageURL, ImageURL);
+	}
+
+	/** Get Image URL.
+		@return URL of  image
 	  */
+	public String getImageURL()
+	{
+		return (String)get_Value(COLUMNNAME_ImageURL);
+	}
+
+	/** Set Beta Functionality.
+		@param IsBetaFunctionality This functionality is considered Beta
+	*/
 	public void setIsBetaFunctionality (boolean IsBetaFunctionality)
 	{
 		set_Value (COLUMNNAME_IsBetaFunctionality, Boolean.valueOf(IsBetaFunctionality));
@@ -252,22 +311,21 @@ public class X_AD_Form extends PO implements I_AD_Form, I_Persistent
 	/** Get Beta Functionality.
 		@return This functionality is considered Beta
 	  */
-	public boolean isBetaFunctionality () 
+	public boolean isBetaFunctionality()
 	{
 		Object oo = get_Value(COLUMNNAME_IsBetaFunctionality);
-		if (oo != null) 
+		if (oo != null)
 		{
-			 if (oo instanceof Boolean) 
-				 return ((Boolean)oo).booleanValue(); 
+			 if (oo instanceof Boolean)
+				 return ((Boolean)oo).booleanValue();
 			return "Y".equals(oo);
 		}
 		return false;
 	}
 
 	/** Set jsp URL.
-		@param JSPURL 
-		Web URL of the jsp function
-	  */
+		@param JSPURL Web URL of the jsp function
+	*/
 	public void setJSPURL (String JSPURL)
 	{
 		set_Value (COLUMNNAME_JSPURL, JSPURL);
@@ -276,15 +334,14 @@ public class X_AD_Form extends PO implements I_AD_Form, I_Persistent
 	/** Get jsp URL.
 		@return Web URL of the jsp function
 	  */
-	public String getJSPURL () 
+	public String getJSPURL()
 	{
 		return (String)get_Value(COLUMNNAME_JSPURL);
 	}
 
 	/** Set Name.
-		@param Name 
-		Alphanumeric identifier of the entity
-	  */
+		@param Name Alphanumeric identifier of the entity
+	*/
 	public void setName (String Name)
 	{
 		set_Value (COLUMNNAME_Name, Name);
@@ -293,7 +350,7 @@ public class X_AD_Form extends PO implements I_AD_Form, I_Persistent
 	/** Get Name.
 		@return Alphanumeric identifier of the entity
 	  */
-	public String getName () 
+	public String getName()
 	{
 		return (String)get_Value(COLUMNNAME_Name);
 	}
@@ -301,7 +358,7 @@ public class X_AD_Form extends PO implements I_AD_Form, I_Persistent
     /** Get Record ID/ColumnName
         @return ID/ColumnName pair
       */
-    public KeyNamePair getKeyNamePair() 
+    public KeyNamePair getKeyNamePair()
     {
         return new KeyNamePair(get_ID(), getName());
     }

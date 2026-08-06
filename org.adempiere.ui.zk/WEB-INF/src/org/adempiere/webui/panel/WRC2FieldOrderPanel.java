@@ -27,6 +27,7 @@ import org.adempiere.webui.component.ListItem;
 import org.adempiere.webui.component.Listbox;
 import org.adempiere.webui.component.SimpleListModel;
 import org.adempiere.webui.theme.ThemeManager;
+import org.adempiere.webui.util.Icon;
 import org.adempiere.webui.util.ZKUpdateUtil;
 import org.compiere.print.MPrintFormatItem;
 import org.compiere.util.KeyNamePair;
@@ -39,29 +40,34 @@ import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Hlayout;
-import org.zkoss.zul.Vbox;
+import org.adempiere.webui.component.FlexVlayout;
 
-
+/**
+ * Wizard panel to edit order of printed print format items
+ */
 public class WRC2FieldOrderPanel extends WRCTabPanel implements EventListener<Event> {
 	/**
-	 * 
+	 * generated serial id
 	 */
 	private static final long serialVersionUID = -7732332384947376101L;
 
-	/**
-	 * 
-	 */
 	private Button bUp = new Button();
 	private Button bDown = new Button();
 	
 	private ArrayList<MPrintFormatItem> listColumns=new ArrayList<MPrintFormatItem>();
-	SimpleListModel sortModel;
+	protected SimpleListModel sortModel;
 	private Listbox sortList;
 	
+	/**
+	 * default constructor
+	 */
 	public WRC2FieldOrderPanel() {
 		super();	
 	}
 
+	/**
+	 * Populate {@link #listColumns} with printed MPrintFormatItem
+	 */
 	public void setListColumns() {
 		listColumns = new ArrayList<MPrintFormatItem>();
 		for (MPrintFormatItem item : m_pfi)
@@ -69,9 +75,11 @@ public class WRC2FieldOrderPanel extends WRCTabPanel implements EventListener<Ev
 		       listColumns.add(item);
 	}
 	
+	/**
+	 * Layout panel
+	 */
 	public void init()
 	{
-
 		Hlayout hlayout = new Hlayout();
 		ZKUpdateUtil.setVflex(hlayout, "true");
 		ZKUpdateUtil.setHflex(hlayout, "true");
@@ -143,8 +151,8 @@ public class WRC2FieldOrderPanel extends WRCTabPanel implements EventListener<Ev
 		};
 
     	if (ThemeManager.isUseFontIconForImage()) {
-    		bUp.setIconSclass("z-icon-Parent");
-    		bDown.setIconSclass("z-icon-Detail");
+    		bUp.setIconSclass(Icon.getIconSclass(Icon.PARENT));
+    		bDown.setIconSclass(Icon.getIconSclass(Icon.DETAIL));
     	} else {
     		bUp.setImage(ThemeManager.getThemeResource("images/Parent24.png"));
     		bDown.setImage(ThemeManager.getThemeResource("images/Detail24.png"));
@@ -152,7 +160,7 @@ public class WRC2FieldOrderPanel extends WRCTabPanel implements EventListener<Ev
 		bUp.addEventListener(Events.ON_CLICK, actionListener);
 		bDown.addEventListener(Events.ON_CLICK, actionListener);
 
-		Vbox vbox = new Vbox();
+		FlexVlayout vbox = new FlexVlayout();
 		vbox.appendChild(bUp);
 		vbox.appendChild(bDown);
 		ZKUpdateUtil.setWidth(vbox, "50px");
@@ -163,10 +171,11 @@ public class WRC2FieldOrderPanel extends WRCTabPanel implements EventListener<Ev
 	}
 	
 	/**
-	 * 	Move within Yes List with Drag Event and Multiple Choice
-	 *	@param event event
+	 * 	Move selected items within Yes List
+	 *  @param endIndex
+	 *  @param selObjects
 	 */
-	void migrateValueWithinYesList (int endIndex, List<ListElement> selObjects)
+	protected void migrateValueWithinYesList (int endIndex, List<ListElement> selObjects)
 	{
 		int iniIndex =0;
 		Arrays.sort(selObjects.toArray());	
@@ -227,10 +236,10 @@ public class WRC2FieldOrderPanel extends WRCTabPanel implements EventListener<Ev
 	}
 	
 	/**
-	 * 	Move within Yes List
+	 * 	Move selected items within Yes List
 	 *	@param event event
 	 */
-	void migrateValueWithinSortList (Event event)
+	protected void migrateValueWithinSortList (Event event)
 	{
 		Object[] selObjects = sortList.getSelectedItems().toArray();
 		if (selObjects == null)
@@ -304,7 +313,7 @@ public class WRC2FieldOrderPanel extends WRCTabPanel implements EventListener<Ev
 	 */
 	public static class ListElement extends NamePair {
 		/**
-		 *
+		 * generated serial id
 		 */
 		private static final long serialVersionUID = -5645910649588308798L;
 		private int		m_key;
@@ -313,7 +322,13 @@ public class WRC2FieldOrderPanel extends WRCTabPanel implements EventListener<Ev
 		/** Initial seq number */
 		private int		m_sortNo;
 		
-
+		/**
+		 * @param key
+		 * @param name
+		 * @param sortNo
+		 * @param AD_Client_ID
+		 * @param AD_Org_ID
+		 */
 		public ListElement(int key, String name, int sortNo, int AD_Client_ID, int AD_Org_ID) {
 			super(name);
 			this.m_key = key;

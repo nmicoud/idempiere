@@ -33,6 +33,7 @@ import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.TimeUtil;
+import org.compiere.util.Util;
 
 /**
  *  GL Journal Model
@@ -46,17 +47,29 @@ import org.compiere.util.TimeUtil;
  * 				<li>FR [ 1776045 ] Add ReActivate action to GL Journal
  *  @author victor.perez@e-evolution.com, e-Evolution http://www.e-evolution.com
  * 			<li>FR [ 1948157  ]  Is necessary the reference for document reverse
- *  		@see http://sourceforge.net/tracker/?func=detail&atid=879335&aid=1948157&group_id=176962
+ *  		@see https://sourceforge.net/p/adempiere/feature-requests/412/
  *  		<li>FR: [ 2214883 ] Remove SQL code and Replace for Query 
  * 			<li> FR [ 2520591 ] Support multiples calendar for Org 
- *			@see http://sourceforge.net/tracker2/?func=detail&atid=879335&aid=2520591&group_id=176962 	
+ *			@see https://sourceforge.net/p/adempiere/feature-requests/631/
  */
 public class MJournal extends X_GL_Journal implements DocAction
 {
 	/**
-	 * 
+	 * generated serial id
 	 */
 	private static final long serialVersionUID = 4661098755828765138L;
+
+    /**
+     * UUID based Constructor
+     * @param ctx  Context
+     * @param GL_Journal_UU  UUID key
+     * @param trxName Transaction
+     */
+    public MJournal(Properties ctx, String GL_Journal_UU, String trxName) {
+        super(ctx, GL_Journal_UU, trxName);
+		if (Util.isEmpty(GL_Journal_UU))
+			setInitialDefaults();
+    }
 
 	/**
 	 * 	Standard Constructor
@@ -68,31 +81,25 @@ public class MJournal extends X_GL_Journal implements DocAction
 	{
 		super (ctx, GL_Journal_ID, trxName);
 		if (GL_Journal_ID == 0)
-		{
-		//	setGL_Journal_ID (0);		//	PK
-		//	setC_AcctSchema_ID (0);
-		//	setC_Currency_ID (0);
-		//	setC_DocType_ID (0);
-		//	setC_Period_ID (0);
-			//
-			setCurrencyRate (Env.ONE);
-		//	setC_ConversionType_ID(0);
-		//	setDateAcct (new Timestamp(System.currentTimeMillis()));
-			setDateDoc (new Timestamp(System.currentTimeMillis()));
-		//	setDescription (null);
-			setDocAction (DOCACTION_Complete);
-			setDocStatus (DOCSTATUS_Drafted);
-		//	setDocumentNo (null);
-		//	setGL_Category_ID (0);
-			setPostingType (POSTINGTYPE_Actual);
-			setTotalCr (Env.ZERO);
-			setTotalDr (Env.ZERO);
-			setIsApproved (false);
-			setIsPrinted (false);
-			setPosted (false);
-			setProcessed(false);
-		}
+			setInitialDefaults();
 	}	//	MJournal
+
+	/**
+	 * Set the initial defaults for a new record
+	 */
+	private void setInitialDefaults() {
+		setCurrencyRate (Env.ONE);
+		setDateDoc (new Timestamp(System.currentTimeMillis()));
+		setDocAction (DOCACTION_Complete);
+		setDocStatus (DOCSTATUS_Drafted);
+		setPostingType (POSTINGTYPE_Actual);
+		setTotalCr (Env.ZERO);
+		setTotalDr (Env.ZERO);
+		setIsApproved (false);
+		setIsPrinted (false);
+		setPosted (false);
+		setProcessed(false);
+	}
 
 	/**
 	 * 	Load Constructor
@@ -125,8 +132,8 @@ public class MJournal extends X_GL_Journal implements DocAction
 	
 	/**
 	 * 	Copy Constructor.
-	 * 	Dos not copy: Dates/Period
-	 *	@param original original
+	 * 	Does not copy: Dates/Period.
+	 *	@param original original journal document
 	 */
 	public MJournal (MJournal original)
 	{
@@ -145,10 +152,6 @@ public class MJournal extends X_GL_Journal implements DocAction
 		setC_Currency_ID(original.getC_Currency_ID());
 		setC_ConversionType_ID(original.getC_ConversionType_ID());
 		setCurrencyRate(original.getCurrencyRate());
-		
-	//	setDateDoc(original.getDateDoc());
-	//	setDateAcct(original.getDateAcct());
-	//	setC_Period_ID(original.getC_Period_ID());
 	}	//	MJournal
 	
 	
@@ -157,6 +160,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 	 * 	@param AD_Client_ID client
 	 * 	@param AD_Org_ID org
 	 */
+	@Override
 	public void setClientOrg (int AD_Client_ID, int AD_Org_ID)
 	{
 		super.setClientOrg(AD_Client_ID, AD_Org_ID);
@@ -164,7 +168,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 
 	/**
 	 * 	Set Accounting Date.
-	 * 	Set also Period if not set earlier
+	 * 	Set also Period if not set earlier.
 	 *	@param DateAcct date
 	 */
 	public void setDateAcct (Timestamp DateAcct)
@@ -181,7 +185,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 
 	/**
 	 * 	Set Currency Info
-	 *	@param C_Currency_ID currenct
+	 *	@param C_Currency_ID currency
 	 *	@param C_ConversionType_ID type
 	 *	@param CurrencyRate rate
 	 */
@@ -211,18 +215,17 @@ public class MJournal extends X_GL_Journal implements DocAction
 		}
 	}
 	
-	/**************************************************************************
+	/**
 	 * 	Get Journal Lines
-	 * 	@param requery requery (not used)
+	 * 	@param requery ignore
 	 *	@return Array of lines
 	 */
 	public MJournalLine[] getLines (boolean requery)
 	{
-		//FR: [ 2214883 ] Remove SQL code and Replace for Query - red1
 		final String whereClause = "GL_Journal_ID=?";
 		List <MJournalLine> list = new Query(getCtx(), I_GL_JournalLine.Table_Name, whereClause, get_TrxName())
 			.setParameters(getGL_Journal_ID())
-			.setOrderBy("Line")
+			.setOrderBy("Line,GL_JournalLine_ID")
 			.list();
 		//
 		MJournalLine[] retValue = new MJournalLine[list.size()];
@@ -278,6 +281,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 	 * 	Propagate to Lines/Taxes
 	 *	@param processed processed
 	 */
+	@Override
 	public void setProcessed (boolean processed)
 	{
 		super.setProcessed (processed);
@@ -290,15 +294,17 @@ public class MJournal extends X_GL_Journal implements DocAction
 		if (log.isLoggable(Level.FINE)) log.fine(processed + " - Lines=" + noLine);
 	}	//	setProcessed
 
-	
-	/**************************************************************************
-	 * 	Before Save
-	 *	@param newRecord new
-	 *	@return true
-	 */
+	@Override
 	protected boolean beforeSave (boolean newRecord)
 	{
-		//	Imported Journals may not have date
+		if (getGL_JournalBatch_ID() > 0) {
+			MJournalBatch parent = new MJournalBatch(getCtx(), getGL_JournalBatch_ID(), get_TrxName());
+			if (newRecord && parent.isProcessed()) {
+				log.saveError("ParentComplete", Msg.translate(getCtx(), "GL_JournalBatch_ID"));
+				return false;
+			}
+		}
+		// Set DateDoc to DateAcct or today date
 		if (getDateDoc() == null)
 		{
 			if (getDateAcct() == null)
@@ -314,7 +320,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 		}
 		else if (!isProcessed())
 		{
-			//validate period
+			// Validate period for DateAcct
 			int C_Period_ID = MPeriod.getC_Period_ID(getCtx(), getDateAcct(), getAD_Org_ID());
 			if (C_Period_ID == 0)
 			{
@@ -330,17 +336,20 @@ public class MJournal extends X_GL_Journal implements DocAction
 			}
 		}
 
+		// Set GL_Category_ID from document type
 		if (getGL_Category_ID() == 0 && getC_DocType_ID() > 0)
 			setGL_Category_ID(MDocType.get(getCtx(), getC_DocType_ID()).getGL_Category_ID());
+		// Set C_AcctSchema_ID to primary accounting schema
 		if (getC_AcctSchema_ID() == 0)
 			setC_AcctSchema_ID(MClientInfo.get(getCtx(), getAD_Client_ID()).getC_AcctSchema1_ID());
+		// Set default currency conversion type
 		if (getC_ConversionType_ID() == 0)
 			setC_ConversionType_ID(MConversionType.getDefault(getAD_Client_ID()));
 
 		// IDEMPIERE-63
-		// for documents that can be reactivated we cannot allow changing 
-		// C_DocTypeTarget_ID or C_DocType_ID if they were already processed and isOverwriteSeqOnComplete
-		// neither change the Date if isOverwriteDateOnComplete
+		// If document have been processed, we can't change 
+		// C_DocTypeTarget_ID or C_DocType_ID if DocType.IsOverwriteSeqOnComplete=Y.
+		// Also, can't change DateDoc if DocType.IsOverwriteDateOnComplete=Y.
 		BigDecimal previousProcessedOn = (BigDecimal) get_ValueOld(COLUMNNAME_ProcessedOn);
 		if (! newRecord && previousProcessedOn != null && previousProcessedOn.signum() > 0) {
 			int previousDocTypeID = (Integer) get_ValueOld(COLUMNNAME_C_DocType_ID);
@@ -359,7 +368,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 			}
 		}
 		
-		// Update DateAcct on lines - teo_sarca BF [ 1775358 ]
+		// Propagate DateAcct change to lines
 		if (is_ValueChanged(COLUMNNAME_DateAcct)) {
 			int no = DB.executeUpdate(
 					"UPDATE GL_JournalLine SET "+MJournalLine.COLUMNNAME_DateAcct+"=? WHERE GL_Journal_ID=?",
@@ -369,15 +378,8 @@ public class MJournal extends X_GL_Journal implements DocAction
 		}
 		return true;
 	}	//	beforeSave
-	
-	
-	/**
-	 * 	After Save.
-	 * 	Update Batch Total
-	 *	@param newRecord true if new record
-	 *	@param success true if success
-	 *	@return success
-	 */
+		
+	@Override
 	protected boolean afterSave (boolean newRecord, boolean success)
 	{
 		if (!success)
@@ -385,11 +387,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 		return updateBatch();
 	}	//	afterSave
 	
-	/**
-	 * 	After Delete
-	 *	@param success true if deleted
-	 *	@return true if success
-	 */
+	@Override
 	protected boolean afterDelete (boolean success)
 	{
 		if (!success)
@@ -398,7 +396,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 	}	//	afterDelete
 	
 	/**
-	 * 	Update Batch total
+	 * 	Update Total DR and Total CR of journal batch
 	 *	@return true if ok
 	 */
 	protected boolean updateBatch()
@@ -415,13 +413,13 @@ public class MJournal extends X_GL_Journal implements DocAction
 		}
 		return true;
 	}	//	updateBatch
-	
-	
-	/**************************************************************************
+		
+	/**
 	 * 	Process document
 	 *	@param processAction document action
 	 *	@return true if performed
 	 */
+	@Override
 	public boolean processIt (String processAction)
 	{
 		m_processMsg = null;
@@ -438,6 +436,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 	 * 	Unlock Document.
 	 * 	@return true if success 
 	 */
+	@Override
 	public boolean unlockIt()
 	{
 		if (log.isLoggable(Level.INFO)) log.info(toString());
@@ -449,6 +448,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 	 * 	Invalidate Document
 	 * 	@return true if success 
 	 */
+	@Override
 	public boolean invalidateIt()
 	{
 		if (log.isLoggable(Level.INFO)) log.info(toString());
@@ -459,6 +459,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 	 *	Prepare Document
 	 * 	@return new status (In Progress or Invalid) 
 	 */
+	@Override
 	public String prepareIt()
 	{
 		if (log.isLoggable(Level.INFO)) log.info(toString());
@@ -574,10 +575,14 @@ public class MJournal extends X_GL_Journal implements DocAction
 		return DocAction.STATUS_InProgress;
 	}	//	prepareIt
 	
+	/**
+	 * @param dateAcct
+	 * @return null or error message
+	 */
 	private String validatePeriod(Timestamp dateAcct) {
 		// Get Period
 		MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
-		MPeriod period = (MPeriod) getC_Period();
+		MPeriod period = MPeriod.get(getC_Period_ID());
 		SimpleDateFormat dateFormat = DisplayType.getDateFormat(DisplayType.Date);
 
 		if (! period.isInPeriod(dateAcct)) {
@@ -607,6 +612,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 	 * 	Approve Document
 	 * 	@return true if success 
 	 */
+	@Override
 	public boolean  approveIt()
 	{
 		if (log.isLoggable(Level.INFO)) log.info(toString());
@@ -618,6 +624,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 	 * 	Reject Approval
 	 * 	@return true if success 
 	 */
+	@Override
 	public boolean rejectIt()
 	{
 		if (log.isLoggable(Level.INFO)) log.info(toString());
@@ -629,6 +636,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 	 * 	Complete Document
 	 * 	@return new status (Complete, In Progress, Invalid, Waiting ..)
 	 */
+	@Override
 	public String completeIt()
 	{
 		//	Re-Check
@@ -692,6 +700,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 	 * 	Void Document.
 	 * 	@return true if success 
 	 */
+	@Override
 	public boolean voidIt()
 	{
 		if (log.isLoggable(Level.INFO)) log.info(toString());
@@ -737,6 +746,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 	 * 	Cancel not delivered Qunatities
 	 * 	@return true if success 
 	 */
+	@Override
 	public boolean closeIt()
 	{
 		if (log.isLoggable(Level.INFO)) log.info(toString());
@@ -764,10 +774,11 @@ public class MJournal extends X_GL_Journal implements DocAction
 	}	//	closeIt
 	
 	/**
-	 * 	Reverse Correction (in same batch).
-	 * 	As if nothing happened - same date
+	 * 	Reverse Correction (in same batch if using batch).
+	 *  Flip Dr/Cr - Use date of this document.
 	 * 	@return true if success 
 	 */
+	@Override
 	public boolean reverseCorrectIt()
 	{
 		// Before reverseCorrect
@@ -790,8 +801,8 @@ public class MJournal extends X_GL_Journal implements DocAction
 
 	/**
 	 * 	Reverse Correction.
-	 * 	As if nothing happened - same date
-	 * 	@param GL_JournalBatch_ID reversal batch
+	 *  Flip Dr/Cr - Use date of this document.
+	 * 	@param GL_JournalBatch_ID optional reversal batch
 	 * 	@return reversed Journal or null
 	 */
 	public MJournal reverseCorrectIt (int GL_JournalBatch_ID)
@@ -839,10 +850,11 @@ public class MJournal extends X_GL_Journal implements DocAction
 	}	//	reverseCorrectionIt
 	
 	/**
-	 * 	Reverse Accrual (sane batch).
-	 * 	Flip Dr/Cr - Use Today's date
+	 * 	Reverse Accrual (in same batch if using batch).
+	 * 	Flip Dr/Cr - Use Today's date.
 	 * 	@return true if success 
 	 */
+	@Override
 	public boolean reverseAccrualIt()
 	{
 		// Before reverseAccrual
@@ -865,8 +877,8 @@ public class MJournal extends X_GL_Journal implements DocAction
 	
 	/**
 	 * 	Reverse Accrual.
-	 * 	Flip Dr/Cr - Use Today's date
-	 * 	@param GL_JournalBatch_ID reversal batch
+	 * 	Flip Dr/Cr - Use Today's date.
+	 * 	@param GL_JournalBatch_ID optional reversal batch
 	 * 	@return reversed journal or null 
 	 */
 	public MJournal reverseAccrualIt (int GL_JournalBatch_ID)
@@ -875,7 +887,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 		//	Journal
 		MJournal reverse = new MJournal (this);
 		reverse.setGL_JournalBatch_ID(GL_JournalBatch_ID);
-		Timestamp reversalDate = Env.getContextAsDate(getCtx(), "#Date");
+		Timestamp reversalDate = Env.getContextAsDate(getCtx(), Env.DATE);
 		if (reversalDate == null) {
 			reversalDate = new Timestamp(System.currentTimeMillis());
 		}
@@ -913,9 +925,10 @@ public class MJournal extends X_GL_Journal implements DocAction
 	}	//	reverseAccrualIt
 	
 	/** 
-	 * 	Re-activate
+	 * 	Re-activate document and delete Fact_Acct entries.
 	 * 	@return true if success 
 	 */
+	@Override
 	public boolean reActivateIt()
 	{
 		if (log.isLoggable(Level.INFO)) log.info(toString());
@@ -923,9 +936,35 @@ public class MJournal extends X_GL_Journal implements DocAction
 		m_processMsg = ModelValidationEngine.get().fireDocValidate(this,ModelValidator.TIMING_BEFORE_REACTIVATE);
 		if (m_processMsg != null)
 			return false;	
-		
+
 		// teo_sarca - FR [ 1776045 ] Add ReActivate action to GL Journal
 		MPeriod.testPeriodOpen(getCtx(), getDateAcct(), getC_DocType_ID(), getAD_Org_ID());
+
+		if (!DocumentEngine.canReactivateThisDocType(getC_DocType_ID())) {
+			m_processMsg = Msg.getMsg(getCtx(), "DocTypeCannotBeReactivated", new Object[] {MDocType.get(getC_DocType_ID()).getNameTrl()});
+			return false;
+		}
+
+		List<List<Object>> list = DB.getSQLArrayObjectsEx(get_TrxName(), "SELECT DISTINCT ev.Value FROM Fact_Acct fa"
+				+ " INNER JOIN C_ElementValue ev ON (fa.Account_ID = ev.C_ElementValue_ID)"
+				+ " INNER JOIN Fact_Reconciliation fr ON (fa.Fact_Acct_ID = fr.Fact_Acct_ID)"
+				+ " WHERE fa.AD_Table_ID = ? AND fa.Record_ID = ?", Table_ID, getGL_Journal_ID());
+		if (list != null && list.size() > 0) {
+			StringBuilder accounts = new StringBuilder();
+
+			for (List<Object> row : list) {
+				String accountValue = (String) row.get(0);
+
+				if (accounts.length() > 0)
+					accounts.append(", ");
+
+				accounts.append(accountValue);
+			}
+
+			m_processMsg = Msg.getMsg(getCtx(), "JournalReactivationFailedReconciliation", new Object[] {accounts});
+			return false;
+		}
+
 		MFactAcct.deleteEx(MJournal.Table_ID, get_ID(), get_TrxName());
 		setPosted(false);
 		setProcessed(false);
@@ -938,12 +977,12 @@ public class MJournal extends X_GL_Journal implements DocAction
 		
 		return true;
 	}	//	reActivateIt
-	
-	
-	/*************************************************************************
+		
+	/**
 	 * 	Get Summary
 	 *	@return Summary of Document
 	 */
+	@Override
 	public String getSummary()
 	{
 		StringBuilder sb = new StringBuilder();
@@ -964,6 +1003,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 	 * 	String Representation
 	 *	@return info
 	 */
+	@Override
 	public String toString ()
 	{
 		StringBuilder sb = new StringBuilder ("MJournal[");
@@ -978,6 +1018,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 	 * 	Get Document Info
 	 *	@return document info (untranslated)
 	 */
+	@Override
 	public String getDocumentInfo()
 	{
 		MDocType dt = MDocType.get(getCtx(), getC_DocType_ID());
@@ -989,6 +1030,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 	 * 	Create PDF
 	 *	@return File or null
 	 */
+	@Override
 	public File createPDF ()
 	{
 		try
@@ -1007,21 +1049,18 @@ public class MJournal extends X_GL_Journal implements DocAction
 	/**
 	 * 	Create PDF file
 	 *	@param file output file
-	 *	@return file if success
+	 *	@return not implemented, always return null
 	 */
 	public File createPDF (File file)
 	{
-	//	ReportEngine re = ReportEngine.get (getCtx(), ReportEngine.INVOICE, getC_Invoice_ID());
-	//	if (re == null)
-			return null;
-	//	return re.getPDF(file);
+		return null;
 	}	//	createPDF
-
 	
 	/**
 	 * 	Get Process Message
 	 *	@return clear text error message
 	 */
+	@Override
 	public String getProcessMsg()
 	{
 		return m_processMsg;
@@ -1031,6 +1070,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 	 * 	Get Document Owner (Responsible)
 	 *	@return AD_User_ID (Created)
 	 */
+	@Override
 	public int getDoc_User_ID()
 	{
 		return getCreatedBy();
@@ -1040,6 +1080,7 @@ public class MJournal extends X_GL_Journal implements DocAction
 	 * 	Get Document Approval Amount
 	 *	@return DR amount
 	 */
+	@Override
 	public BigDecimal getApprovalAmt()
 	{
 		return getTotalDr();
@@ -1058,8 +1099,8 @@ public class MJournal extends X_GL_Journal implements DocAction
 	}	//	isComplete
 
 	/**
-	 * 	Get Document Status
-	 *	@return Document Status Clear Text
+	 * 	Get Document Status Name
+	 *	@return Document Status Name
 	 */
 	public String getDocStatusName()
 	{

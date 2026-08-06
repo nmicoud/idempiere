@@ -19,6 +19,7 @@ package org.compiere.print;
 import java.util.ArrayList;
 import java.util.Properties;
 
+import org.compiere.util.Util;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -45,6 +46,7 @@ public class PrintDataHandler extends DefaultHandler
 	/**	Final Structure			*/
 	private PrintData		m_pd = null;
 
+	private String m_curPrintFormatItemId = null;
 	/** Current Active Element Name		*/
 	private String			m_curPDEname = null;
 	/** Current Active Element Value	*/
@@ -60,8 +62,6 @@ public class PrintDataHandler extends DefaultHandler
 	{
 		return m_pd;
 	}	//	getPrintData
-
-	/*************************************************************************/
 
 	/**
 	 * 	Receive notification of the start of an element.
@@ -96,6 +96,7 @@ public class PrintDataHandler extends DefaultHandler
 		}
 		else if (qName.equals(PrintDataElement.XML_TAG))
 		{
+			m_curPrintFormatItemId = attributes.getValue(PrintDataElement.XML_ATTRIBUTE_PRINTFORMATITEM_ID);
 			m_curPDEname = attributes.getValue(PrintDataElement.XML_ATTRIBUTE_NAME);
 			m_curPDEvalue = new StringBuffer();
 		}
@@ -131,17 +132,24 @@ public class PrintDataHandler extends DefaultHandler
 		}
 		else if (qName.equals(PrintDataElement.XML_TAG))
 		{
-			m_curPD.addNode(new PrintDataElement(m_curPDEname, m_curPDEvalue.toString(),0, null));
+			int id = 0;
+			if (!Util.isEmpty(m_curPrintFormatItemId, true))
+			{
+				try 
+				{
+					id = Integer.parseInt(m_curPrintFormatItemId);
+				}
+				catch (Exception ex) {}
+			}
+			m_curPD.addNode(new PrintDataElement(id, m_curPDEname, m_curPDEvalue.toString(),0, null));
 		}
 	}	//	endElement
-
-	/*************************************************************************/
 
 	/**	Stack						*/
 	private ArrayList<PrintData>	m_stack = new ArrayList<PrintData>();
 
 	/**
-	 * 	Push new PD on Stack and set m_cutPD
+	 * 	Push new PD on Stack and set m_curPD
 	 * 	@param newPD new PD
 	 */
 	private void push (PrintData newPD)
@@ -152,7 +160,7 @@ public class PrintDataHandler extends DefaultHandler
 	}	//	push
 
 	/**
-	 * 	Pop last PD from Stack and set m_cutPD
+	 * 	Pop last PD from Stack and set m_curPD
 	 */
 	private void pop ()
 	{

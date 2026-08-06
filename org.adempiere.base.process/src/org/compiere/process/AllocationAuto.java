@@ -30,6 +30,7 @@ import org.compiere.model.MInvoice;
 import org.compiere.model.MPaySelectionCheck;
 import org.compiere.model.MPaySelectionLine;
 import org.compiere.model.MPayment;
+import org.compiere.model.MProcessPara;
 import org.compiere.model.Query;
 import org.compiere.util.AdempiereSystemError;
 import org.compiere.util.Env;
@@ -41,6 +42,7 @@ import org.compiere.util.Msg;
  *  @author Jorg Janke
  *  @version $Id: AllocationAuto.java,v 1.2 2006/07/30 00:51:01 jjanke Exp $
  */
+@org.adempiere.base.annotation.Process
 public class AllocationAuto extends SvrProcess
 {
 	/**	BP Group					*/
@@ -83,7 +85,7 @@ public class AllocationAuto extends SvrProcess
 			else if (name.equals("APAR"))
 				p_APAR = (String)para[i].getParameter();
 			else
-				log.log(Level.SEVERE, "Unknown Parameter: " + name);
+				MProcessPara.validateUnknownParameter(getProcessInfo().getAD_Process_ID(), para[i]);
 		}
 	}	//	prepare
 
@@ -286,6 +288,7 @@ public class AllocationAuto extends SvrProcess
 	
 	/**************************************************************************
 	 * 	Allocate Individual Payments with payment references
+	 *  Uses OverUnderAmt for calculation, fallback method allocateBPOldestFirst doesn't
 	 *	@return number of allocations
 	 */
 	private int allocateBPPaymentWithInfo ()
@@ -317,7 +320,7 @@ public class AllocationAuto extends SvrProcess
 					MInvoice invoice = m_invoices[i];
 					if (invoice.isPaid())
 						continue;
-				//	log.fine("allocateIndividualPayments - " + invoice);
+
 					if (payment.getC_Invoice_ID() == invoice.getC_Invoice_ID())
 					{
 						if (payment.getC_Currency_ID() == invoice.getC_Currency_ID())
@@ -360,9 +363,9 @@ public class AllocationAuto extends SvrProcess
 					{
 						BigDecimal invoiceAmt = invoice.getOpenAmt(true, null);
 						BigDecimal overUnder = line.getOpenAmt().subtract(line.getPayAmt())
-							.subtract(line.getDiscountAmt()).subtract(line.getWriteOffAmt()).subtract(line.getDifferenceAmt());
+							.subtract(line.getDiscountAmt()).subtract(line.getWriteOffAmt());
 						invoiceAmt = invoiceAmt.subtract(line.getDiscountAmt()).subtract(line.getWriteOffAmt())
-							.subtract(line.getDifferenceAmt()).subtract(overUnder);
+							.subtract(overUnder);
 						if (!invoice.isSOTrx())
 							invoiceAmt = invoiceAmt.negate();
 						if (log.isLoggable(Level.FINE)) log.fine(invoice + ", Invoice=" + invoiceAmt);
@@ -391,6 +394,7 @@ public class AllocationAuto extends SvrProcess
 	
 	/**
 	 * 	Allocate Payment:Invoice 1:1
+	 *  Uses OverUnderAmt for calculation, fallback method allocateBPOldestFirst doesn't
 	 *	@return allocations
 	 */
 	private int allocateBPOneToOne() throws Exception
@@ -455,6 +459,7 @@ public class AllocationAuto extends SvrProcess
 	
 	/**
 	 * 	Allocate all Payments/Invoices using Accounting currency
+	 *  Uses OverUnderAmt for calculation, fallback method allocateBPOldestFirst doesn't
 	 *	@return allocations
 	 */
 	private int allocateBPartnerAll() throws Exception
@@ -469,7 +474,7 @@ public class AllocationAuto extends SvrProcess
 			if (payment.isAllocated())
 				continue;
 			BigDecimal allocatedAmt = payment.getAllocatedAmt();
-		//	log.info("allocateBPartnerAll - " + payment + ", Allocated=" + allocatedAmt);
+
 			if (allocatedAmt != null && allocatedAmt.signum() != 0)
 				continue;
 			BigDecimal availableAmt = payment.getPayAmt()
@@ -481,7 +486,6 @@ public class AllocationAuto extends SvrProcess
 			//	Foreign currency
 			if (payment.getC_Currency_ID() != C_Currency_ID)
 				continue;
-		//	log.fine("allocateBPartnerAll - Available=" + availableAmt);
 			if (dateAcct == null || payment.getDateAcct().after(dateAcct))
 				dateAcct = payment.getDateAcct();
 			totalPayments = totalPayments.add(availableAmt); 
@@ -493,14 +497,12 @@ public class AllocationAuto extends SvrProcess
 			MInvoice invoice = m_invoices[i];
 			if (invoice.isPaid())
 				continue;
-		//	log.info("allocateBPartnerAll - " + invoice);
 			BigDecimal openAmt = invoice.getOpenAmt(true, null);
 			if (!invoice.isSOTrx())
 				openAmt = openAmt.negate();
 			//	Foreign currency
 			if (invoice.getC_Currency_ID() != C_Currency_ID)
 				continue;
-		//	log.fine("allocateBPartnerAll - Open=" + openAmt);
 			if (dateAcct == null || invoice.getDateAcct().after(dateAcct))
 				dateAcct = invoice.getDateAcct();
 			totalInvoices = totalInvoices.add(openAmt);
@@ -566,6 +568,7 @@ public class AllocationAuto extends SvrProcess
 	
 	/**
 	 * 	Allocate Oldest First using Accounting currency
+	 *  on purpose this method doesn't use OverUnderAmt for calculation, fallback method
 	 *	@return allocations
 	 */
 	private int allocateBPOldestFirst() throws Exception
@@ -587,8 +590,7 @@ public class AllocationAuto extends SvrProcess
 			if (log.isLoggable(Level.INFO)) log.info(payment + ", Allocated=" + allocatedAmt);
 			BigDecimal availableAmt = payment.getPayAmt()
 				.add(payment.getDiscountAmt())
-				.add(payment.getWriteOffAmt())
-				.add(payment.getOverUnderAmt());
+				.add(payment.getWriteOffAmt());
 			availableAmt = availableAmt.subtract(allocatedAmt);
 			if (!payment.isReceipt())
 				availableAmt = availableAmt.negate();
@@ -646,13 +648,9 @@ public class AllocationAuto extends SvrProcess
 			BigDecimal allocatedAmt = payment.getAllocatedAmt();
 			if (allocatedAmt == null)
 				allocatedAmt = Env.ZERO;
-			// comment following lines to allow partial allocation
-			// if (allocatedAmt != null && allocatedAmt.signum() != 0)
-			// 	continue;
 			BigDecimal availableAmt = payment.getPayAmt()
 				.add(payment.getDiscountAmt())
-				.add(payment.getWriteOffAmt())
-				.add(payment.getOverUnderAmt());
+				.add(payment.getWriteOffAmt());
 			availableAmt = availableAmt.subtract(allocatedAmt);
 			if (!payment.isReceipt())
 				availableAmt = availableAmt.negate();
@@ -722,7 +720,7 @@ public class AllocationAuto extends SvrProcess
 	/**********************************************************************************************
 	 * 	Create Allocation allocation
 	 *	@param C_Currency_ID currency
-	 *	@param description decription
+	 *	@param description description
 	 *	@param Amount amount
 	 *	@param DiscountAmt discount
 	 *	@param WriteOffAmt write off

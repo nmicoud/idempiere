@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_PInstance
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 14
  */
 public interface I_AD_PInstance 
 {
@@ -44,8 +44,8 @@ public interface I_AD_PInstance
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -58,18 +58,19 @@ public interface I_AD_PInstance
 	/** Get Language ID	  */
 	public int getAD_Language_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Language getAD_Language() throws RuntimeException;
 
     /** Column name AD_Org_ID */
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -108,6 +109,7 @@ public interface I_AD_PInstance
 	  */
 	public int getAD_PrintFormat_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_PrintFormat getAD_PrintFormat() throws RuntimeException;
 
     /** Column name AD_Process_ID */
@@ -123,7 +125,40 @@ public interface I_AD_PInstance
 	  */
 	public int getAD_Process_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Process getAD_Process() throws RuntimeException;
+
+    /** Column name AD_Session_ID */
+    public static final String COLUMNNAME_AD_Session_ID = "AD_Session_ID";
+
+	/** Set Session.
+	  * User Session Online or Web
+	  */
+	public void setAD_Session_ID (int AD_Session_ID);
+
+	/** Get Session.
+	  * User Session Online or Web
+	  */
+	public int getAD_Session_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_AD_Session getAD_Session() throws RuntimeException;
+
+    /** Column name AD_Table_ID */
+    public static final String COLUMNNAME_AD_Table_ID = "AD_Table_ID";
+
+	/** Set Table.
+	  * Database Table information
+	  */
+	public void setAD_Table_ID (int AD_Table_ID);
+
+	/** Get Table.
+	  * Database Table information
+	  */
+	public int getAD_Table_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_AD_Table getAD_Table() throws RuntimeException;
 
     /** Column name AD_User_ID */
     public static final String COLUMNNAME_AD_User_ID = "AD_User_ID";
@@ -138,6 +173,7 @@ public interface I_AD_PInstance
 	  */
 	public int getAD_User_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_User getAD_User() throws RuntimeException;
 
     /** Column name Created */
@@ -164,6 +200,19 @@ public interface I_AD_PInstance
 
 	/** Get Error Msg	  */
 	public String getErrorMsg();
+
+    /** Column name ExternalTraceId */
+    public static final String COLUMNNAME_ExternalTraceId = "ExternalTraceId";
+
+	/** Set External Trace ID.
+	  * External identifier used for audit tracing
+	  */
+	public void setExternalTraceId (String ExternalTraceId);
+
+	/** Get External Trace ID.
+	  * External identifier used for audit tracing
+	  */
+	public String getExternalTraceId();
 
     /** Column name IsActive */
     public static final String COLUMNNAME_IsActive = "IsActive";
@@ -209,6 +258,19 @@ public interface I_AD_PInstance
 	  */
 	public boolean isSummary();
 
+    /** Column name JsonData */
+    public static final String COLUMNNAME_JsonData = "JsonData";
+
+	/** Set JSON Data.
+	  * The json field stores json data.
+	  */
+	public void setJsonData (String JsonData);
+
+	/** Get JSON Data.
+	  * The json field stores json data.
+	  */
+	public String getJsonData();
+
     /** Column name Name */
     public static final String COLUMNNAME_Name = "Name";
 
@@ -247,6 +309,15 @@ public interface I_AD_PInstance
 	  * Direct internal record ID
 	  */
 	public int getRecord_ID();
+
+    /** Column name Record_UU */
+    public static final String COLUMNNAME_Record_UU = "Record_UU";
+
+	/** Set Record UUID	  */
+	public void setRecord_UU (String Record_UU);
+
+	/** Get Record UUID	  */
+	public String getRecord_UU();
 
     /** Column name ReportType */
     public static final String COLUMNNAME_ReportType = "ReportType";

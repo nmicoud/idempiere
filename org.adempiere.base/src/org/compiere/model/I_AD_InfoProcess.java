@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_InfoProcess
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_AD_InfoProcess 
 {
@@ -44,8 +44,8 @@ public interface I_AD_InfoProcess
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -62,6 +62,7 @@ public interface I_AD_InfoProcess
 	  */
 	public int getAD_InfoColumn_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_InfoColumn getAD_InfoColumn() throws RuntimeException;
 
     /** Column name AD_InfoProcess_ID */
@@ -95,18 +96,19 @@ public interface I_AD_InfoProcess
 	  */
 	public int getAD_InfoWindow_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_InfoWindow getAD_InfoWindow() throws RuntimeException;
 
     /** Column name AD_Org_ID */
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -123,6 +125,7 @@ public interface I_AD_InfoProcess
 	  */
 	public int getAD_Process_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_Process getAD_Process() throws RuntimeException;
 
     /** Column name Created */
@@ -198,12 +201,12 @@ public interface I_AD_InfoProcess
     /** Column name LayoutType */
     public static final String COLUMNNAME_LayoutType = "LayoutType";
 
-	/** Set LayoutType.
+	/** Set Layout Type.
 	  * Layout type of info process
 	  */
 	public void setLayoutType (String LayoutType);
 
-	/** Get LayoutType.
+	/** Get Layout Type.
 	  * Layout type of info process
 	  */
 	public String getLayoutType();

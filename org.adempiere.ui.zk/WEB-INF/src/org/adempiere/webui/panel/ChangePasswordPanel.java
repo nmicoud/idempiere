@@ -11,8 +11,6 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,    *
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.                     *
  *****************************************************************************/
-
-
 package org.adempiere.webui.panel;
 
 import java.util.ArrayList;
@@ -37,10 +35,10 @@ import org.compiere.model.MPasswordHistory;
 import org.compiere.model.MPasswordRule;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MUser;
-import org.compiere.model.PO;
 import org.compiere.util.CLogger;
 import org.compiere.util.Env;
 import org.compiere.util.KeyNamePair;
+import org.compiere.util.Login;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 import org.compiere.util.Util;
@@ -56,14 +54,14 @@ import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Image;
 
 /**
- * Change Password Panel
+ * Change Password dialog
  * @author Elaine
  * @date August 30, 2012
  */
 public class ChangePasswordPanel extends Window implements EventListener<Event>
 {
     /**
-	 * 
+	 * generated serial id
 	 */
 	private static final long serialVersionUID = -4117126419866788951L;
 
@@ -92,6 +90,14 @@ public class ChangePasswordPanel extends Window implements EventListener<Event>
     protected Textbox txtRetypeNewPassword;
     protected Textbox txtAnswer;
 
+    /**
+     * @param ctx
+     * @param loginWindow
+     * @param userName
+     * @param userPassword
+     * @param show
+     * @param clientsKNPairs
+     */
     public ChangePasswordPanel(Properties ctx, LoginWindow loginWindow, String userName, String userPassword, boolean show, KeyNamePair[] clientsKNPairs) 
     {
     	this.wndLogin = loginWindow;
@@ -112,6 +118,9 @@ public class ChangePasswordPanel extends Window implements EventListener<Event>
     	createUI();
     }
 
+    /**
+     * Layout dialog
+     */
 	protected void createUI() {
 		Div div = new Div();
     	div.setSclass(ITheme.LOGIN_BOX_HEADER_CLASS);
@@ -210,6 +219,9 @@ public class ChangePasswordPanel extends Window implements EventListener<Event>
         this.appendChild(div);
 	}
 
+	/**
+	 * Create components
+	 */
     private void initComponents()
     {
     	lblOldPassword = new Label();
@@ -264,13 +276,13 @@ public class ChangePasswordPanel extends Window implements EventListener<Event>
         
     	txtAnswer = new Textbox();
     	txtAnswer.setId("txtAnswer");
-//        txtAnswer.setType("password");
         txtAnswer.setCols(25);
         ZKUpdateUtil.setWidth(txtAnswer, "220px");
    }
 
-    public void onEvent(Event event)
-    {
+   @Override
+   public void onEvent(Event event)
+   {
         if (event.getTarget().getId().equals(ConfirmPanel.A_OK))
         {
 			validateChangePassword();
@@ -278,13 +290,12 @@ public class ChangePasswordPanel extends Window implements EventListener<Event>
         else if (event.getTarget().getId().equals(ConfirmPanel.A_CANCEL))
         {
         	SessionManager.logoutSession();
-            //wndLogin.loginCancelled();
         }
         else if (event.getTarget() == txtNewPassword) {
         	MPasswordRule pwdrule = MPasswordRule.getRules(Env.getCtx(), null);
 			if (pwdrule != null) {
 				try {
-					pwdrule.validate(m_userName, txtNewPassword.getValue(), new ArrayList<MPasswordHistory>());
+					pwdrule.validate(Login.getAppUser(m_userName), txtNewPassword.getValue(), new ArrayList<MPasswordHistory>());
 				}
 				catch (Exception e) {
 					throw new WrongValueException(txtNewPassword, e.getMessage());
@@ -297,6 +308,9 @@ public class ChangePasswordPanel extends Window implements EventListener<Event>
         }
     }
     
+    /**
+     * Validate new password
+     */
     public void validateChangePassword()
     {
     	Clients.clearBusy();
@@ -334,6 +348,7 @@ public class ChangePasswordPanel extends Window implements EventListener<Event>
         		throw new IllegalArgumentException(Msg.getMsg(m_ctx, "NewPasswordMustDiffer"));
     	}
 
+    	StringBuilder tenantsChanged = new StringBuilder();
     	Trx trx = null;
     	try
     	{
@@ -344,8 +359,8 @@ public class ChangePasswordPanel extends Window implements EventListener<Event>
 	    	for (KeyNamePair clientKNPair : m_clientKNPairs)
 	    	{	    		
 	    		int clientId = clientKNPair.getKey();
-	    		Env.setContext(m_ctx, "#AD_Client_ID", clientId);
-	    		MUser user = MUser.get(m_ctx, m_userName);
+	    		Env.setContext(m_ctx, Env.AD_CLIENT_ID, clientId);
+	    		MUser user = MUser.get(m_ctx, Login.getAppUser(m_userName));
 	    		if (user == null)
 	    		{
 	    			trx.rollback();
@@ -357,12 +372,10 @@ public class ChangePasswordPanel extends Window implements EventListener<Event>
 	    		user.setIsExpired(false);
 	    		user.setSecurityQuestion(securityQuestion);
 	    		user.setAnswer(answer);    		
-	    		try {
-	    			PO.setCrossTenantSafe();
-	    			user.saveEx(trx.getTrxName());
-	    		} finally {
-	    			PO.clearCrossTenantSafe();
-	    		}
+    			user.saveCrossTenantSafeEx(trx.getTrxName());
+    			if (tenantsChanged.length() > 0)
+    				tenantsChanged.append(", ");
+    			tenantsChanged.append(clientKNPair.getName());
 	    	}
 	    	
 	    	trx.commit();	    	
@@ -379,7 +392,7 @@ public class ChangePasswordPanel extends Window implements EventListener<Event>
     			trx.close();
     	}
     	
-		String msg = Msg.getMsg(m_ctx, "NewPasswordValidForAllTenants");
+		String msg = Msg.getMsg(m_ctx, "NewPasswordValidForAllTenants", new Object[] {tenantsChanged});
 		Messagebox.showDialog(msg, AEnv.getDialogHeader(Env.getCtx(), 0), Messagebox.OK, Messagebox.INFORMATION, new Callback<Integer>() {
 			@Override
 			public void onCallback(Integer result) {

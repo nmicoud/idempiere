@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for M_PackageMPS
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_M_PackageMPS 
 {
@@ -44,8 +44,8 @@ public interface I_M_PackageMPS
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -53,14 +53,59 @@ public interface I_M_PackageMPS
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
+
+    /** Column name C_UOM_Length_ID */
+    public static final String COLUMNNAME_C_UOM_Length_ID = "C_UOM_Length_ID";
+
+	/** Set UOM for Length.
+	  * Standard Unit of Measure for Length
+	  */
+	public void setC_UOM_Length_ID (int C_UOM_Length_ID);
+
+	/** Get UOM for Length.
+	  * Standard Unit of Measure for Length
+	  */
+	public int getC_UOM_Length_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_C_UOM getC_UOM_Length() throws RuntimeException;
+
+    /** Column name C_UOM_Weight_ID */
+    public static final String COLUMNNAME_C_UOM_Weight_ID = "C_UOM_Weight_ID";
+
+	/** Set UOM for Weight.
+	  * Standard Unit of Measure for Weight
+	  */
+	public void setC_UOM_Weight_ID (int C_UOM_Weight_ID);
+
+	/** Get UOM for Weight.
+	  * Standard Unit of Measure for Weight
+	  */
+	public int getC_UOM_Weight_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_C_UOM getC_UOM_Weight() throws RuntimeException;
+
+    /** Column name CreateFrom */
+    public static final String COLUMNNAME_CreateFrom = "CreateFrom";
+
+	/** Set Create lines from.
+	  * Process which will generate a new document lines based on an existing document
+	  */
+	public void setCreateFrom (String CreateFrom);
+
+	/** Get Create lines from.
+	  * Process which will generate a new document lines based on an existing document
+	  */
+	public String getCreateFrom();
 
     /** Column name Created */
     public static final String COLUMNNAME_Created = "Created";
@@ -77,49 +122,6 @@ public interface I_M_PackageMPS
 	  * User who created this records
 	  */
 	public int getCreatedBy();
-
-    /** Column name CreateFrom */
-    public static final String COLUMNNAME_CreateFrom = "CreateFrom";
-
-	/** Set Create lines from.
-	  * Process which will generate a new document lines based on an existing document
-	  */
-	public void setCreateFrom (String CreateFrom);
-
-	/** Get Create lines from.
-	  * Process which will generate a new document lines based on an existing document
-	  */
-	public String getCreateFrom();
-
-    /** Column name C_UOM_Length_ID */
-    public static final String COLUMNNAME_C_UOM_Length_ID = "C_UOM_Length_ID";
-
-	/** Set UOM for Length.
-	  * Standard Unit of Measure for Length
-	  */
-	public void setC_UOM_Length_ID (int C_UOM_Length_ID);
-
-	/** Get UOM for Length.
-	  * Standard Unit of Measure for Length
-	  */
-	public int getC_UOM_Length_ID();
-
-	public org.compiere.model.I_C_UOM getC_UOM_Length() throws RuntimeException;
-
-    /** Column name C_UOM_Weight_ID */
-    public static final String COLUMNNAME_C_UOM_Weight_ID = "C_UOM_Weight_ID";
-
-	/** Set UOM for Weight.
-	  * Standard Unit of Measure for Weight
-	  */
-	public void setC_UOM_Weight_ID (int C_UOM_Weight_ID);
-
-	/** Get UOM for Weight.
-	  * Standard Unit of Measure for Weight
-	  */
-	public int getC_UOM_Weight_ID();
-
-	public org.compiere.model.I_C_UOM getC_UOM_Weight() throws RuntimeException;
 
     /** Column name Description */
     public static final String COLUMNNAME_Description = "Description";
@@ -174,30 +176,6 @@ public interface I_M_PackageMPS
 	/** Get Length	  */
 	public BigDecimal getLength();
 
-    /** Column name MasterTrackingNo */
-    public static final String COLUMNNAME_MasterTrackingNo = "MasterTrackingNo";
-
-	/** Set Master Tracking No	  */
-	public void setMasterTrackingNo (String MasterTrackingNo);
-
-	/** Get Master Tracking No	  */
-	public String getMasterTrackingNo();
-
-    /** Column name M_Package_ID */
-    public static final String COLUMNNAME_M_Package_ID = "M_Package_ID";
-
-	/** Set Package.
-	  * Shipment Package
-	  */
-	public void setM_Package_ID (int M_Package_ID);
-
-	/** Get Package.
-	  * Shipment Package
-	  */
-	public int getM_Package_ID();
-
-	public org.compiere.model.I_M_Package getM_Package() throws RuntimeException;
-
     /** Column name M_PackageMPS_ID */
     public static final String COLUMNNAME_M_PackageMPS_ID = "M_PackageMPS_ID";
 
@@ -215,6 +193,31 @@ public interface I_M_PackageMPS
 
 	/** Get M_PackageMPS_UU	  */
 	public String getM_PackageMPS_UU();
+
+    /** Column name M_Package_ID */
+    public static final String COLUMNNAME_M_Package_ID = "M_Package_ID";
+
+	/** Set Package.
+	  * Shipment Package
+	  */
+	public void setM_Package_ID (int M_Package_ID);
+
+	/** Get Package.
+	  * Shipment Package
+	  */
+	public int getM_Package_ID();
+
+	@Deprecated(since="13") // use better methods with cache
+	public org.compiere.model.I_M_Package getM_Package() throws RuntimeException;
+
+    /** Column name MasterTrackingNo */
+    public static final String COLUMNNAME_MasterTrackingNo = "MasterTrackingNo";
+
+	/** Set Master Tracking No	  */
+	public void setMasterTrackingNo (String MasterTrackingNo);
+
+	/** Get Master Tracking No	  */
+	public String getMasterTrackingNo();
 
     /** Column name Price */
     public static final String COLUMNNAME_Price = "Price";

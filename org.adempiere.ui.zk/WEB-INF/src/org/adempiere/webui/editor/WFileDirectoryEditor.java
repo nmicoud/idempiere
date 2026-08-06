@@ -19,14 +19,17 @@ import org.adempiere.webui.component.FolderBrowser;
 import org.adempiere.webui.event.DialogEvents;
 import org.adempiere.webui.event.ValueChangeEvent;
 import org.adempiere.webui.theme.ThemeManager;
+import org.adempiere.webui.util.Icon;
 import org.compiere.model.GridField;
 import org.compiere.util.CLogger;
+import org.compiere.util.DisplayType;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.Events;
 
 /**
- *
+ * Default editor for {@link DisplayType#FilePath}.<br/>
+ * Implemented with {@link FilenameBox} (with upload disable) and {@link FolderBrowser} component.
  * @author Low Heng Sin
  *
  */
@@ -37,6 +40,7 @@ public class WFileDirectoryEditor extends WEditor
 	@SuppressWarnings("unused")
 	private static final CLogger log = CLogger.getCLogger(WFileDirectoryEditor.class);
 
+	/** absolute folder/directory path */
 	private String oldValue;
 
 	/**
@@ -58,7 +62,7 @@ public class WFileDirectoryEditor extends WEditor
 	{
 		super(new FilenameBox(), gridField, tableEditor, editorConfiguration);
 		if (ThemeManager.isUseFontIconForImage())
-			getComponent().getButton().setIconSclass("z-icon-Open");
+			getComponent().getButton().setIconSclass(Icon.getIconSclass(Icon.OPEN));
 		else
 			getComponent().setButtonImage(ThemeManager.getThemeResource("images/Open16.png"));
 		getComponent().getButton().setUpload("false");
@@ -109,6 +113,7 @@ public class WFileDirectoryEditor extends WEditor
 		getComponent().setEnabled(readWrite);
 	}
 
+	@Override
 	public void onEvent(Event event)
 	{
 		String newValue = null;
@@ -134,6 +139,10 @@ public class WFileDirectoryEditor extends WEditor
 		processNewValue(newValue);
 	}
 
+	/**
+	 * Process newValue from user input
+	 * @param newValue
+	 */
 	protected void processNewValue(String newValue) {
 		if (oldValue != null && newValue != null && oldValue.equals(newValue)) {
     	    return;
@@ -146,7 +155,7 @@ public class WFileDirectoryEditor extends WEditor
 	}
 
 	/**
-	 *  Load file
+	 *  Open folder selection dialog ({@link FolderBrowser}.
 	 */
 	private void cmd_file()
 	{
@@ -162,6 +171,7 @@ public class WFileDirectoryEditor extends WEditor
 		});
 	}   //  cmd_file
 
+	@Override
 	public String[] getEvents()
     {
         return LISTENER_EVENTS;

@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.logging.Level;
 
 import javax.xml.transform.sax.TransformerHandler;
+import org.adempiere.pipo2.IPackSerializer;
 
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.model.GenericPO;
@@ -42,6 +43,7 @@ import org.compiere.model.I_AD_Form;
 import org.compiere.model.I_AD_InfoWindow;
 import org.compiere.model.I_AD_Process;
 import org.compiere.model.I_AD_Role;
+import org.compiere.model.I_AD_TableAttribute;
 import org.compiere.model.I_AD_Window;
 import org.compiere.model.I_C_DocType;
 import org.compiere.model.MColumn;
@@ -63,7 +65,7 @@ import org.xml.sax.helpers.AttributesImpl;
  */
 public class GenericPOElementHandler extends AbstractElementHandler {
 
-	private String m_tableName;
+	protected String m_tableName;
 
 	public GenericPOElementHandler() {
 	}
@@ -74,10 +76,10 @@ public class GenericPOElementHandler extends AbstractElementHandler {
 
 	public void startElement(PIPOContext ctx, Element element) throws SAXException {
 		String tableName = element.getElementValue();
+		MTable table = MTable.get(ctx.ctx, tableName);
 
 		PO po = findPO(ctx, element);
 		if (po == null) {
-    		MTable table = MTable.get(ctx.ctx, tableName);
 			po = table.getPO(0, getTrxName(ctx));
 		}
 		PoFiller filler = new PoFiller(ctx, po, element, this);
@@ -101,10 +103,17 @@ public class GenericPOElementHandler extends AbstractElementHandler {
 		}
 		String action = po.is_new() ? "New" : "Update";
 		po.saveEx();
-		element.recordId = po.get_ID();
+		boolean isMultiKey = po.get_KeyColumns().length > 1;
+		if (table.isUUIDKeyTable() || isMultiKey)
+			element.recordId = po.get_UUID();
+		else
+			element.recordId = po.get_ID();
 
 		X_AD_Package_Imp_Detail impDetail = createImportDetail(ctx, element.qName, po.get_TableName(), po.get_Table_ID());
-		logImportDetail(ctx, impDetail, 1, po.toString(), element.recordId, action);
+		if (element.recordId instanceof Integer)
+			logImportDetail(ctx, impDetail, 1, po.toString(), (Integer)element.recordId, null,                     action);
+		else if (element.recordId instanceof String)
+			logImportDetail(ctx, impDetail, 1, po.toString(), 0,                         (String)element.recordId, action);
 
 		if (   I_AD_Window.Table_Name.equals(tableName)
 			|| I_AD_Process.Table_Name.equals(tableName)
@@ -118,8 +127,8 @@ public class GenericPOElementHandler extends AbstractElementHandler {
 	public void endElement(PIPOContext ctx, Element element) throws SAXException {
 	}
 
-	public void create(PIPOContext ctx, TransformerHandler document)
-			throws SAXException {
+	public void create(PIPOContext ctx, IPackSerializer document)
+			throws Exception {
 		AttributesImpl atts = new AttributesImpl();
 
 		String sql = Env.getContext(ctx.ctx, DataElementParameters.SQL_STATEMENT);
@@ -133,13 +142,10 @@ public class GenericPOElementHandler extends AbstractElementHandler {
 		int tableId = Env.getContextAsInt(ctx.ctx, DataElementParameters.AD_TABLE_ID);
 		String tableName = MTable.getTableName(ctx.ctx, tableId);
 		List<String> excludes = defaultExcludeList(tableName);
-		boolean checkExcluded = ! sql.toLowerCase().startsWith("select *");
-		Statement stmt = null;
-		ResultSet rs = null;
-		try {
-			sql = MRole.getDefault().addAccessSQL(sql, tableName, true, true);
-			stmt = DB.createStatement();
-			rs = stmt.executeQuery(sql);
+		boolean checkExcluded = ! sql.toLowerCase().startsWith("select *");				
+		try (Statement stmt = DB.createStatement();) {
+			sql = MRole.getDefault().addAccessSQL(sql, tableName, true, true);			
+			ResultSet rs = stmt.executeQuery(sql);
 			while (rs.next()) {
 				GenericPO po = new GenericPO(tableName, ctx.ctx, rs, getTrxName(ctx));
 				int AD_Client_ID = po.getAD_Client_ID();
@@ -175,27 +181,44 @@ public class GenericPOElementHandler extends AbstractElementHandler {
 
 				if (createElement) {
 					// 
-					if (po.get_KeyColumns() != null && po.get_KeyColumns().length == 1 && po.get_ID() > 0
+					if (po.get_KeyColumns() != null && po.get_KeyColumns().length == 1 && (po.get_ID() > 0 || po.get_UUID() != null)
 						&& ! IHandlerRegistry.TABLE_GENERIC_SINGLE_HANDLER.equals(ctx.packOut.getCurrentPackoutItem().getType())) {
 						ElementHandler handler = ctx.packOut.getHandler(po.get_TableName());
 						if (handler != null && !handler.getClass().equals(this.getClass()) ) {
-							handler.packOut(ctx.packOut, document, ctx.logDocument, po.get_ID());
+							ctx.packOut.getCtx().ctx.put("Table_Name",tableName);
+							handler.packOut(ctx.packOut, document, ctx.logDocument, po.get_ID(), po.get_UUID());
 							createElement = false;
 						}
 					}
 					if (createElement) {
 						verifyPackOutRequirement(po);
 						addTypeName(atts, "table");
-						document.startElement("","", tableName, atts);
+						document.startElement(tableName, atts);
 						PoExporter filler = new PoExporter(ctx, document, po);
-						filler.export(excludes, true);
+						if (MColumn.Table_Name.equals(po.get_TableName())) {
+							filler.addString("IsSyncDatabase", "Y", new AttributesImpl());
+							excludes.add("IsSyncDatabase");
+						}
+						filler.export(excludes, ctx.packOut.isIncludeOrganizationId());
 						ctx.packOut.getCtx().ctx.put("Table_Name",tableName);
 						try {
-							new CommonTranslationHandler().packOut(ctx.packOut,document,null,po.get_ID());
+							new CommonTranslationHandler().packOut(ctx.packOut, document, null, po.get_ID(), po.get_UUID());
 						} catch(Exception e) {
 							if (log.isLoggable(Level.INFO)) log.info(e.toString());
 						}
 					}
+				}
+				
+				ctx.packOut.getCtx().ctx.put("Table_Name", tableName);
+				try
+				{
+					ElementHandler handler = ctx.packOut.getHandler(I_AD_TableAttribute.Table_Name);
+					handler.packOut(ctx.packOut, document, null, po.get_ID());
+				}
+				catch (Exception e)
+				{
+					if (log.isLoggable(Level.INFO))
+						log.info(e.toString());
 				}
 
 				for (int i = 1; i < components.length; i++) {
@@ -207,26 +230,33 @@ public class GenericPOElementHandler extends AbstractElementHandler {
 				}
 
 				if (createElement) {
-					document.endElement("","",tableName);
+					document.endElement(tableName);
 				}
 			}
 		} catch (Exception e)	{
 			throw new AdempiereException(e);
-		} finally {
-			DB.close(rs, stmt);
 		}
 	}
 
-	private void exportDetail(PIPOContext ctx, TransformerHandler document, GenericPO parent, String[] tables) {
+	private void exportDetail(PIPOContext ctx, IPackSerializer document, GenericPO parent, String[] tables) {
 		String mainTable = tables[0];
 		AttributesImpl atts = new AttributesImpl();
-		String sql = "SELECT * FROM " + mainTable + " WHERE " + parent.get_TableName() + "_ID = ?";
+		String keyColumn;
+		MTable table = MTable.get(ctx.ctx, parent.get_TableName());
+		if (table.isUUIDKeyTable())
+			keyColumn = PO.getUUIDColumnName(parent.get_TableName());
+		else
+			keyColumn = parent.get_TableName() + "_ID";
+		String sql = "SELECT * FROM " + mainTable + " WHERE " + keyColumn + " = ?";
 		PreparedStatement pstmt = null;
 		ResultSet rs = null;
 		try {
 			sql = MRole.getDefault().addAccessSQL(sql, mainTable, true, true);
 			pstmt = DB.prepareStatement(sql, null);
-			pstmt.setInt(1, parent.get_ID());
+			if (table.isUUIDKeyTable())
+				pstmt.setString(1, parent.get_UUID());
+			else
+				pstmt.setInt(1, parent.get_ID());
 			rs = pstmt.executeQuery();
 			while (rs.next()) {
 				GenericPO po = new GenericPO(mainTable, ctx.ctx, rs, getTrxName(ctx));
@@ -240,7 +270,7 @@ public class GenericPOElementHandler extends AbstractElementHandler {
 					ElementHandler handler = ctx.packOut.getHandler(po.get_TableName());
 					if (handler != null && !handler.getClass().equals(this.getClass())) {
 						if (po.get_ID() > 0 && po.get_KeyColumns().length==1) {
-							handler.packOut(ctx.packOut, document, ctx.logDocument, po.get_ID());
+							handler.packOut(ctx.packOut, document, ctx.logDocument, po.get_ID(), po.get_UUID());
 							createElement = false;
 						} else {
 							String uuid = po.get_ValueAsString(po.getUUIDColumnName());
@@ -255,15 +285,27 @@ public class GenericPOElementHandler extends AbstractElementHandler {
 						verifyPackOutRequirement(po);
 						List<String> excludes = defaultExcludeList(mainTable);
 						addTypeName(atts, "table");
-						document.startElement("", "", mainTable, atts);
+						document.startElement(mainTable, atts);
 						PoExporter filler = new PoExporter(ctx, document, po);
-						filler.export(excludes, true);
+						filler.export(excludes, ctx.packOut.isIncludeOrganizationId());
 						ctx.packOut.getCtx().ctx.put("Table_Name",mainTable);
 						try {
-							new CommonTranslationHandler().packOut(ctx.packOut,document,null,po.get_ID());
+							new CommonTranslationHandler().packOut(ctx.packOut, document, null, po.get_ID(), po.get_UUID());
 						} catch(Exception e) {
 							if (log.isLoggable(Level.INFO)) log.info(e.toString());
 						}
+					}
+					
+					ctx.packOut.getCtx().ctx.put("Table_Name", mainTable);
+					try
+					{
+						ElementHandler handlerTabAttr = ctx.packOut.getHandler(I_AD_TableAttribute.Table_Name);
+						handlerTabAttr.packOut(ctx.packOut, document, null, po.get_ID());
+					}
+					catch (Exception e)
+					{
+						if (log.isLoggable(Level.INFO))
+							log.info(e.toString());
 					}
 				}
 				for (int i=1; i<tables.length; i++) {
@@ -286,7 +328,7 @@ public class GenericPOElementHandler extends AbstractElementHandler {
 					exportDetail(ctx, document, po, detTables);
 				}
 				if (createElement) {
-					document.endElement("","",mainTable);
+					document.endElement(mainTable);
 				}
 			}
 		} catch (Exception e)	{
@@ -297,7 +339,7 @@ public class GenericPOElementHandler extends AbstractElementHandler {
 
 	}
 
-	public void packOut(PackOut packout, TransformerHandler packoutHandler, TransformerHandler docHandler,int recordId) throws Exception
+	public void packOut(PackOut packout, IPackSerializer packoutSerializer, TransformerHandler docHandler,int recordId) throws Exception
 	{
 		PackoutItem detail = packout.getCurrentPackoutItem();
 		int tableId = 0;
@@ -318,7 +360,7 @@ public class GenericPOElementHandler extends AbstractElementHandler {
 		}
 		packout.getCtx().ctx.put(DataElementParameters.AD_TABLE_ID, Integer.toString(tableId));
 		packout.getCtx().ctx.put(DataElementParameters.SQL_STATEMENT, sql);
-		this.create(packout.getCtx(), packoutHandler);
+		this.create(packout.getCtx(), packoutSerializer);
 		packout.getCtx().ctx.remove(DataElementParameters.AD_TABLE_ID);
 		packout.getCtx().ctx.remove(DataElementParameters.SQL_STATEMENT);
 	}

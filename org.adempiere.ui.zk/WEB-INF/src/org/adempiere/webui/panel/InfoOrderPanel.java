@@ -44,19 +44,21 @@ import org.compiere.minigrid.ColumnInfo;
 import org.compiere.minigrid.IDColumn;
 import org.compiere.model.MLookup;
 import org.compiere.model.MLookupFactory;
+import org.compiere.model.MOrder;
 import org.compiere.model.MQuery;
 import org.compiere.util.DisplayType;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Util;
+import org.idempiere.db.util.SQLFragment;
 import org.zkoss.zk.ui.WrongValueException;
 import org.zkoss.zul.Borderlayout;
 import org.zkoss.zul.Center;
-import org.zkoss.zul.North;
-import org.zkoss.zul.South;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.Hbox;
+import org.zkoss.zul.North;
 import org.zkoss.zul.Separator;
+import org.zkoss.zul.South;
 import org.zkoss.zul.Vbox;
 
 /**
@@ -71,7 +73,7 @@ import org.zkoss.zul.Vbox;
  * @version	InfoOrder.java Adempiere Swing UI 3.4.1
  **/
 
-@Deprecated // replaced with InfoOrderWindow IDEMPIERE-325
+@Deprecated (since="13", forRemoval=true) // replaced with InfoOrderWindow IDEMPIERE-325
 public class InfoOrderPanel extends InfoPanel implements ValueChangeListener
 {
     /**
@@ -122,8 +124,14 @@ public class InfoOrderPanel extends InfoPanel implements ValueChangeListener
 
     public InfoOrderPanel(int WindowNo, String value,
             boolean multiSelection, String whereClause, boolean lookup)
+	{
+    	this(WindowNo, value, multiSelection, lookup, new SQLFragment(whereClause));
+	}
+    
+    public InfoOrderPanel(int WindowNo, String value,
+            boolean multiSelection, boolean lookup, SQLFragment	sqlFilter)
     {
-        super ( WindowNo, "o", "C_Order_ID", multiSelection, whereClause, lookup);
+        super ( WindowNo, "o", "C_Order_ID", multiSelection, lookup, sqlFilter);
         log.info( "InfoOrder");
         setTitle(Msg.getMsg(Env.getCtx(), "InfoOrder"));
         //
@@ -163,21 +171,21 @@ public class InfoOrderPanel extends InfoPanel implements ValueChangeListener
         txtDescription = new Textbox();
         txtOrderRef = new Textbox();
 
-        txtDocumentNo.setWidgetAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "documentNo");
-        txtDescription.setWidgetAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "description");
-        txtOrderRef.setWidgetAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "orderReference");
+        txtDocumentNo.setClientAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "documentNo");
+        txtDescription.setClientAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "description");
+        txtOrderRef.setClientAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "orderReference");
         
         dateFrom = new Datebox();
         dateTo= new Datebox();
         
-        dateFrom.setWidgetAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "dateFrom");
-        dateTo.setWidgetAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "dateTo");
+        dateFrom.setClientAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "dateFrom");
+        dateTo.setClientAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "dateTo");
 
         amountFrom = new NumberBox(false);
         amountTo = new NumberBox(false);
         
-        amountFrom.setWidgetAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "amountFrom");
-        amountTo.setWidgetAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "amountTo");
+        amountFrom.setClientAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "amountFrom");
+        amountTo.setClientAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "amountTo");
 
         isSoTrx = new Checkbox();
         isSoTrx.setLabel(Msg.translate(Env.getCtx(), "IsSOTrx"));
@@ -187,7 +195,7 @@ public class InfoOrderPanel extends InfoPanel implements ValueChangeListener
         editorBPartner = new WSearchEditor(lookupBP, Msg.translate(
                 Env.getCtx(), "C_BPartner_ID"), "", true, false, true);
         editorBPartner.addValueChangeListener(this);
-        editorBPartner.getComponent().setWidgetAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "bpartnerLookup");
+        editorBPartner.getComponent().setClientAttribute(AdempiereWebUI.WIDGET_INSTANCE_NAME, "bpartnerLookup");
 
     }
 
@@ -277,7 +285,8 @@ public class InfoOrderPanel extends InfoPanel implements ValueChangeListener
      *  General Init
      *  @return true, if success
      */
-    private boolean initInfo ()
+    @SuppressWarnings("removal")
+	private boolean initInfo ()
     {
         //  Set Defaults
         String bp = Env.getContext(Env.getCtx(), p_WindowNo, "C_BPartner_ID");
@@ -515,7 +524,7 @@ public class InfoOrderPanel extends InfoPanel implements ValueChangeListener
 	public void zoom()
 	{
 		log.info("");
-		Integer C_Order_ID = getSelectedRowKey();
+		Integer C_Order_ID = getIntSelectedRowKey(MOrder.Table_ID);
 		if (C_Order_ID == null)
 			return;
 		MQuery query = new MQuery("C_Order");

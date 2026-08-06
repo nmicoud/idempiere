@@ -17,6 +17,7 @@ package org.adempiere.pipo2.handler;
 import java.util.List;
 
 import javax.xml.transform.sax.TransformerHandler;
+import org.adempiere.pipo2.IPackSerializer;
 
 import org.adempiere.pipo2.AbstractElementHandler;
 import org.adempiere.pipo2.Element;
@@ -26,6 +27,7 @@ import org.adempiere.pipo2.PoExporter;
 import org.adempiere.pipo2.PoFiller;
 import org.adempiere.pipo2.ReferenceUtils;
 import org.adempiere.pipo2.exception.POSaveFailedException;
+import org.compiere.model.MPackageImpDetail;
 import org.compiere.model.MViewColumn;
 import org.compiere.model.MViewComponent;
 import org.compiere.model.X_AD_Package_Imp_Detail;
@@ -54,11 +56,11 @@ public class ViewColumnElementHandler extends AbstractElementHandler {
 			MViewColumn mViewColumn = findPO(ctx, element);
 			if (mViewColumn == null) {
 				int parentId = 0;
-				if (getParentId(element, MViewComponent.Table_Name) > 0) {
-					parentId = getParentId(element, MViewComponent.Table_Name);
+				if ((Integer)getParentId(element, MViewComponent.Table_Name) > 0) {
+					parentId = (Integer)getParentId(element, MViewComponent.Table_Name);
 				} else {
 					Element pfElement = element.properties.get(MViewColumn.COLUMNNAME_AD_ViewComponent_ID);
-					parentId = ReferenceUtils.resolveReference(ctx.ctx, pfElement, getTrxName(ctx));
+					parentId = ReferenceUtils.resolveReferenceAsInt(ctx.ctx, pfElement, getTrxName(ctx));
 				}
 				if (parentId <= 0) {
 					element.defer = true;
@@ -88,9 +90,9 @@ public class ViewColumnElementHandler extends AbstractElementHandler {
 				String action = null;
 				if (!mViewColumn.is_new()) {
 					backupRecord(ctx, impDetail.getAD_Package_Imp_Detail_ID(), MViewColumn.Table_Name, mViewColumn);
-					action = "Update";
+					action = MPackageImpDetail.ACTION_UPDATE;
 				} else {
-					action = "New";
+					action = MPackageImpDetail.ACTION_INSERT;
 				}
 				if (mViewColumn.save(getTrxName(ctx)) == true) {
 					logImportDetail(ctx, impDetail, 1, mViewColumn.toString(), mViewColumn.get_ID(), action);
@@ -109,24 +111,21 @@ public class ViewColumnElementHandler extends AbstractElementHandler {
 	public void endElement(PIPOContext ctx, Element element) throws SAXException {		
 	}
 	
-	public void create(PIPOContext ctx, TransformerHandler document) throws SAXException {
+	public void create(PIPOContext ctx, IPackSerializer document) throws Exception {
 		int AD_ViewColumn_ID = Env.getContextAsInt(ctx.ctx, MViewColumn.COLUMNNAME_AD_ViewColumn_ID);
 		MViewColumn m_ViewColumn = new MViewColumn(ctx.ctx, AD_ViewColumn_ID, getTrxName(ctx));
 
-		if (ctx.packOut.getFromDate() != null) {
-			if (m_ViewColumn.getUpdated().compareTo(ctx.packOut.getFromDate()) < 0) {
-				return;
-			}
-		}
+		if (!isPackOutElement(ctx, m_ViewColumn))
+			return;
 
 		AttributesImpl atts = new AttributesImpl();
 		addTypeName(atts, "table");
-		document.startElement("", "", MViewColumn.Table_Name, atts);
+		document.startElement(MViewColumn.Table_Name, atts);
 		createViewColumnBinding(ctx, document, m_ViewColumn);
-		document.endElement("", "", MViewColumn.Table_Name);
+		document.endElement(MViewColumn.Table_Name);
 	}
 
-	private void createViewColumnBinding(PIPOContext ctx, TransformerHandler document, MViewColumn m_ViewColumn) {
+	private void createViewColumnBinding(PIPOContext ctx, IPackSerializer document, MViewColumn m_ViewColumn) {
 		PoExporter filler = new PoExporter(ctx, document, m_ViewColumn);
 		List<String>excludes = defaultExcludeList(MViewColumn.Table_Name);
 
@@ -137,9 +136,9 @@ public class ViewColumnElementHandler extends AbstractElementHandler {
 	}
 
 	@Override
-	public void packOut(PackOut packout, TransformerHandler packoutHandler, TransformerHandler docHandler, int recordId) throws Exception {
+	public void packOut(PackOut packout, IPackSerializer packoutSerializer, TransformerHandler docHandler, int recordId) throws Exception {
 		Env.setContext(packout.getCtx().ctx, MViewColumn.COLUMNNAME_AD_ViewColumn_ID, recordId);
-		create(packout.getCtx(), packoutHandler);
+		create(packout.getCtx(), packoutSerializer);
 		packout.getCtx().ctx.remove(MViewColumn.COLUMNNAME_AD_ViewColumn_ID);
 	}
 

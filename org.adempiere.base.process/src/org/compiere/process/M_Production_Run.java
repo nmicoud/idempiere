@@ -19,10 +19,11 @@ package org.compiere.process;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.List;
-import java.util.logging.Level;
 
+import org.adempiere.base.GeneratedCodeCoverageExclusion;
 import org.compiere.model.MClient;
 import org.compiere.model.MLocator;
+import org.compiere.model.MProcessPara;
 import org.compiere.model.MProduct;
 import org.compiere.model.MStorageOnHand;
 import org.compiere.model.MStorageReservation;
@@ -46,7 +47,10 @@ import org.eevolution.model.MPPProductBOMLine;
  * @author victor.perez@e-evolution.com
  * @contributor: Carlos Ruiz (globalqss) - review backward compatibility - implement mustBeStocked properly
  */
-@Deprecated // replaced by ProductionProcess
+@Deprecated (since="13", forRemoval=true) // replaced by ProductionProcess
+@SuppressWarnings("removal")
+@GeneratedCodeCoverageExclusion
+@org.adempiere.base.annotation.Process
 public class M_Production_Run extends SvrProcess {
 
 	/** The Record */
@@ -68,7 +72,7 @@ public class M_Production_Run extends SvrProcess {
 			else if (name.equals("MustBeStocked"))
 				mustBeStocked = ((String) para[i].getParameter()).equals("Y");
 			else
-				log.log(Level.SEVERE, "Unknown Parameter: " + name);
+				MProcessPara.validateUnknownParameter(getProcessInfo().getAD_Process_ID(), para[i]);
 		}
 		p_Record_ID = getRecord_ID();
 	} //prepare

@@ -14,6 +14,8 @@ import java.util.Date;
 import java.util.Properties;
 import java.util.logging.Level;
 
+import org.apache.commons.text.StringEscapeUtils;
+import org.compiere.model.SystemProperties;
 import org.compiere.util.CLogger;
 import org.compiere.util.Ini;
 import org.compiere.util.SecureEngine;
@@ -36,6 +38,7 @@ public final class Prop implements Serializable {
 	public static final String	CREDITS_TXT 		=	"Credits";
 	public static final String	COPYRIGHT_TXT 		=	"Copyright";
 	public static final	String CUSTOM_IMAGE_PATH	= "CustomImagePath";
+	public static final	String HOMEPAGE	        	= "Homepage";
 	
 	/**	Customizable Links    */
 	public static final String	WEBUI_LINK 			=	"WebUiLink";
@@ -90,7 +93,7 @@ public final class Prop implements Serializable {
 	public static final String	SOC_7				=	"Social7";
 	
 	/**Defaults*/
-	private static final String CREDITS				=	"Welcome to the iDempiere (OSGi+ADempiere) 8.2z Phong Page!";
+	private static final String CREDITS				=	"Welcome to the iDempiere 14 Development Build Page!";
 	private static String LOGO_URL 					= 	null;
 	
 	
@@ -114,12 +117,9 @@ public final class Prop implements Serializable {
 	{
 		boolean loadOK = true;
 		s_prop = new Properties();
-		InputStream fis = null;
-		try
+		try (InputStream fis = new FileInputStream(filename))
 		{
-			fis = new FileInputStream(filename);
 			s_prop.load(fis);
-			fis.close();
 		}
 		catch (FileNotFoundException e)
 		{
@@ -128,10 +128,8 @@ public final class Prop implements Serializable {
 				log.info("!!WARNING:Please locate your custom home.properties on IDEMPIERE_HOME.");
 			}
 			loadOK = false;
-			try {
-				fis = Prop.class.getResourceAsStream(HOME_PROPERTY_FILE);
+			try (InputStream fis = Prop.class.getResourceAsStream(HOME_PROPERTY_FILE)){
 				s_prop.load(fis);	
-				fis.close();
 				loadOK = true;
 			} catch (IOException e1) {
 				e1.printStackTrace();
@@ -158,6 +156,8 @@ public final class Prop implements Serializable {
 			s_prop.setProperty(CLIENT_NAME, "iDempiere Server");
 		if(s_prop.getProperty(CREDITS_TXT)==null||s_prop.getProperty(CREDITS_TXT).length()<=0)
 			s_prop.setProperty(CREDITS_TXT, CREDITS);
+		if(s_prop.getProperty(HOMEPAGE)==null||s_prop.getProperty(HOMEPAGE).length()<=0)
+			s_prop.setProperty(HOMEPAGE, "idempiere-default.jsp");
 		//LINKS
 		if(s_prop.getProperty(FELIX_LINK)==null||s_prop.getProperty(FELIX_LINK).length()<=0)
 			s_prop.setProperty(FELIX_LINK, DEF_FELIX_LINK);
@@ -193,7 +193,7 @@ public final class Prop implements Serializable {
 			try {
 				fis = new URL(getProperty(TEMPLATE_PATH)+getProperty(TEMPLATE_NAME)+"/styles/template.css");
 				byte data[]=read(fis);
-				ret+=Base64.getEncoder().encode (data);
+				ret+=Base64.getEncoder().encodeToString (data);
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
@@ -243,10 +243,19 @@ public final class Prop implements Serializable {
 		return value;
 	}
 	
+	public static String getPropertyEscaped(String key) {
+	    String value = getProperty(key);
+	    if (value == null || value.isEmpty()) {
+	        return "";
+	    }
+	    // Escape HTML/XML special characters
+	    return StringEscapeUtils.escapeHtml4(value);
+	}
+	
 	public static String getFileName (boolean tryUserHome)
 	{
-		if (System.getProperty("PropertyHomeFile") != null)
-			return System.getProperty("PropertyHomeFile");
+		if (SystemProperties.getPropertyHomeFile() != null)
+			return SystemProperties.getPropertyHomeFile();
 		String base = null;
 		if (tryUserHome && Ini.isClient())
 			base = System.getProperty("user.home");
@@ -273,7 +282,7 @@ public final class Prop implements Serializable {
 			byte data[]=read(fis);
 			if(data==null||data.length<=0)
 				return null;
-			ret+=Base64.getEncoder().encode (data);
+			ret+=Base64.getEncoder().encodeToString (data);
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {

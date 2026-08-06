@@ -39,13 +39,10 @@ import java.sql.Statement;
 import java.util.logging.Level;
 
 import org.compiere.process.SvrProcess;
-import org.compiere.util.CLogger;
 import org.compiere.util.DB;
 
+@org.adempiere.base.annotation.Process
 public class ApplyMigrationScripts extends SvrProcess {
-
-	/** Logger */
-	private static final CLogger log = CLogger.getCLogger(ApplyMigrationScripts.class);
 
 	@Override
 	protected String doIt() throws Exception {
@@ -87,9 +84,6 @@ public class ApplyMigrationScripts extends SvrProcess {
 					}
 					try {
 						pstmtu.executeUpdate();
-						if (!execOk) {
-							return null;
-						}
 					} catch (SQLException e) {
 						e.printStackTrace();
 						StringBuilder msglog = new StringBuilder("Script: ").append(rs.getString(3)).append(" - ").append(e.getMessage());
@@ -148,7 +142,7 @@ public class ApplyMigrationScripts extends SvrProcess {
 				if (statementReady) {
 					if (sqlBuf.length() == 0)
 						continue;
-					Connection conn = DB.getConnectionRW();
+					Connection conn = DB.getConnection();
 					conn.setAutoCommit(false);
 					Statement stmt = null;
 					try {
@@ -170,10 +164,10 @@ public class ApplyMigrationScripts extends SvrProcess {
 						else
 							conn.rollback();
 						conn.setAutoCommit(true);
-						conn.close();
-						if(!execOk)
-							return false;
+						conn.close();						
 					}
+					if(!execOk)
+						return false;
 					sqlBuf.setLength(0);					
 				}
 			}

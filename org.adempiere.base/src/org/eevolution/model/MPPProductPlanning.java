@@ -44,34 +44,43 @@ public class MPPProductPlanning extends X_PP_Product_Planning
 	private static final long serialVersionUID = -3061309620804116277L;
 	
 	/** Log									*/
-	private static CLogger log = CLogger.getCLogger(MPPProductPlanning.class); 
+	private static CLogger s_log = CLogger.getCLogger(MPPProductPlanning.class); 
 
+
+    /**
+    * UUID based Constructor
+    * @param ctx  Context
+    * @param PP_Product_Planning_UU  UUID key
+    * @param trxName Transaction
+    */
+    public MPPProductPlanning(Properties ctx, String PP_Product_Planning_UU, String trxName) {
+        super(ctx, PP_Product_Planning_UU, trxName);
+    }
 
 	/**************************************************************************
 	 * 	Default Constructor
 	 *	@param ctx context
 	 *	@param pp_product_planning_id id
-	 *	@param trxName
-	 *  @return MPPProductPlanning Data Product Planning 
+	 *	@param trxname
 	 */
 	public MPPProductPlanning(Properties ctx, int pp_product_planning_id, String trxname)
 	{
 		super(ctx, pp_product_planning_id, trxname);
-		if (pp_product_planning_id == 0)
-		{    
-		}
 	}	//	MPPProductPlanning
 
 	/**
 	 * 	Load Constructor
 	 *	@param ctx context
 	 *	@param rs result set
-	 *	@param trxName Transaction Name
-	 *	@return MPPProductPlanning Data Product Planning 
+	 *	@param trxname Transaction Name
 	 */
 	public MPPProductPlanning(Properties ctx, ResultSet rs, String trxname)
 	{
 		super(ctx, rs,trxname);
+	}
+
+	public MPPProductPlanning(Properties ctx, int PP_Product_Planning_ID, String trxName, String... virtualColumns) {
+		super(ctx, PP_Product_Planning_ID, trxName, virtualColumns);
 	}
 
 	/**
@@ -102,19 +111,19 @@ public class MPPProductPlanning extends X_PP_Product_Planning
 	/**
 	 * Get Data Product Planning 
 	 * @param ctx Context
-	 * @param AD_Client_ID ID Organization
-	 * @param AD_Org_ID ID Organization
-	 * @param M_Warehouse_ID Warehouse
-	 * @param S_Resource_ID Resource type Plant
-	 * @param M_Product_ID ID Product
+	 * @param ad_client_id ID Organization
+	 * @param ad_org_id ID Organization
+	 * @param m_warehouse_id Warehouse
+	 * @param s_resource_id Resource type Plant
+	 * @param m_product_id ID Product
 	 * @param trxname Trx Name
 	 * @return MPPProductPlanning
-	 */     
+	 */
 	public static MPPProductPlanning get(Properties ctx, int ad_client_id, int ad_org_id,
 											int m_warehouse_id, int s_resource_id, int m_product_id,
 											String trxname)
 	{
-		if (log.isLoggable(Level.INFO)) log.info("AD_Client_ID="  + ad_client_id + " AD_Org_ID=" + ad_org_id + " M_Product_ID=" + m_product_id + " M_Warehouse_ID=" + m_warehouse_id + " S_Resource_ID=" + s_resource_id );
+		if (s_log.isLoggable(Level.INFO)) s_log.info("AD_Client_ID="  + ad_client_id + " AD_Org_ID=" + ad_org_id + " M_Product_ID=" + m_product_id + " M_Warehouse_ID=" + m_warehouse_id + " S_Resource_ID=" + s_resource_id );
 		String  sql_warehouse = COLUMNNAME_M_Warehouse_ID+"=?";
 		if(m_warehouse_id == 0)
 		{
@@ -181,13 +190,12 @@ public class MPPProductPlanning extends X_PP_Product_Planning
 	@Override
 	protected boolean beforeSave(boolean newRecord)
 	{
-		//
-		// Set default : Order_Policy
+		// Set default Order_Policy
 		if (getOrder_Policy() == null)
 		{
 			setOrder_Policy(ORDER_POLICY_Lot_For_Lot);
 		}
-		//
+		
 		// Check Order_Min < Order_Max
 		if (getOrder_Min().signum() > 0
 				&& getOrder_Max().signum() > 0
@@ -195,14 +203,14 @@ public class MPPProductPlanning extends X_PP_Product_Planning
 		{
 			throw new AdempiereException("@Order_Min@ > @Order_Max@");
 		}
-		//
+		
 		// Check Order_Period
 		if (ORDER_POLICY_PeriodOrderQuantity.equals(getOrder_Policy())
 				&& getOrder_Period().signum() <= 0)
 		{
 			throw new AdempiereException("@Order_Period@ <= 0");
 		}
-		//
+		
 		// Check Order_Qty
 		if (ORDER_POLICY_FixedOrderQuantity.equals(getOrder_Policy())
 				&& getOrder_Qty().signum() <= 0)

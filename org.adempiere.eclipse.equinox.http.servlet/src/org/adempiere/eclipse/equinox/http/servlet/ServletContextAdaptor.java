@@ -14,7 +14,6 @@ package org.adempiere.eclipse.equinox.http.servlet;
 import java.io.*;
 import java.lang.reflect.Method;
 import java.net.URL;
-import java.security.*;
 import java.util.*;
 
 import javax.servlet.*;
@@ -29,13 +28,11 @@ public class ServletContextAdaptor implements ServletContext {
 
 	private ServletContext servletContext;
 	HttpContext httpContext;
-	private AccessControlContext acc;
 	private ProxyContext proxyContext;
 
-	public ServletContextAdaptor(ProxyContext proxyContext, ServletContext servletContext, HttpContext httpContext, AccessControlContext acc) {
+	public ServletContextAdaptor(ProxyContext proxyContext, ServletContext servletContext, HttpContext httpContext) {
 		this.servletContext = servletContext;
 		this.httpContext = httpContext;
-		this.acc = acc;
 		this.proxyContext = proxyContext;
 	}
 
@@ -53,7 +50,7 @@ public class ServletContextAdaptor implements ServletContext {
 			return null;
 		try {
 			Method getResourcePathsMethod = httpContext.getClass().getMethod("getResourcePaths", new Class[] {String.class}); //$NON-NLS-1$
-			if (!getResourcePathsMethod.isAccessible())
+			if (!getResourcePathsMethod.canAccess(httpContext))
 				getResourcePathsMethod.setAccessible(true);
 			return (Set<String>) getResourcePathsMethod.invoke(httpContext, new Object[] {name});
 		} catch (Exception e) {
@@ -88,16 +85,7 @@ public class ServletContextAdaptor implements ServletContext {
 	}
 
 	public URL getResource(final String name) {
-		try {
-			return (URL) AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
-				public Object run() throws Exception {
-					return httpContext.getResource(name);
-				}
-			}, acc);
-		} catch (PrivilegedActionException e) {
-			log(e.getException().getMessage(), e.getException());
-		}
-		return null;
+		return httpContext.getResource(name);
 	}
 
 	public InputStream getResourceAsStream(String name) {
@@ -149,6 +137,7 @@ public class ServletContextAdaptor implements ServletContext {
 	}
 
 	/**@deprecated*/
+	@Deprecated (since="13", forRemoval=true)
 	public Servlet getServlet(String arg0) throws ServletException {
 		return servletContext.getServlet(arg0);
 	}
@@ -158,16 +147,19 @@ public class ServletContextAdaptor implements ServletContext {
 	}
 
 	/**@deprecated*/
+	@Deprecated (since="13", forRemoval=true)
 	public Enumeration<String> getServletNames() {
 		return servletContext.getServletNames();
 	}
 
 	/**@deprecated*/
+	@Deprecated (since="13", forRemoval=true)
 	public Enumeration<Servlet> getServlets() {
 		return servletContext.getServlets();
 	}
 
 	/**@deprecated*/
+	@Deprecated (since="13", forRemoval=true)
 	public void log(Exception arg0, String arg1) {
 		servletContext.log(arg0, arg1);
 	}
@@ -301,5 +293,40 @@ public class ServletContextAdaptor implements ServletContext {
 	@Override
 	public String getVirtualServerName() {
 		return servletContext.getVirtualServerName();
+	}
+
+	@Override
+	public javax.servlet.ServletRegistration.Dynamic addJspFile(String servletName, String jspFile) {
+		return servletContext.addJspFile(servletName, jspFile);
+	}
+
+	@Override
+	public int getSessionTimeout() {
+		return servletContext.getSessionTimeout();
+	}
+
+	@Override
+	public void setSessionTimeout(int sessionTimeout) {
+		servletContext.setSessionTimeout(sessionTimeout);
+	}
+
+	@Override
+	public String getRequestCharacterEncoding() {
+		return servletContext.getRequestCharacterEncoding();
+	}
+
+	@Override
+	public void setRequestCharacterEncoding(String encoding) {
+		servletContext.setRequestCharacterEncoding(encoding);
+	}
+
+	@Override
+	public String getResponseCharacterEncoding() {
+		return servletContext.getResponseCharacterEncoding();
+	}
+
+	@Override
+	public void setResponseCharacterEncoding(String encoding) {
+		servletContext.setResponseCharacterEncoding(encoding);
 	}
 }

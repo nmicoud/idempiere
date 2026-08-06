@@ -29,12 +29,14 @@ import org.atmosphere.cpr.AtmosphereRequest;
 import org.atmosphere.cpr.AtmosphereResource;
 import org.atmosphere.cpr.AtmosphereResourceEvent;
 import org.atmosphere.cpr.AtmosphereResponse;
+import org.idempiere.ui.zk.DelegatingServerPush;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.zkoss.zk.ui.Desktop;
 import org.zkoss.zk.ui.Session;
 import org.zkoss.zk.ui.http.WebManager;
 import org.zkoss.zk.ui.sys.DesktopCtrl;
+import org.zkoss.zk.ui.sys.ServerPush;
 import org.zkoss.zk.ui.sys.WebAppCtrl;
 
 /**
@@ -44,12 +46,19 @@ import org.zkoss.zk.ui.sys.WebAppCtrl;
 public class ZkAtmosphereHandler implements AtmosphereHandler {
 
 	private static final String SESSION_NOT_FOUND = "SessionNotFound";
+	private static final String DESKTOP_NOT_FOUND = "DesktopNotFound";
 	private final Logger log = LoggerFactory.getLogger(this.getClass());
 	
     @Override
     public void destroy() {
     }
 
+    /**
+     * Get Zk {@link Desktop} instance from session by desktop id
+     * @param session
+     * @param dtid desktop id
+     * @return left as error message and right as {@link Desktop} reference
+     */
     private Either<String, Desktop> getDesktop(Session session, String dtid) {
         if (session.getWebApp() instanceof WebAppCtrl) {
         	WebAppCtrl webAppCtrl = (WebAppCtrl) session.getWebApp();
@@ -58,16 +67,26 @@ public class ZkAtmosphereHandler implements AtmosphereHandler {
         		if (log.isDebugEnabled())
         			log.debug("Could not find desktop: " + dtid);
         	}
-            return new Either<String, Desktop>("Could not find desktop", desktop);
+            return new Either<String, Desktop>(DESKTOP_NOT_FOUND, desktop);
         }
         return new Either<String, Desktop>("Webapp does not implement WebAppCtrl", null);
     }
 
+    /**
+     * Get Zk {@link Desktop} id from HttpServletRequest parameter (dtid)
+     * @param request
+     * @return left as desktop id and right as error message
+     */
     private Either<String, String> getDesktopId(HttpServletRequest request) {
     	String dtid = request.getParameter("dtid");
-    	return new Either<String, String>(dtid, "Could not find desktop id");
+    	return new Either<String, String>(dtid, DESKTOP_NOT_FOUND);
     }
 
+    /**
+     * Get {@link AtmosphereServerPush} instance from {@link AtmosphereResource}
+     * @param resource {@link AtmosphereResource}
+     * @return left as error message and right as AtmosphereServerPush reference
+     */
     private Either<String, AtmosphereServerPush> getServerPush(AtmosphereResource resource) {
         AtmosphereRequest request = resource.getRequest();
 
@@ -95,23 +114,36 @@ public class ZkAtmosphereHandler implements AtmosphereHandler {
         }
     }
 
+    /**
+     * Get {@link AtmosphereServerPush} instance from {@link Desktop}
+     * @param desktop
+     * @return left as error message and right as {@link AtmosphereServerPush} reference
+     */
     private Either<String, AtmosphereServerPush> getServerPush(Desktop desktop) {
         if (desktop instanceof DesktopCtrl) {
         	DesktopCtrl desktopCtrl = (DesktopCtrl) desktop;
-            if (desktopCtrl.getServerPush() == null)
+        	ServerPush spush = desktopCtrl.getServerPush();
+            if (spush == null)
                 return new Either<String, AtmosphereServerPush>("Server push is not enabled", null);
-            if (desktopCtrl.getServerPush() instanceof AtmosphereServerPush) {
-                return new Either<String, AtmosphereServerPush>(null, (AtmosphereServerPush) desktopCtrl.getServerPush());
+            if (spush instanceof DelegatingServerPush && ((DelegatingServerPush) spush).getDelegate() instanceof AtmosphereServerPush) {
+            	return new Either<String, AtmosphereServerPush>(null, (AtmosphereServerPush) ((DelegatingServerPush) spush).getDelegate());
+            } else if (spush instanceof AtmosphereServerPush) {
+            	return new Either<String, AtmosphereServerPush>(null, (AtmosphereServerPush) spush);
             }
             return new Either<String, AtmosphereServerPush>("Server push implementation is not AtmosphereServerPush", null);
         }
         return new Either<String, AtmosphereServerPush>("Desktop does not implement DesktopCtrl", null);
     }
 
+    /**
+     * Get {@link Session} from request
+     * @param resource
+     * @param request
+     * @return left as error message and right as Session reference
+     */
     private Either<String, Session> getSession(AtmosphereResource resource, HttpServletRequest request) {
     	Session session = WebManager.getSession(resource.getAtmosphereConfig().getServletContext(), request, false);
     	if (session == null) {
-    		log.warn("Could not find session: " + request.getRequestURI());
     		return new Either<String, Session>(SESSION_NOT_FOUND, null);
     	} else {
     		return new Either<String, Session>(null, session);

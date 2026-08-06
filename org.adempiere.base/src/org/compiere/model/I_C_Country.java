@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for C_Country
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_C_Country 
 {
@@ -44,8 +44,8 @@ public interface I_C_Country
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -66,12 +66,12 @@ public interface I_C_Country
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -87,15 +87,6 @@ public interface I_C_Country
 	  * A flag to allow cities, currently not in the list, to be entered
 	  */
 	public boolean isAllowCitiesOutOfList();
-
-    /** Column name CaptureSequence */
-    public static final String COLUMNNAME_CaptureSequence = "CaptureSequence";
-
-	/** Set Capture Sequence	  */
-	public void setCaptureSequence (String CaptureSequence);
-
-	/** Get Capture Sequence	  */
-	public String getCaptureSequence();
 
     /** Column name C_Country_ID */
     public static final String COLUMNNAME_C_Country_ID = "C_Country_ID";
@@ -132,18 +123,28 @@ public interface I_C_Country
 	  */
 	public int getC_Currency_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_C_Currency getC_Currency() throws RuntimeException;
+
+    /** Column name CaptureSequence */
+    public static final String COLUMNNAME_CaptureSequence = "CaptureSequence";
+
+	/** Set Capture Sequence	  */
+	public void setCaptureSequence (String CaptureSequence);
+
+	/** Get Capture Sequence	  */
+	public String getCaptureSequence();
 
     /** Column name CountryCode */
     public static final String COLUMNNAME_CountryCode = "CountryCode";
 
 	/** Set ISO Country Code.
-	  * Upper-case two-letter alphanumeric ISO Country code according to ISO 3166-1 - http://www.chemie.fu-berlin.de/diverse/doc/ISO_3166.html
+	  * Upper-case two-letter alphanumeric ISO Country code according to ISO 3166-1
 	  */
 	public void setCountryCode (String CountryCode);
 
 	/** Get ISO Country Code.
-	  * Upper-case two-letter alphanumeric ISO Country code according to ISO 3166-1 - http://www.chemie.fu-berlin.de/diverse/doc/ISO_3166.html
+	  * Upper-case two-letter alphanumeric ISO Country code according to ISO 3166-1
 	  */
 	public String getCountryCode();
 
@@ -233,13 +234,17 @@ public interface I_C_Country
 
 	/** Set Phone Format.
 	  * Format of the phone;
- Can contain fixed format elements, Variables: "_lLoOaAcCa09"
+ Can contain fixed format elements, Variables: &quot;
+_lLoOaAcCa09&quot;
+
 	  */
 	public void setExpressionPhone (String ExpressionPhone);
 
 	/** Get Phone Format.
 	  * Format of the phone;
- Can contain fixed format elements, Variables: "_lLoOaAcCa09"
+ Can contain fixed format elements, Variables: &quot;
+_lLoOaAcCa09&quot;
+
 	  */
 	public String getExpressionPhone();
 
@@ -248,13 +253,17 @@ public interface I_C_Country
 
 	/** Set Postal Code Format.
 	  * Format of the postal code;
- Can contain fixed format elements, Variables: "_lLoOaAcCa09"
+ Can contain fixed format elements, Variables: &quot;
+_lLoOaAcCa09&quot;
+
 	  */
 	public void setExpressionPostal (String ExpressionPostal);
 
 	/** Get Postal Code Format.
 	  * Format of the postal code;
- Can contain fixed format elements, Variables: "_lLoOaAcCa09"
+ Can contain fixed format elements, Variables: &quot;
+_lLoOaAcCa09&quot;
+
 	  */
 	public String getExpressionPostal();
 
@@ -263,13 +272,17 @@ public interface I_C_Country
 
 	/** Set Additional Postal Format.
 	  * Format of the value;
- Can contain fixed format elements, Variables: "_lLoOaAcCa09"
+ Can contain fixed format elements, Variables: &quot;
+_lLoOaAcCa09&quot;
+
 	  */
 	public void setExpressionPostal_Add (String ExpressionPostal_Add);
 
 	/** Get Additional Postal Format.
 	  * Format of the value;
- Can contain fixed format elements, Variables: "_lLoOaAcCa09"
+ Can contain fixed format elements, Variables: &quot;
+_lLoOaAcCa09&quot;
+
 	  */
 	public String getExpressionPostal_Add();
 
@@ -298,6 +311,19 @@ public interface I_C_Country
 	  * Country contains Regions
 	  */
 	public boolean isHasRegion();
+
+    /** Column name ISOCountryCodeAlpha3 */
+    public static final String COLUMNNAME_ISOCountryCodeAlpha3 = "ISOCountryCodeAlpha3";
+
+	/** Set ISO Alpha-3 Code.
+	  * ISO Alpha-3 country code - a three-letter code that represents a country name, which is usually more closely related to the country name
+	  */
+	public void setISOCountryCodeAlpha3 (String ISOCountryCodeAlpha3);
+
+	/** Get ISO Alpha-3 Code.
+	  * ISO Alpha-3 country code - a three-letter code that represents a country name, which is usually more closely related to the country name
+	  */
+	public String getISOCountryCodeAlpha3();
 
     /** Column name IsActive */
     public static final String COLUMNNAME_IsActive = "IsActive";
@@ -338,70 +364,18 @@ public interface I_C_Country
 	  */
 	public boolean isAddressLinesReverse();
 
-    /** Column name IsPostcodeLookup */
-    public static final String COLUMNNAME_IsPostcodeLookup = "IsPostcodeLookup";
+    /** Column name M49Code */
+    public static final String COLUMNNAME_M49Code = "M49Code";
 
-	/** Set Use Postcode Lookup.
-	  * Does this country have a post code web service
+	/** Set M49 Code.
+	  * Standard country codes for statistical use (M49) defined by the United Nations
 	  */
-	public void setIsPostcodeLookup (boolean IsPostcodeLookup);
+	public void setM49Code (String M49Code);
 
-	/** Get Use Postcode Lookup.
-	  * Does this country have a post code web service
+	/** Get M49 Code.
+	  * Standard country codes for statistical use (M49) defined by the United Nations
 	  */
-	public boolean isPostcodeLookup();
-
-    /** Column name LookupClassName */
-    public static final String COLUMNNAME_LookupClassName = "LookupClassName";
-
-	/** Set Lookup ClassName.
-	  * The class name of the postcode lookup plugin
-	  */
-	public void setLookupClassName (String LookupClassName);
-
-	/** Get Lookup ClassName.
-	  * The class name of the postcode lookup plugin
-	  */
-	public String getLookupClassName();
-
-    /** Column name LookupClientID */
-    public static final String COLUMNNAME_LookupClientID = "LookupClientID";
-
-	/** Set Lookup Client ID.
-	  * The ClientID or Login submitted to the Lookup URL
-	  */
-	public void setLookupClientID (String LookupClientID);
-
-	/** Get Lookup Client ID.
-	  * The ClientID or Login submitted to the Lookup URL
-	  */
-	public String getLookupClientID();
-
-    /** Column name LookupPassword */
-    public static final String COLUMNNAME_LookupPassword = "LookupPassword";
-
-	/** Set Lookup Password.
-	  * The password submitted to the Lookup URL
-	  */
-	public void setLookupPassword (String LookupPassword);
-
-	/** Get Lookup Password.
-	  * The password submitted to the Lookup URL
-	  */
-	public String getLookupPassword();
-
-    /** Column name LookupUrl */
-    public static final String COLUMNNAME_LookupUrl = "LookupUrl";
-
-	/** Set Lookup URL.
-	  * The URL of the web service that the plugin connects to in order to retrieve postcode data
-	  */
-	public void setLookupUrl (String LookupUrl);
-
-	/** Get Lookup URL.
-	  * The URL of the web service that the plugin connects to in order to retrieve postcode data
-	  */
-	public String getLookupUrl();
+	public String getM49Code();
 
     /** Column name MediaSize */
     public static final String COLUMNNAME_MediaSize = "MediaSize";

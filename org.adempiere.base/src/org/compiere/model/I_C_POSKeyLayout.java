@@ -22,7 +22,7 @@ import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for C_POSKeyLayout
  *  @author iDempiere (generated) 
- *  @version Release 8.2
+ *  @version Release 13
  */
 public interface I_C_POSKeyLayout 
 {
@@ -44,8 +44,8 @@ public interface I_C_POSKeyLayout
     /** Column name AD_Client_ID */
     public static final String COLUMNNAME_AD_Client_ID = "AD_Client_ID";
 
-	/** Get Client.
-	  * Client/Tenant for this installation.
+	/** Get Tenant.
+	  * Tenant for this installation.
 	  */
 	public int getAD_Client_ID();
 
@@ -53,12 +53,12 @@ public interface I_C_POSKeyLayout
     public static final String COLUMNNAME_AD_Org_ID = "AD_Org_ID";
 
 	/** Set Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public void setAD_Org_ID (int AD_Org_ID);
 
 	/** Get Organization.
-	  * Organizational entity within client
+	  * Organizational entity within tenant
 	  */
 	public int getAD_Org_ID();
 
@@ -75,6 +75,7 @@ public interface I_C_POSKeyLayout
 	  */
 	public int getAD_PrintColor_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_PrintColor getAD_PrintColor() throws RuntimeException;
 
     /** Column name AD_PrintFont_ID */
@@ -90,20 +91,8 @@ public interface I_C_POSKeyLayout
 	  */
 	public int getAD_PrintFont_ID();
 
+	@Deprecated(since="13") // use better methods with cache
 	public org.compiere.model.I_AD_PrintFont getAD_PrintFont() throws RuntimeException;
-
-    /** Column name Columns */
-    public static final String COLUMNNAME_Columns = "Columns";
-
-	/** Set Columns.
-	  * Number of columns
-	  */
-	public void setColumns (int Columns);
-
-	/** Get Columns.
-	  * Number of columns
-	  */
-	public int getColumns();
 
     /** Column name C_POSKeyLayout_ID */
     public static final String COLUMNNAME_C_POSKeyLayout_ID = "C_POSKeyLayout_ID";
@@ -126,6 +115,19 @@ public interface I_C_POSKeyLayout
 
 	/** Get C_POSKeyLayout_UU	  */
 	public String getC_POSKeyLayout_UU();
+
+    /** Column name Columns */
+    public static final String COLUMNNAME_Columns = "Columns";
+
+	/** Set Columns.
+	  * Number of columns
+	  */
+	public void setColumns (int Columns);
+
+	/** Get Columns.
+	  * Number of columns
+	  */
+	public int getColumns();
 
     /** Column name Created */
     public static final String COLUMNNAME_Created = "Created";
