@@ -343,6 +343,21 @@ public class EnvTest extends AbstractTestCase {
 		assertEquals("SELECT * FROM C_Charge WHERE Name='MyString'", parsedText, "Unexpected parsed text forSQL=true for "+expr);
 	}
 
+	/**
+	 * windowNo=0 is a legitimate window number - it is used by the ZK home/dashboard
+	 * tab (see DefaultDesktop.registerWindow, and the existing Env.WINDOW_MAIN=0 constant) -
+	 * and must not be treated by DefaultEvaluatee as "no window context".
+	 * https://idempiere.atlassian.net/browse/IDEMPIERE-4827
+	 */
+	@Test
+	public void testDefaultEvaluateeWindowNoZero() {
+		Env.setContext(Env.getCtx(), Env.WINDOW_MAIN, "TestDashboardVar", "WindowZeroValue");
+
+		DefaultEvaluatee evaluatee = new DefaultEvaluatee(null, Env.WINDOW_MAIN, -1, true);
+		assertEquals("WindowZeroValue", evaluatee.get_ValueAsString("TestDashboardVar"),
+				"windowNo=0 (home tab) must not be treated as 'no window'");
+	}
+
 	@Test
 	public void testParseMailText() {
 		String mailText = """
@@ -1447,6 +1462,43 @@ public class EnvTest extends AbstractTestCase {
 				assertTrue(windowId >= 0, "Window ID for " + tableName + " should be >= 0");
 			}
 		}
+	}
+
+	/**
+	 * Direct coverage of {@link Env#resolveZoomWindowID(int, int, boolean)}, the helper
+	 * introduced to unify the sales/purchase window decision that used to be duplicated
+	 * (and inconsistently implemented - see IDEMPIERE-7127) across Env, MRelationType and MLookup.
+	 */
+	@Test
+	public void testResolveZoomWindowID() {
+		// no PO window defined at all -> always the default window, regardless of isSOTrx
+		assertEquals(SystemIDs.WINDOW_BUSINESS_PARTNER,
+				Env.resolveZoomWindowID(SystemIDs.WINDOW_BUSINESS_PARTNER, 0, true));
+		assertEquals(SystemIDs.WINDOW_BUSINESS_PARTNER,
+				Env.resolveZoomWindowID(SystemIDs.WINDOW_BUSINESS_PARTNER, 0, false),
+				"Should fall back to the default window instead of returning 0 when there is no dedicated PO window");
+
+		// PO window defined -> only used when isSOTrx is false
+		assertEquals(SystemIDs.WINDOW_INVOICE_CUSTOMER,
+				Env.resolveZoomWindowID(SystemIDs.WINDOW_INVOICE_CUSTOMER, SystemIDs.WINDOW_INVOICE_VENDOR, true));
+		assertEquals(SystemIDs.WINDOW_INVOICE_VENDOR,
+				Env.resolveZoomWindowID(SystemIDs.WINDOW_INVOICE_CUSTOMER, SystemIDs.WINDOW_INVOICE_VENDOR, false));
+	}
+
+	/**
+	 * Coverage for {@link MTable#getZoomWindowID(boolean)}, used by MRelationType.retrieveWindowID().
+	 */
+	@Test
+	public void testMTableGetZoomWindowID() {
+		MTable bpartnerTable = MTable.get(Env.getCtx(), MTable.getTable_ID("C_BPartner"));
+		assertEquals(0, bpartnerTable.getPO_Window_ID(), "Fixture assumption: C_BPartner has no dedicated PO window");
+		assertEquals(SystemIDs.WINDOW_BUSINESS_PARTNER, bpartnerTable.getZoomWindowID(true));
+		assertEquals(SystemIDs.WINDOW_BUSINESS_PARTNER, bpartnerTable.getZoomWindowID(false),
+				"Should fall back to AD_Window_ID when PO_Window_ID is not defined");
+
+		MTable invoiceTable = MTable.get(Env.getCtx(), MTable.getTable_ID("C_Invoice"));
+		assertEquals(SystemIDs.WINDOW_INVOICE_CUSTOMER, invoiceTable.getZoomWindowID(true));
+		assertEquals(SystemIDs.WINDOW_INVOICE_VENDOR, invoiceTable.getZoomWindowID(false));
 	}
 
 	@Test
