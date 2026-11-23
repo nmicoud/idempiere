@@ -131,6 +131,14 @@ public class WImageDialog extends Window implements EventListener<Event>
 	private Div captureDiv;
 	private String defaultNameForCaptureImage = "CapturedImage";
 	private Button cancelCaptureButton;
+
+	/** Draw (IDEMPIERE-7224): drawing area + its buttons, shown instead of mainLayout */
+	private Button drawButton = new Button();
+	private Div drawDiv;
+	private Button clearDrawButton;
+	private Button okDrawButton;
+	private Button cancelDrawButton;
+	private String defaultNameForDrawImage = "Drawing";
 	/* SysConfig USE_ESC_FOR_TAB_CLOSING */
 	private boolean isUseEscForTabClosing = MSysConfig.getBooleanValue(MSysConfig.USE_ESC_FOR_TAB_CLOSING, false, Env.getAD_Client_ID(Env.getCtx()));
 
@@ -190,7 +198,38 @@ public class WImageDialog extends Window implements EventListener<Event>
 		this.appendChild(cancelCaptureButton);
 		cancelCaptureButton.addEventListener(Events.ON_CLICK, this);
 		cancelCaptureButton.setVisible(false);
-		
+
+		// Draw: same overlay principle as Capture
+		drawDiv = new Div();
+		this.appendChild(drawDiv);
+		drawDiv.setStyle("position: absolute;");
+		if (ClientInfo.maxHeight(539))
+			ZKUpdateUtil.setHeight(drawDiv, (ClientInfo.get().desktopHeight-60)+ "px");
+		else
+			ZKUpdateUtil.setHeight(drawDiv, "480px");
+		if (ClientInfo.maxWidth(639))
+			ZKUpdateUtil.setWidth(drawDiv, ClientInfo.get().desktopWidth + "px");
+		else
+			ZKUpdateUtil.setWidth(drawDiv, "640px");
+		drawDiv.setVisible(false);
+		drawDiv.addEventListener("onDrawImage", this);
+		FlexHlayout drawButtons = new FlexHlayout();
+		drawButtons.setAlign(FlexHlayout.AlignType.CENTER);
+		drawButtons.setPack(FlexHlayout.PackType.END);
+		drawButtons.setStyle("padding: 5px 3px;");
+		ZKUpdateUtil.setHflex(drawButtons, "1");
+		clearDrawButton = new Button("Clear");
+		okDrawButton = new Button(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "OK")));
+		cancelDrawButton = new Button(Util.cleanAmp(Msg.getMsg(Env.getCtx(), "Cancel")));
+		for (Button b : new Button[] {clearDrawButton, okDrawButton, cancelDrawButton})
+		{
+			LayoutUtils.addSclass("txt-btn", b);
+			b.addEventListener(Events.ON_CLICK, this);
+			drawButtons.appendChild(b);
+			drawButtons.appendChild(new Space());
+		}
+		drawDiv.appendChild(drawButtons);
+
 		mainLayout.setParent(this);
 		ZKUpdateUtil.setHflex(mainLayout, "1");
 		ZKUpdateUtil.setVflex(mainLayout, "1");
@@ -199,6 +238,8 @@ public class WImageDialog extends Window implements EventListener<Event>
 		LayoutUtils.addSclass("txt-btn", fileButton);
 		captureButton.setLabel("Capture");
 		LayoutUtils.addSclass("txt-btn", captureButton);
+		drawButton.setLabel("Draw");
+		LayoutUtils.addSclass("txt-btn", drawButton);
 		
 		North north = new North();
 		north.setParent(mainLayout);
@@ -210,6 +251,8 @@ public class WImageDialog extends Window implements EventListener<Event>
 		hbox.appendChild(fileButton);
 		hbox.appendChild(new Space());
 		hbox.appendChild(captureButton);
+		hbox.appendChild(new Space());
+		hbox.appendChild(drawButton);
 		hbox.appendChild(new Space());
 		hbox.appendChild(fileNameTextbox);
 		
@@ -237,6 +280,7 @@ public class WImageDialog extends Window implements EventListener<Event>
 		fileButton.setUpload(AdempiereWebUI.getUploadSetting());
 		fileButton.addEventListener(Events.ON_UPLOAD, this);
 		captureButton.addEventListener(Events.ON_CLICK, this);
+		drawButton.addEventListener(Events.ON_CLICK, this);
 		confirmPanel.addActionListener(Events.ON_CLICK, this);
 		
 		addEventListener(Events.ON_UPLOAD, this);
@@ -287,24 +331,7 @@ public class WImageDialog extends Window implements EventListener<Event>
 			captureDiv.setVisible(false);
 			cancelCaptureButton.setVisible(false);
 			mainLayout.setVisible(true);
-			String dataUrl = (String) e.getData();
-			if (!Util.isEmpty(dataUrl))
-			{
-				String encodingPrefix = "base64,";
-				int contentStartIndex = dataUrl.indexOf(encodingPrefix) + encodingPrefix.length();
-				byte[] imageData = Base64.decodeBase64(dataUrl.substring(contentStartIndex).getBytes());
-				AImage img = new AImage(defaultNameForCaptureImage, imageData);
-				image.setContent(img);
-				image.setClientAttribute("sandbox", "");
-				image.setVisible(true);
-				image.invalidate();
-				
-				if (m_mImage == null)
-					m_mImage = new MImage (Env.getCtx(), 0, null);
-				m_mImage.setName(defaultNameForCaptureImage);
-				m_mImage.setBinaryData(imageData);
-				fileNameTextbox.setValue(defaultNameForCaptureImage);
-			}
+			processDataUrl((String) e.getData(), defaultNameForCaptureImage);
 			String script = "(function(){let wgt = zk.Widget.$('#"+captureDiv.getUuid()+"');";
 			script = script + "jq(wgt).data( 'photobooth').destroy();})() ";
 			Clients.evalJavaScript(script);
@@ -318,6 +345,31 @@ public class WImageDialog extends Window implements EventListener<Event>
 			script = script + "jq(wgt).data( 'photobooth').destroy();})() ";
 			Clients.evalJavaScript(script);
 		}
+		else if (e.getTarget() == drawButton)
+		{
+			drawDiv.setVisible(true);
+			mainLayout.setVisible(false);
+			Clients.evalJavaScript(drawPadScript("jq(wgt).drawpad();"));
+		}
+		else if (e.getTarget() == clearDrawButton)
+		{
+			Clients.evalJavaScript(drawPadScript("if (pad) pad.clear();"));
+		}
+		else if (e.getTarget() == okDrawButton)
+		{
+			// the browser sends the PNG back with onDrawImage (nothing is sent if the pad is empty)
+			Clients.evalJavaScript(drawPadScript("let url = pad ? pad.toDataURL() : null; "
+					+ "if (url) zAu.send(new zk.Event(wgt, 'onDrawImage', url, {toServer:true}));"));
+		}
+		else if (e.getName().equals("onDrawImage"))
+		{
+			closeDrawPad();
+			processDataUrl((String) e.getData(), defaultNameForDrawImage);
+		}
+		else if (e.getTarget() == cancelDrawButton)
+		{
+			closeDrawPad();
+		}
 		else if (e.getName().equals("onSave"))
 		{
 			try {
@@ -326,6 +378,55 @@ public class WImageDialog extends Window implements EventListener<Event>
 				Clients.clearBusy(this);
 			}
 		}
+	}
+
+	/**
+	 * Build a client script with <code>wgt</code> (drawing area widget) and <code>pad</code> (drawpad instance) in scope
+	 * @param body
+	 * @return script
+	 */
+	private String drawPadScript(String body) {
+		return "(function(){let wgt = zk.Widget.$('#" + drawDiv.getUuid() + "');"
+				+ "let pad = jq(wgt).data('drawpad');" + body + "})()";
+	}
+
+	/**
+	 * Hide the drawing area and go back to the image view
+	 */
+	private void closeDrawPad() {
+		Clients.evalJavaScript(drawPadScript("if (pad) pad.destroy();"));
+		drawDiv.setVisible(false);
+		mainLayout.setVisible(true);
+	}
+
+	/**
+	 * Show and keep an image received from the browser as a data URL (Capture, Draw)
+	 * @param dataUrl e.g. data:image/png;base64,...
+	 * @param defaultName image name
+	 */
+	private void processDataUrl(String dataUrl, String defaultName) {
+		if (Util.isEmpty(dataUrl))
+			return;
+		String encodingPrefix = "base64,";
+		int contentStartIndex = dataUrl.indexOf(encodingPrefix) + encodingPrefix.length();
+		byte[] imageData = Base64.decodeBase64(dataUrl.substring(contentStartIndex).getBytes());
+		AImage img = null;
+		try {
+			img = new AImage(defaultName, imageData);
+		} catch (Exception ex) {
+			log.log(Level.WARNING, "load image", ex);
+			return;
+		}
+		image.setContent(img);
+		image.setClientAttribute("sandbox", "");
+		image.setVisible(true);
+		image.invalidate();
+
+		if (m_mImage == null)
+			m_mImage = new MImage (Env.getCtx(), 0, null);
+		m_mImage.setName(defaultName);
+		m_mImage.setBinaryData(imageData);
+		fileNameTextbox.setValue(defaultName);
 	}
 
 	/**
@@ -447,6 +548,20 @@ public class WImageDialog extends Window implements EventListener<Event>
 	 */
 	public void setDefaultNameForCaptureImage(String defaultNameForCaptureImage) {
 		this.defaultNameForCaptureImage = defaultNameForCaptureImage;
+	}
+
+	/**
+	 * @return the defaultNameForDrawImage
+	 */
+	public String getDefaultNameForDrawImage() {
+		return defaultNameForDrawImage;
+	}
+
+	/**
+	 * @param defaultNameForDrawImage the defaultNameForDrawImage to set
+	 */
+	public void setDefaultNameForDrawImage(String defaultNameForDrawImage) {
+		this.defaultNameForDrawImage = defaultNameForDrawImage;
 	}
 
 	@Override
